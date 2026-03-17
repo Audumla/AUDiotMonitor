@@ -1,0 +1,16 @@
+server:
+  listen_address: "0.0.0.0:9200"
+  refresh_interval: 5s
+  discovery_interval: 60s
+
+identity:
+  host: "localhost"
+  platform: "linux"
+
+adapters:
+  linux_hwmon:
+    enabled: true
+
+mapping:
+  rules_file: "/etc/hwexp/mappings.yaml"
+  strict_mode: false

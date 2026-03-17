@@ -11,20 +11,25 @@ homepage: "https://github.com/your-org/audiot"
 license: "MIT"
 
 contents:
-  - src: "../hwexp" # This assumes the binary is already built in the root
+  - src: "hwexp"
     dst: "/usr/bin/hwexp"
-  - src: "../configs/hwexp.yaml"
+    file_info:
+      mode: 0755
+  - src: "packaging/hwexp.yaml"
     dst: "/etc/hwexp/hwexp.yaml"
     type: "config"
-  - src: "../configs/mappings.yaml"
+  - src: "configs/mappings.yaml"
     dst: "/etc/hwexp/mappings.yaml"
     type: "config"
-  - src: "hwexp.service"
+  - src: "tests/fixtures/sample_hwmon.json"
+    dst: "/etc/hwexp/sample_hwmon.json"
+    type: "config"
+  - src: "packaging/hwexp.service"
     dst: "/usr/lib/systemd/system/hwexp.service"
 
 scripts:
-  postinstall: "scripts/postinstall.sh"
-  preremove: "scripts/preremove.sh"
+  postinstall: "packaging/scripts/postinstall.sh"
+  preremove: "packaging/scripts/preremove.sh"
 
 overrides:
   deb:

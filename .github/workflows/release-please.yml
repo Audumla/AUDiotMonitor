@@ -74,26 +74,31 @@ jobs:
           # Build via Makefile using the dynamic version
           make build package VERSION=$CLEAN_VERSION
 
-      # Test the generated DEB package in an Ubuntu container
-      - name: Test DEB Installation (Docker)
-        run: |
-          docker run --rm -v ${{ github.workspace }}/hwexp/dist:/dist ubuntu:22.04 /bin/bash -c "
-            apt-get update && apt-get install -y systemd
-            # Install the deb package
-            dpkg -i /dist/*.deb
-            # Verify the binary is in the path and executes
-            /usr/bin/hwexp --help || echo 'Installed and verified DEB successfully'
-          "
+      - name: Make integration test scripts executable
+        run: chmod +x hwexp/tests/integration/*.sh
 
-      # Test the generated RPM package in a Fedora container
-      - name: Test RPM Installation (Docker)
+      - name: Test DEB Install (Ubuntu)
         run: |
-          docker run --rm -v ${{ github.workspace }}/hwexp/dist:/dist fedora:latest /bin/bash -c "
-            # Install the rpm package
-            dnf install -y /dist/*.rpm
-            # Verify the binary is in the path and executes
-            /usr/bin/hwexp --help || echo 'Installed and verified RPM successfully'
-          "
+          DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
+          docker run --rm \
+            -v "$(realpath "$DEB"):/tmp/hwexp.deb:ro" \
+            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
+            ubuntu:22.04 \
+            bash -c "apt-get update -qq && apt-get install -y -qq curl && bash /tests/test-deb-install.sh /tmp/hwexp.deb"
+
+      - name: Test RPM Install (Fedora)
+        run: |
+          RPM=$(find hwexp/dist -maxdepth 1 -name "*.rpm" | head -1)
+          docker run --rm \
+            -v "$(realpath "$RPM"):/tmp/hwexp.rpm:ro" \
+            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
+            fedora:latest \
+            bash -c "bash /tests/test-rpm-install.sh /tmp/hwexp.rpm"
+
+      - name: Smoke Test - Emitter to Client (Network)
+        run: |
+          DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
+          bash hwexp/tests/integration/test-network-smoke.sh "$DEB"
 
       - name: Upload Release Artifacts
         env:
