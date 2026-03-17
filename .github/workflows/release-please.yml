@@ -95,6 +95,12 @@ jobs:
             fedora:latest \
             bash -c "bash /tests/test-rpm-install.sh /tmp/hwexp.rpm"
 
+      - name: Test Real hwmon Adapter (fake sysfs)
+        run: |
+          bash hwexp/tests/integration/test-hwmon-install.sh \
+            "$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)" \
+            "$(pwd)"
+
       - name: Smoke Test - Emitter to Client (Network)
         run: |
           DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)

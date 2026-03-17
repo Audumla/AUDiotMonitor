@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 
+	"hwexp/internal/adapters/hwmon"
 	"hwexp/internal/adapters/mock"
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
@@ -16,7 +17,7 @@ import (
 
 func main() {
 	configPath := flag.String("config", "configs/hwexp.yaml", "Path to config YAML")
-	fixturePath := flag.String("fixture", "tests/fixtures/sample_hwmon.json", "Path to mock fixture JSON")
+	fixturePath := flag.String("fixture", "", "Path to mock fixture JSON (forces mock adapter, overrides config)")
 	flag.Parse()
 
 	// 1. Load Config
@@ -42,10 +43,27 @@ func main() {
 		l.Fatal("startup", "Failed to load auth store", "CFG_LOAD_FAILED", map[string]interface{}{"error": err.Error()})
 	}
 
-	// 5. Initialize Mock Adapter
-	adapter := mock.NewAdapter(*fixturePath)
-	if err := adapter.Load(); err != nil {
-		l.Fatal("startup", "Failed to load fixture", "ADAPTER_INIT_FAILED", map[string]interface{}{"error": err.Error()})
+	// 5. Select adapters
+	// --fixture flag forces mock mode (for testing/CI).
+	// Otherwise use adapters enabled in config.
+	var adapters []engine.Adapter
+
+	if *fixturePath != "" {
+		l.Info("startup", "Using mock adapter (--fixture override)", map[string]interface{}{"fixture": *fixturePath})
+		a := mock.NewAdapter(*fixturePath)
+		if err := a.Load(); err != nil {
+			l.Fatal("startup", "Failed to load fixture", "ADAPTER_INIT_FAILED", map[string]interface{}{"error": err.Error()})
+		}
+		adapters = append(adapters, a)
+	} else if cfg.Adapters.LinuxHwmon.Enabled {
+		hwmonPath := hwmon.DefaultBasePath
+		if p, ok := cfg.Adapters.LinuxHwmon.Settings["hwmon_path"].(string); ok && p != "" {
+			hwmonPath = p
+		}
+		l.Info("startup", "Using linux_hwmon adapter", map[string]interface{}{"path": hwmonPath})
+		adapters = append(adapters, hwmon.NewAdapter(hwmonPath))
+	} else {
+		l.Fatal("startup", "No adapters enabled in config and no --fixture provided", "CFG_LOAD_FAILED", nil)
 	}
 
 	// 6. Initialize State Store
@@ -57,23 +75,17 @@ func main() {
 		l.Fatal("startup", "Failed to initialize mapper", "INTERNAL_ERROR", map[string]interface{}{"error": err.Error()})
 	}
 
-	// 8. Initialize and start Core Engine loop
-	coreEngine := engine.NewEngine(
-		stateStore,
-		mapperEngine,
-		[]engine.Adapter{adapter},
-	)
-	
+	// 8. Start Core Engine
+	coreEngine := engine.NewEngine(stateStore, mapperEngine, adapters)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	l.Info("startup", "Starting background telemetry loop", map[string]interface{}{"interval": cfg.Server.RefreshInterval})
 	coreEngine.Start(ctx)
 
 	// 9. Start HTTP Server
 	server := httpapi.NewServer(cfg, stateStore, authStore)
 	l.Info("startup", "HTTP server listening", map[string]interface{}{"address": cfg.Server.ListenAddress})
-	
 	if err := server.Start(); err != nil {
 		l.Fatal("startup", "Server failed", "HTTP_INTERNAL_ERROR", map[string]interface{}{"error": err.Error()})
 	}

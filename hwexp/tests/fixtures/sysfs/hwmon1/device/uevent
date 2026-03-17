@@ -1,0 +1,2 @@
+DRIVER=amdgpu
+PCI_SLOT_NAME=0000:0b:00.0

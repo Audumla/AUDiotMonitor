@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=root
 Group=root
-ExecStart=/usr/bin/hwexp --config /etc/hwexp/hwexp.yaml --fixture /etc/hwexp/sample_hwmon.json
+ExecStart=/usr/bin/hwexp --config /etc/hwexp/hwexp.yaml
 Restart=on-failure
 RestartSec=5s
 
