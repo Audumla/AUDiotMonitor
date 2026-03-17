@@ -28,8 +28,8 @@ scripts:
 
 overrides:
   deb:
-    dependencies:
+    depends:
       - libc6
   rpm:
-    dependencies:
+    depends:
       - glibc
