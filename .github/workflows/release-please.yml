@@ -72,7 +72,7 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           
           # Build via Makefile using the dynamic version
-          make package VERSION=$CLEAN_VERSION
+          make build package VERSION=$CLEAN_VERSION
 
       # Test the generated DEB package in an Ubuntu container
       - name: Test DEB Installation (Docker)
