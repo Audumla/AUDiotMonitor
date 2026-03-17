@@ -104,9 +104,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Upload all packages to the Release created by Release Please
-          # Note: googleapis/release-please-action tags mono-repo packages with <package-name>-v<version>
-          TAG_NAME=${{ needs.release.outputs.hwexp_tag_name }}
-          if [ -n "$TAG_NAME" ]; then
-            find ./hwexp/dist -maxdepth 1 -type f | xargs gh release upload $TAG_NAME
+          # Prefer the hwexp-specific tag; fall back to the root package tag
+          TAG_NAME="${{ needs.release.outputs.hwexp_tag_name }}"
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
           fi
+          echo "Uploading artifacts to release: $TAG_NAME"
+          find ./hwexp/dist -maxdepth 1 -type f | xargs gh release upload "$TAG_NAME" --clobber

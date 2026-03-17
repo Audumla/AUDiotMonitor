@@ -12,9 +12,16 @@ PORT=9200
 TOTAL_PASS=0
 TOTAL_FAIL=0
 
-# Convert path to Docker-compatible mount format (handles Windows Git Bash paths)
+# Convert path to Docker-compatible absolute bind-mount path.
+# On Windows/Git Bash: H:\foo -> //h/foo  (Git Bash strips one slash, Docker sees /h/foo)
+# On Linux: resolves to absolute path via realpath
 docker_path() {
-  echo "$1" | sed 's|^\([A-Za-z]\):|//\L\1|; s|\\|/|g'
+  local p="$1"
+  if echo "$p" | grep -qE '^[A-Za-z]:'; then
+    echo "$p" | sed 's|^\([A-Za-z]\):|//\L\1|; s|\\|/|g'
+  else
+    realpath "$p"
+  fi
 }
 
 DEB_DOCKER="$(docker_path "$DEB_PATH")"
