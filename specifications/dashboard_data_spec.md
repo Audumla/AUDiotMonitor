@@ -606,7 +606,7 @@ Dashboard-facing tests SHOULD verify:
 * panel dashboards can populate all expected sections from canonical labels
 * ops dashboards tolerate multi-host data
 * discovery views show unknown devices and mapping issues where applicable
-* optional LLM/custom-data sections appear only when relevant metrics exist
+* optional LLM/custom-data sections appear only when relevant metrics exist 
 
 ---
 
