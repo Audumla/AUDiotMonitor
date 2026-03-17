@@ -103,5 +103,5 @@ jobs:
           # Note: googleapis/release-please-action tags mono-repo packages with <package-name>-v<version>
           TAG_NAME=${{ needs.release.outputs.hwexp_tag_name }}
           if [ -n "$TAG_NAME" ]; then
-            gh release upload $TAG_NAME ./hwexp/dist/*
+            find ./hwexp/dist -maxdepth 1 -type f | xargs gh release upload $TAG_NAME
           fi
