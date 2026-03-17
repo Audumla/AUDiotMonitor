@@ -1,0 +1,24 @@
+{
+  "uid": "hwexp-ops-main",
+  "title": "AUDiot Operations",
+  "tags": ["hwexp", "ops"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "title": "Hardware Overview",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "hw_device_temperature_celsius",
+          "format": "table"
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      { "name": "host", "type": "query", "query": "label_values(hw_host_uptime_seconds, host)", "refresh": 1, "multi": true, "includeAll": true }
+    ]
+  }
+}

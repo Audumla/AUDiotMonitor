@@ -1,0 +1,36 @@
+{
+  "devices": [
+    {
+      "stable_id": "pci-0000:0b:00.0",
+      "platform": "linux",
+      "source": "linux_hwmon",
+      "device_class": "gpu",
+      "device_subclass": "discrete",
+      "vendor": "amd",
+      "model": "Radeon RX 7900 XTX",
+      "driver": "amdgpu",
+      "bus": "pci",
+      "location": "0000:0b:00.0",
+      "display_name": "Main 7900 XTX",
+      "logical_device_name": "gpu0",
+      "capabilities": ["temperature", "power", "fan_speed", "memory"],
+      "first_seen": "2026-03-17T12:00:00Z",
+      "last_seen": "2026-03-17T12:05:00Z",
+      "present": true
+    }
+  ],
+  "measurements": [
+    {
+      "measurement_id": "linux_hwmon:pci-0000:0b:00.0:temp1_input",
+      "stable_device_id": "pci-0000:0b:00.0",
+      "source": "linux_hwmon",
+      "raw_name": "temp1_input",
+      "raw_value": 54234,
+      "raw_unit": "millidegree_celsius",
+      "timestamp": "2026-03-17T12:05:03Z",
+      "quality": "good",
+      "component_hint": "thermal",
+      "sensor_hint": "temperature"
+    }
+  ]
+}

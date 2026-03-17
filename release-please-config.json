@@ -3,6 +3,9 @@
     ".": {
       "release-type": "python",
       "changelog-path": "CHANGELOG.md"
+    },
+    "hwexp": {
+      "release-type": "go"
     }
   }
 }

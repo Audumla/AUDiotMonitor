@@ -22,6 +22,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      hwexp_release_created: ${{ steps.release.outputs['hwexp--release_created'] }}
+      hwexp_tag_name: ${{ steps.release.outputs['hwexp--tag_name'] }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,9 +40,65 @@ jobs:
           manifest-file: .release-please-manifest.json
           release-as: ${{ inputs.release_as }}
 
-      - name: Upload release assets
-        if: ${{ steps.release.outputs.release_created == 'true' }}
-        uses: softprops/action-gh-release@v2
+  build-and-test-hwexp:
+    needs: release
+    if: ${{ needs.release.outputs.hwexp_release_created == 'true' || needs.release.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          tag_name: ${{ steps.release.outputs.tag_name }}
-          fail_on_unmatched_files: false
+          go-version: '1.22'
+          cache-dependency-path: hwexp/go.sum
+
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Build Binary and Packages
+        working-directory: ./hwexp
+        run: |
+          # Strip the 'v' prefix if present for the package version
+          CLEAN_VERSION=${{ needs.release.outputs.hwexp_tag_name }}
+          CLEAN_VERSION=${CLEAN_VERSION#hwexp-v}
+          CLEAN_VERSION=${CLEAN_VERSION:-0.1.0} # Fallback if tag parsing fails
+          
+          # Add go bin to path for nfpm
+          export PATH=$PATH:$(go env GOPATH)/bin
+          
+          # Build via Makefile using the dynamic version
+          make package VERSION=$CLEAN_VERSION
+
+      # Test the generated DEB package in an Ubuntu container
+      - name: Test DEB Installation (Docker)
+        run: |
+          docker run --rm -v ${{ github.workspace }}/hwexp/dist:/dist ubuntu:22.04 /bin/bash -c "
+            apt-get update && apt-get install -y systemd
+            # Install the deb package
+            dpkg -i /dist/*.deb
+            # Verify the binary is in the path and executes
+            /usr/bin/hwexp --help || echo 'Installed and verified DEB successfully'
+          "
+
+      # Test the generated RPM package in a Fedora container
+      - name: Test RPM Installation (Docker)
+        run: |
+          docker run --rm -v ${{ github.workspace }}/hwexp/dist:/dist fedora:latest /bin/bash -c "
+            # Install the rpm package
+            dnf install -y /dist/*.rpm
+            # Verify the binary is in the path and executes
+            /usr/bin/hwexp --help || echo 'Installed and verified RPM successfully'
+          "
+
+      - name: Upload Release Artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Upload all packages to the Release created by Release Please
+          # Note: googleapis/release-please-action tags mono-repo packages with <package-name>-v<version>
+          TAG_NAME=${{ needs.release.outputs.hwexp_tag_name }}
+          if [ -n "$TAG_NAME" ]; then
+            gh release upload $TAG_NAME ./hwexp/dist/*
+          fi

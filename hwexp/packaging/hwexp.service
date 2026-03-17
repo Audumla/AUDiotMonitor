@@ -1,0 +1,18 @@
+[Unit]
+Description=AUDiot Hardware Telemetry Exporter
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/hwexp --config /etc/hwexp/hwexp.yaml
+Restart=on-failure
+RestartSec=5s
+
+# Security hardening
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

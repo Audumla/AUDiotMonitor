@@ -1,0 +1,19 @@
+{
+  "uid": "hwexp-discovery-main",
+  "title": "AUDiot Discovery",
+  "tags": ["hwexp", "discovery"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "title": "Exporter Inventory",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "hwexp_discovered_devices",
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

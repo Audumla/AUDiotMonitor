@@ -1,0 +1,35 @@
+name: "hwexp"
+arch: "amd64"
+platform: "linux"
+version: "0.1.0"
+section: "default"
+priority: "extra"
+maintainer: "AUDiot Project <maintainer@audiot.local>"
+description: "AUDiot Hardware Telemetry Exporter"
+vendor: "AUDiot"
+homepage: "https://github.com/your-org/audiot"
+license: "MIT"
+
+contents:
+  - src: "../hwexp" # This assumes the binary is already built in the root
+    dst: "/usr/bin/hwexp"
+  - src: "../configs/hwexp.yaml"
+    dst: "/etc/hwexp/hwexp.yaml"
+    type: "config"
+  - src: "../configs/mappings.yaml"
+    dst: "/etc/hwexp/mappings.yaml"
+    type: "config"
+  - src: "hwexp.service"
+    dst: "/usr/lib/systemd/system/hwexp.service"
+
+scripts:
+  postinstall: "scripts/postinstall.sh"
+  preremove: "scripts/preremove.sh"
+
+overrides:
+  deb:
+    dependencies:
+      - libc6
+  rpm:
+    dependencies:
+      - glibc
