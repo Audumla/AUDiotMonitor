@@ -3,10 +3,10 @@ name: Release Please
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
   workflow_dispatch:
     inputs:
       release_as:
@@ -21,7 +21,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       hwexp_release_created: ${{ steps.release.outputs['hwexp--release_created'] }}
