@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.7](https://github.com/Audumla/AUDiotMonitor/compare/v0.1.6...v0.1.7) (2026-03-17)
+
+
+### Bug Fixes
+
+* agent release errors ([46b21d1](https://github.com/Audumla/AUDiotMonitor/commit/46b21d118bbf883c8c62765ea38cba62bca41715))
+* cross platform testing ([6d3b0e2](https://github.com/Audumla/AUDiotMonitor/commit/6d3b0e20def70f67db539ed33ee19d9ee9b22eec))
+* release builds ([c719b21](https://github.com/Audumla/AUDiotMonitor/commit/c719b2112db8c43914c37f601708c87c7f267a9f))
+* release fixes ([fe0321d](https://github.com/Audumla/AUDiotMonitor/commit/fe0321d8e53d8f340ad2126ca3c059d4b29f168d))
+* release issues ([a370303](https://github.com/Audumla/AUDiotMonitor/commit/a370303ac37dcd2369612f1301e675e9b205c490))
+
 ## [0.1.6](https://github.com/Audumla/AUDiotMonitor/compare/v0.1.5...v0.1.6) (2026-03-17)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.1...v0.3.2) (2026-03-17)
+
+
+### Bug Fixes
+
+* release builds ([c719b21](https://github.com/Audumla/AUDiotMonitor/commit/c719b2112db8c43914c37f601708c87c7f267a9f))
+
 ## [0.3.1](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.0...v0.3.1) (2026-03-17)
 
 
