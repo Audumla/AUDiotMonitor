@@ -20,7 +20,7 @@ This document defines:
 * refresh/discovery concurrency model
 * state snapshot model
 * fixture mode behavior
-* extension points for future platforms and bridges
+* extension points for future platforms and bridges 
 
 This document does not define packaging, installer behavior, or dashboard layouts.
 
