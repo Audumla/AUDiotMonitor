@@ -777,26 +777,34 @@ The implementation following this spec MUST produce:
 A recommended implementation layout is:
 
 ```text
-rpi-dashboard-node/
-  docker-compose.yml
-  .env.example
-  README.md
-  config/
-    prometheus/
-      prometheus.yml.template
-    grafana/
-      provisioning/
-        datasources/
-        dashboards/
-    targets/
-      remote-targets.yml.example
-  dashboards/
-    panel/
-    ops/
-    discovery/
+monitoring/
+  INSTALL.md
+  collector/                          # deploy on every machine being monitored
+    docker-compose.yml                # hwexp + node-exporter + Prometheus
+    .env.example
+    config/
+      hwexp/
+        hwexp.yaml
+        mappings.yaml
+        mappings.auto.yaml            # auto-generated on first run, not committed
+      prometheus/
+        prometheus.yml
+  dashboard/                          # deploy on the Grafana host (anywhere on the network)
+    docker-compose.yml                # Grafana only — PROMETHEUS_URL points at collector
+    .env.example
+    config/
+      grafana/
+        grafana.ini
+        provisioning/
+          datasources/
+            prometheus.yaml
+          dashboards/
+            dashboards.yaml
+    dashboards/
+      panel/
+      ops/
+      discovery/
   scripts/
-    prepare-config.sh
-    validate-config.sh
     start-kiosk.sh
 ```
 

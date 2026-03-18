@@ -5,10 +5,10 @@ hwexp/tar/
 
 # --- Runtime-generated files ---
 # Auto-generated sensor mapping rules (written by hwexp on first run)
-dashboard/server/config/hwexp/mappings.auto.yaml
+monitoring/collector/config/hwexp/mappings.auto.yaml
 # Docker env overrides (machine-local)
-dashboard/server/.env
-dashboard/display/.env
+monitoring/collector/.env
+monitoring/dashboard/.env
 # Temp / backup files
 *.bak
 *.tmp

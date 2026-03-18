@@ -785,31 +785,38 @@ They MAY be used for automation, but SHOULD NOT be the primary browser-auth patt
 The following folder structure is the normative reference for the provisioning pack.
 
 ```text
-rpi-dashboard-node/
-  docker-compose.yml
-  .env.example
-  README.md
-  config/
-    grafana/
-      grafana.ini
-      provisioning/
-        datasources/
-          prometheus.yaml
-        dashboards/
-          dashboards.yaml
-    prometheus/
-      prometheus.yml.template
-    targets/
-      remote-targets.yml.example
-  dashboards/
-    panel/
-      panel-dashboard.json
-    ops/
-      operations-dashboard.json
-    discovery/
-      discovery-dashboard.json
+monitoring/
+  INSTALL.md
+  collector/                          # deploy on every machine being monitored
+    docker-compose.yml                # hwexp + node-exporter + Prometheus
+    .env.example
+    config/
+      hwexp/
+        hwexp.yaml
+        mappings.yaml
+        mappings.auto.yaml            # auto-generated on first run, not committed
+      prometheus/
+        prometheus.yml
+  dashboard/                          # deploy on the Grafana host (anywhere on the network)
+    docker-compose.yml                # Grafana only — PROMETHEUS_URL points at collector
+    .env.example
+    config/
+      grafana/
+        grafana.ini
+        provisioning/
+          datasources/
+            prometheus.yaml           # datasource URL read from PROMETHEUS_URL env var
+          dashboards/
+            dashboards.yaml
+    dashboards/
+      panel/
+        panel-dashboard.json
+      ops/
+        operations-dashboard.json
+      discovery/
+        discovery-dashboard.json
   scripts/
-    prepare-config.sh
+    start-kiosk.sh
     validate-config.sh
     start-kiosk.sh
     install-kiosk-autostart.sh

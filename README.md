@@ -21,17 +21,17 @@ Hardware and OS telemetry stack for Linux machines. Collects sensor data from th
 
 ## Quick install
 
-Full instructions: [`dashboard/INSTALL.md`](dashboard/INSTALL.md)
+Full instructions: [`monitoring/INSTALL.md`](monitoring/INSTALL.md)
 
 ```bash
-# On the machine you want to monitor:
-cd dashboard/server && docker compose up -d
+# On every machine you want to monitor (collector stack):
+cd monitoring/collector && docker compose up -d
 
-# On the machine running Grafana (can be the same or different):
-PROMETHEUS_URL=http://<server-ip>:9090 docker compose -f dashboard/display/docker-compose.yml up -d
+# On the machine running Grafana — same host or separate (dashboard stack):
+PROMETHEUS_URL=http://<collector-ip>:9090 docker compose -f monitoring/dashboard/docker-compose.yml up -d
 ```
 
-Grafana at `http://<display-host>:3000` — default login `admin / admin`.
+Grafana at `http://<dashboard-host>:3000` — default login `admin / admin`.
 
 ## Docker Hub
 
@@ -55,14 +55,14 @@ hwexp/                      Go source for the hardware exporter
   packaging/                .deb / .rpm packaging (nfpm)
   tests/integration/        Install and smoke tests
 
-dashboard/                  Deployment stacks
-  server/                   Deploy on every machine you want to monitor
+monitoring/                 Deployment stacks
+  collector/                Deploy on every machine you want to monitor
     docker-compose.yml      hwexp + node-exporter + Prometheus
     config/
       hwexp/                hwexp config and mapping rules
       prometheus/           Prometheus scrape config
-  display/                  Deploy on your Grafana host (can be same machine)
-    docker-compose.yml      Grafana only — points at server via PROMETHEUS_URL
+  dashboard/                Deploy on your Grafana host (can be same machine)
+    docker-compose.yml      Grafana only — points at collector via PROMETHEUS_URL
     config/grafana/         Grafana provisioning
     dashboards/             Pre-built Grafana dashboard JSON
   INSTALL.md                Step-by-step install guide
