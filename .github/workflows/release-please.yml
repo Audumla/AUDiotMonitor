@@ -7,7 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       release_as:
-        description: 'Optional exact release version (e.g. 1.2.3)'
+        description: 'Optional exact release version for release-please (e.g. 1.2.3)'
+        required: false
+        type: string
+      publish_version:
+        description: 'Force build + Docker publish for an existing tag (e.g. 0.7.0). Skips release-please.'
         required: false
         type: string
 
@@ -21,6 +25,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Skip the release-please step when doing a forced manual publish
+    if: ${{ inputs.publish_version == '' || inputs.publish_version == null }}
     outputs:
       hwexp_release_created: ${{ steps.release.outputs['hwexp--release_created'] }}
       hwexp_tag_name: ${{ steps.release.outputs['hwexp--tag_name'] }}
@@ -41,12 +47,26 @@ jobs:
 
   build-packages:
     name: Build & Upload Release Artifacts
-    needs: release
-    if: ${{ needs.release.outputs.hwexp_release_created == 'true' }}
+    # Run when release-please created a release OR when manually publishing a version
+    needs: [release]
+    if: |
+      always() && (
+        needs.release.outputs.hwexp_release_created == 'true' ||
+        (inputs.publish_version != '' && inputs.publish_version != null)
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Resolve tag name
+        id: tag
+        run: |
+          if [ -n "${{ inputs.publish_version }}" ]; then
+            echo "tag_name=hwexp-v${{ inputs.publish_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag_name=${{ needs.release.outputs.hwexp_tag_name }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -60,9 +80,9 @@ jobs:
       - name: Build Binary and Packages
         working-directory: ./hwexp
         run: |
-          CLEAN_VERSION=${{ needs.release.outputs.hwexp_tag_name }}
-          CLEAN_VERSION=${CLEAN_VERSION#hwexp-v}
-          CLEAN_VERSION=${CLEAN_VERSION:-0.1.0}
+          CLEAN_VERSION="${{ steps.tag.outputs.tag_name }}"
+          CLEAN_VERSION="${CLEAN_VERSION#hwexp-v}"
+          CLEAN_VERSION="${CLEAN_VERSION:-0.1.0}"
           export PATH=$PATH:$(go env GOPATH)/bin
           make build package VERSION=$CLEAN_VERSION
 
@@ -70,18 +90,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="${{ needs.release.outputs.hwexp_tag_name }}"
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
           echo "Uploading artifacts to release: $TAG_NAME"
           find ./hwexp/dist -maxdepth 1 -type f | xargs gh release upload "$TAG_NAME" --clobber
 
   docker-publish:
     name: Publish Docker Image
     needs: [release, build-packages]
-    if: ${{ needs.release.outputs.hwexp_release_created == 'true' }}
+    if: |
+      always() && needs.build-packages.result == 'success' && (
+        needs.release.outputs.hwexp_release_created == 'true' ||
+        (inputs.publish_version != '' && inputs.publish_version != null)
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ -n "${{ inputs.publish_version }}" ]; then
+            echo "version=${{ inputs.publish_version }}" >> $GITHUB_OUTPUT
+          else
+            TAG="${{ needs.release.outputs.hwexp_tag_name }}"
+            echo "version=${TAG#hwexp-v}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -94,13 +128,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract version from release tag
-        id: version
-        run: |
-          TAG="${{ needs.release.outputs.hwexp_tag_name }}"
-          VERSION="${TAG#hwexp-v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v6
