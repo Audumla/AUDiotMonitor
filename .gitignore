@@ -3,6 +3,16 @@ hwexp/hwexp
 hwexp/dist/
 hwexp/tar/
 
+# --- Runtime-generated files ---
+# Auto-generated sensor mapping rules (written by hwexp on first run)
+dashboard/server/config/hwexp/mappings.auto.yaml
+# Docker env overrides (machine-local)
+dashboard/server/.env
+dashboard/display/.env
+# Temp / backup files
+*.bak
+*.tmp
+
 # --- agent-system --- DO NOT EDIT THIS BLOCK MANUALLY ---
 # AgentRunner workspace files (code, artifacts, and generated metadata)
 # Machine-local state (new v2 structure)

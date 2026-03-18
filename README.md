@@ -21,14 +21,17 @@ Hardware and OS telemetry stack for Linux machines. Collects sensor data from th
 
 ## Quick install
 
-Full instructions: [`rpi-dashboard-node/INSTALL.md`](rpi-dashboard-node/INSTALL.md)
+Full instructions: [`dashboard/INSTALL.md`](dashboard/INSTALL.md)
 
 ```bash
-# Copy rpi-dashboard-node/ to target machine, then:
-docker compose up -d
+# On the machine you want to monitor:
+cd dashboard/server && docker compose up -d
+
+# On the machine running Grafana (can be the same or different):
+PROMETHEUS_URL=http://<server-ip>:9090 docker compose -f dashboard/display/docker-compose.yml up -d
 ```
 
-Grafana at `http://<host>:3000` — default login `admin / admin`.
+Grafana at `http://<display-host>:3000` — default login `admin / admin`.
 
 ## Docker Hub
 
@@ -52,12 +55,16 @@ hwexp/                      Go source for the hardware exporter
   packaging/                .deb / .rpm packaging (nfpm)
   tests/integration/        Install and smoke tests
 
-rpi-dashboard-node/         Docker Compose stack for deployment
-  config/
-    hwexp/                  hwexp config and mapping rules
-    prometheus/             Prometheus scrape config
-    grafana/                Grafana provisioning
-  dashboards/               Pre-built Grafana dashboard JSON
+dashboard/                  Deployment stacks
+  server/                   Deploy on every machine you want to monitor
+    docker-compose.yml      hwexp + node-exporter + Prometheus
+    config/
+      hwexp/                hwexp config and mapping rules
+      prometheus/           Prometheus scrape config
+  display/                  Deploy on your Grafana host (can be same machine)
+    docker-compose.yml      Grafana only — points at server via PROMETHEUS_URL
+    config/grafana/         Grafana provisioning
+    dashboards/             Pre-built Grafana dashboard JSON
   INSTALL.md                Step-by-step install guide
 ```
 
