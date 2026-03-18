@@ -1,6 +1,7 @@
 services:
 
   hwexp:
+    image: audumla/audiot-hwexp:latest
     build:
       context: ../hwexp
       dockerfile: Dockerfile
