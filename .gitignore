@@ -1,4 +1,9 @@
-﻿# --- agent-system --- DO NOT EDIT THIS BLOCK MANUALLY ---
+﻿# --- Go build artifacts ---
+hwexp/hwexp
+hwexp/dist/
+hwexp/tar/
+
+# --- agent-system --- DO NOT EDIT THIS BLOCK MANUALLY ---
 # AgentRunner workspace files (code, artifacts, and generated metadata)
 # Machine-local state (new v2 structure)
 .agent_runner/local/
