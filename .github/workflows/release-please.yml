@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
   workflow_dispatch:
     inputs:
       release_as:
@@ -24,7 +21,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       hwexp_release_created: ${{ steps.release.outputs['hwexp--release_created'] }}
@@ -43,12 +39,13 @@ jobs:
           manifest-file: .release-please-manifest.json
           release-as: ${{ inputs.release_as }}
 
-  build-and-test-hwexp:
+  build-packages:
+    name: Build & Upload Release Artifacts
     needs: release
-    if: ${{ needs.release.outputs.hwexp_release_created == 'true' || needs.release.outputs.releases_created == 'true' }}
+    if: ${{ needs.release.outputs.hwexp_release_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Go
@@ -63,63 +60,23 @@ jobs:
       - name: Build Binary and Packages
         working-directory: ./hwexp
         run: |
-          # Strip the 'v' prefix if present for the package version
           CLEAN_VERSION=${{ needs.release.outputs.hwexp_tag_name }}
           CLEAN_VERSION=${CLEAN_VERSION#hwexp-v}
-          CLEAN_VERSION=${CLEAN_VERSION:-0.1.0} # Fallback if tag parsing fails
-          
-          # Add go bin to path for nfpm
+          CLEAN_VERSION=${CLEAN_VERSION:-0.1.0}
           export PATH=$PATH:$(go env GOPATH)/bin
-          
-          # Build via Makefile using the dynamic version
           make build package VERSION=$CLEAN_VERSION
-
-      - name: Make integration test scripts executable
-        run: chmod +x hwexp/tests/integration/*.sh
-
-      - name: Test DEB Install (Ubuntu)
-        run: |
-          DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
-          docker run --rm \
-            -v "$(realpath "$DEB"):/tmp/hwexp.deb:ro" \
-            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
-            ubuntu:22.04 \
-            bash -c "apt-get update -qq && apt-get install -y -qq curl && bash /tests/test-deb-install.sh /tmp/hwexp.deb"
-
-      - name: Test RPM Install (Fedora)
-        run: |
-          RPM=$(find hwexp/dist -maxdepth 1 -name "*.rpm" | head -1)
-          docker run --rm \
-            -v "$(realpath "$RPM"):/tmp/hwexp.rpm:ro" \
-            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
-            fedora:latest \
-            bash -c "bash /tests/test-rpm-install.sh /tmp/hwexp.rpm"
-
-      - name: Test Real hwmon Adapter (fake sysfs)
-        run: |
-          bash hwexp/tests/integration/test-hwmon-install.sh \
-            "$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)" \
-            "$(pwd)"
-
-      - name: Smoke Test - Emitter to Client (Network)
-        run: |
-          DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
-          bash hwexp/tests/integration/test-network-smoke.sh "$DEB"
 
       - name: Upload Release Artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Prefer the hwexp-specific tag; fall back to the root package tag
           TAG_NAME="${{ needs.release.outputs.hwexp_tag_name }}"
-          if [ -z "$TAG_NAME" ]; then
-            TAG_NAME=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
-          fi
           echo "Uploading artifacts to release: $TAG_NAME"
           find ./hwexp/dist -maxdepth 1 -type f | xargs gh release upload "$TAG_NAME" --clobber
 
   docker-publish:
-    needs: [release, build-and-test-hwexp]
+    name: Publish Docker Image
+    needs: [release, build-packages]
     if: ${{ needs.release.outputs.hwexp_release_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -154,3 +111,5 @@ jobs:
           tags: |
             audumla/audiot-hwexp:${{ steps.version.outputs.version }}
             audumla/audiot-hwexp:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

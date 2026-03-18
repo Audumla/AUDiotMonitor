@@ -43,7 +43,6 @@ jobs:
   docker-build-check:
     name: Docker Build Check
     runs-on: ubuntu-latest
-    # Only run on PRs and pushes to master — not every feature branch push
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
@@ -61,3 +60,59 @@ jobs:
           tags: audumla/audiot-hwexp:ci-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    # Only run on PRs — these are the gate before merge, not needed again at release
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: hwexp/go.sum
+
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Build packages
+        working-directory: ./hwexp
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make build package VERSION=0.0.0-ci
+
+      - name: Make test scripts executable
+        run: chmod +x hwexp/tests/integration/*.sh
+
+      - name: Test DEB Install (Ubuntu)
+        run: |
+          DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
+          docker run --rm \
+            -v "$(realpath "$DEB"):/tmp/hwexp.deb:ro" \
+            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
+            ubuntu:22.04 \
+            bash -c "apt-get update -qq && apt-get install -y -qq curl && bash /tests/test-deb-install.sh /tmp/hwexp.deb"
+
+      - name: Test RPM Install (Fedora)
+        run: |
+          RPM=$(find hwexp/dist -maxdepth 1 -name "*.rpm" | head -1)
+          docker run --rm \
+            -v "$(realpath "$RPM"):/tmp/hwexp.rpm:ro" \
+            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
+            fedora:latest \
+            bash -c "bash /tests/test-rpm-install.sh /tmp/hwexp.rpm"
+
+      - name: Test hwmon Adapter (fake sysfs)
+        run: |
+          bash hwexp/tests/integration/test-hwmon-install.sh \
+            "$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)" \
+            "$(pwd)"
+
+      - name: Smoke Test - Network
+        run: |
+          DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
+          bash hwexp/tests/integration/test-network-smoke.sh "$DEB"
