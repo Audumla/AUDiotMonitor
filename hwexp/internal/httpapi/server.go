@@ -102,6 +102,9 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf(`host="%s"`, s.cfg.Identity.Host),
 		}
 		for k, v := range m.Labels {
+			if k == "host" {
+				continue // host is always injected from config above
+			}
 			ls = append(ls, fmt.Sprintf(`%s="%s"`, k, v))
 		}
 		labelStr = "{"

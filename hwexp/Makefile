@@ -13,13 +13,13 @@ build:
 package:
 	mkdir -p dist
 	# Build DEB
-	nfpm pkg --target dist/hwexp_$(VERSION)_amd64.deb -f packaging/nfpm.yaml
+	nfpm pkg --target dist/hwexp_amd64.deb -f packaging/nfpm.yaml
 	# Build RPM
-	nfpm pkg --target dist/hwexp_$(VERSION)_amd64.rpm -f packaging/nfpm.yaml
+	nfpm pkg --target dist/hwexp_amd64.rpm -f packaging/nfpm.yaml
 	# Build Tarball
 	mkdir -p dist/tar
 	cp $(BINARY) configs/*.yaml dist/tar/
-	tar -czvf dist/hwexp_$(VERSION)_linux_amd64.tar.gz -C dist/tar .
+	tar -czvf dist/hwexp_linux_amd64.tar.gz -C dist/tar .
 
 clean:
 	rm -f $(BINARY)

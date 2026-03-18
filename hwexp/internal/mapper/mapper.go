@@ -152,7 +152,7 @@ func (e *Engine) applyNormalization(cr *compiledRule, device model.DiscoveredDev
 		MetricFamily:   n.MetricFamily,
 		MetricType:     n.MetricType,
 		Value:          val,
-		Unit:           "TODO_UNIT_FROM_RULE_OR_FAMILY",
+		Unit:           raw.RawUnit,
 		Labels:         labels,
 		Quality:        raw.Quality,
 		MappingRuleID:  cr.rule.ID,
