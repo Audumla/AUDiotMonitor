@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.4.0...hwexp-v0.5.0) (2026-03-18)
+
+
+### Features
+
+* **hwexp:** auto-map hardware sensors on first run, grafana dashboards and install guide ([d7b4da0](https://github.com/Audumla/AUDiotMonitor/commit/d7b4da0d7a296edc03bcc260dd8a35313dd8ad90))
+
 ## [0.4.0](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.0...v0.4.0) (2026-03-18)
 
 
