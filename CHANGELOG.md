@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Audumla/AUDiotMonitor/compare/v0.4.0...v0.4.1) (2026-03-18)
+
+
+### Bug Fixes
+
+* test failure on docker deploy ([ce77a60](https://github.com/Audumla/AUDiotMonitor/commit/ce77a60dbf7f69c129cf22d685b8a5dec6ae249a))
+
 ## [0.4.0](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.4...v0.4.0) (2026-03-18)
 
 
