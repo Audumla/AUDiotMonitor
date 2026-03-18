@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.5.0...hwexp-v0.5.1) (2026-03-18)
+
+
+### Bug Fixes
+
+* documentation updates ([e5df5ff](https://github.com/Audumla/AUDiotMonitor/commit/e5df5ffb9c7d2785f8275cb58126edc7d24eeee5))
+
 ## [0.5.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.4.0...hwexp-v0.5.0) (2026-03-18)
 
 
