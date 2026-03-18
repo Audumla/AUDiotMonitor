@@ -5,7 +5,8 @@
       "changelog-path": "CHANGELOG.md"
     },
     "hwexp": {
-      "release-type": "go"
+      "release-type": "go",
+      "component": "hwexp"
     }
   }
 }
