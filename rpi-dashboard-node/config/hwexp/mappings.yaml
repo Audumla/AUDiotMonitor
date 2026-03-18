@@ -1,0 +1,16 @@
+schema_version: "1.0.0"
+rules:
+  - id: "mock_gpu_temp"
+    priority: 100
+    match:
+      platform: "linux"
+      vendor: "amd"
+      raw_name_regex: "temp([0-9]+)_input"
+    normalize:
+      metric_family: "hw_device_temperature_celsius"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_temp_${1}"
+      unit_scale: 0.001
+      device_class: "gpu"
+      component: "thermal"
+      sensor: "core"

@@ -5,6 +5,8 @@ global:
 scrape_configs:
   - job_name: 'hwexp'
     static_configs:
-      - targets: ['host.docker.internal:9200']
-        labels:
-          host: 'local-pi'
+      - targets: ['hwexp:9200']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']

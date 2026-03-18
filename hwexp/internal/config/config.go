@@ -110,6 +110,11 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
+	// Environment variable overrides (useful when running in Docker)
+	if v := os.Getenv("HWEXP_HOST"); v != "" {
+		cfg.Identity.Host = v
+	}
+
 	// Basic validation
 	if cfg.Server.ListenAddress == "" {
 		return nil, fmt.Errorf("server.listen_address is required")
