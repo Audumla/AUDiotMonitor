@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.4...v0.4.0) (2026-03-18)
+
+
+### Features
+
+* containerise full stack — hwexp + node-exporter + prometheus + grafana ([2e50d35](https://github.com/Audumla/AUDiotMonitor/commit/2e50d358fc1bef300d99e455ce73dc17bba37b7d))
+* docker enabling ([5ec0286](https://github.com/Audumla/AUDiotMonitor/commit/5ec0286b9256f9f21e4f7b86ad27b70bf45adb8e))
+
+
+### Bug Fixes
+
+* ensure first-time install works correctly on fresh Linux hosts ([f2f1732](https://github.com/Audumla/AUDiotMonitor/commit/f2f173288e558beef95f55891aa0b62a0ee599ee))
+* open/close firewall port 9200 on install and remove ([14391d1](https://github.com/Audumla/AUDiotMonitor/commit/14391d1f22b0047b1f84be60463a8fed65ce0a6b))
+
 ## [0.3.4](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.3...v0.3.4) (2026-03-18)
 
 
