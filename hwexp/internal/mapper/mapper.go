@@ -131,7 +131,6 @@ func (e *Engine) applyNormalization(cr *compiledRule, device model.DiscoveredDev
 
 	// Merge labels
 	labels := make(map[string]string)
-	labels["host"] = "TODO_HOST" // Ideally injected from config/context
 	labels["platform"] = device.Platform
 	labels["source"] = device.Source
 	labels["device_class"] = n.DeviceClass
