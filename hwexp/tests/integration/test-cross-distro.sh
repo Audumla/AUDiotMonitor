@@ -122,7 +122,7 @@ for emitter_def in "${EMITTERS[@]}"; do
     METRICS=$(docker run --rm --network "$NETWORK" "$C_IMAGE" \
       sh -c "${C_CURL_CMD} -sf http://hwexp-emitter:${PORT}/metrics" 2>/dev/null || echo "FAIL")
 
-    if echo "$METRICS" | grep -q 'hwexp_up 1'; then
+    if echo "$METRICS" | grep -qE 'hwexp_up(\{[^}]*\})? 1'; then
       pass "$E_NAME → $C_NAME: /metrics ok (hwexp_up=1)"
     else
       fail "$E_NAME → $C_NAME: /metrics failed"

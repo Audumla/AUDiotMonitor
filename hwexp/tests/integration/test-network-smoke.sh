@@ -92,7 +92,7 @@ VERSION=$(run_client "version")
 echo "$VERSION" | grep -q '"exporter_version"'    && pass "client: /version ok"          || fail "client: /version bad: $VERSION"
 
 METRICS=$(run_client "metrics")
-echo "$METRICS" | grep -q 'hwexp_up 1'            && pass "client: /metrics hwexp_up 1"  || fail "client: /metrics missing hwexp_up"
+echo "$METRICS" | grep -qE 'hwexp_up(\{[^}]*\})? 1' && pass "client: /metrics hwexp_up 1"  || fail "client: /metrics missing hwexp_up"
 echo "$METRICS" | grep -q 'hw_device_temperature' && pass "client: /metrics has temp"    || fail "client: /metrics missing temperature"
 
 DISCOVERY=$(run_client "debug/discovery")

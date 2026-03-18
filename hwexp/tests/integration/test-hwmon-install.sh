@@ -84,7 +84,7 @@ EOF
     echo \"\$RAW\" | grep -q 'power1_input'    && echo '[PASS] raw power readings present' || echo '[FAIL] no raw power readings'
 
     METRICS=\$(curl -sf http://localhost:${PORT}/metrics)
-    echo \"\$METRICS\" | grep -q 'hwexp_up 1'              && echo '[PASS] /metrics hwexp_up=1'           || echo '[FAIL] hwexp_up missing'
+    echo \"\$METRICS\" | grep -qE 'hwexp_up(\\{[^}]*\\})? 1' && echo '[PASS] /metrics hwexp_up=1'           || echo '[FAIL] hwexp_up missing'
     echo \"\$METRICS\" | grep -q 'hw_device_temperature'   && echo '[PASS] temperature metric exported'   || echo '[FAIL] temperature metric missing'
 
     echo ''

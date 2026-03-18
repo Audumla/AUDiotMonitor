@@ -58,7 +58,7 @@ VERSION=$(curl -sf "http://localhost:$PORT/version")
 echo "$VERSION" | grep -q '"exporter_version"'          && pass "/version returns version info" || fail "/version bad response: $VERSION"
 
 METRICS=$(curl -sf "http://localhost:$PORT/metrics")
-echo "$METRICS" | grep -q 'hwexp_up 1'                  && pass "/metrics contains hwexp_up 1"  || fail "/metrics bad response"
+echo "$METRICS" | grep -qE 'hwexp_up(\{[^}]*\})? 1'    && pass "/metrics contains hwexp_up 1"  || fail "/metrics bad response"
 echo "$METRICS" | grep -q 'hw_device_temperature'       && pass "/metrics contains mapped temp"  || fail "/metrics missing temperature metric"
 
 # --- 4. Uninstall and verify cleanup ---
