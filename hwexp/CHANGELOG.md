@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.5.1...hwexp-v0.6.0) (2026-03-18)
+
+
+### Features
+
+* **hwexp:** restructure deployment into collector/dashboard stacks ([ac81632](https://github.com/Audumla/AUDiotMonitor/commit/ac816323c6e5ff5370d6adda03f1518fb4ff945a))
+
 ## [0.5.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.5.0...hwexp-v0.5.1) (2026-03-18)
 
 
