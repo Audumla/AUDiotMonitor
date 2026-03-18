@@ -1,0 +1,6 @@
+configs/
+dist/
+packaging/
+tests/
+*.md
+.git/

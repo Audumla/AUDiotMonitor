@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"hwexp/internal/adapters/hwmon"
 	"hwexp/internal/adapters/mock"
@@ -30,12 +33,23 @@ func main() {
 	l := logger.New(cfg.Identity.Host, "hwexp")
 	l.Info("startup", "Starting AUDiot Exporter...", nil)
 
-	// 3. Load Mapping Rules
+	// 3. Load Mapping Rules (manual + previously auto-generated)
 	rules, err := mapper.LoadRules(cfg.Mapping.RulesFile)
 	if err != nil {
 		l.Fatal("startup", "Failed to load rules", "CFG_LOAD_FAILED", map[string]interface{}{"error": err.Error()})
 	}
 	l.Info("startup", "Loaded mapping rules", map[string]interface{}{"count": len(rules), "file": cfg.Mapping.RulesFile})
+
+	if cfg.Mapping.AutoMap.Enabled && cfg.Mapping.AutoMap.GeneratedFile != "" {
+		if genRules, err := mapper.LoadRules(cfg.Mapping.AutoMap.GeneratedFile); err == nil {
+			rules = append(rules, genRules...)
+			l.Info("startup", "Loaded auto-generated rules", map[string]interface{}{
+				"count": len(genRules),
+				"file":  cfg.Mapping.AutoMap.GeneratedFile,
+			})
+		}
+		// Missing file is fine on first run — it will be created by the engine.
+	}
 
 	// 4. Initialize Auth Store
 	authStore, err := httpapi.LoadAuthStore(cfg.Security.APITokensFile)
@@ -77,11 +91,29 @@ func main() {
 
 	// 8. Start Core Engine
 	coreEngine := engine.NewEngine(stateStore, mapperEngine, adapters)
+	if cfg.Mapping.AutoMap.Enabled {
+		coreEngine.EnableAutoMap(cfg.Mapping.AutoMap.GeneratedFile)
+		l.Info("startup", "Auto-mapping enabled", map[string]interface{}{"generated_file": cfg.Mapping.AutoMap.GeneratedFile})
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	l.Info("startup", "Starting background telemetry loop", map[string]interface{}{"interval": cfg.Server.RefreshInterval})
 	coreEngine.Start(ctx)
+
+	// 8b. SIGHUP reloads mapping rules without restart
+	go func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGHUP)
+		for range sigs {
+			l.Info("reload", "Reloading mapping rules (SIGHUP)", map[string]interface{}{"file": cfg.Mapping.RulesFile})
+			if err := mapperEngine.ReloadRules(cfg.Mapping.RulesFile); err != nil {
+				l.Info("reload", "Failed to reload mapping rules", map[string]interface{}{"error": err.Error()})
+			} else {
+				l.Info("reload", "Mapping rules reloaded successfully", nil)
+			}
+		}
+	}()
 
 	// 9. Start HTTP Server
 	server := httpapi.NewServer(cfg, stateStore, authStore)

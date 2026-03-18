@@ -10,7 +10,7 @@ services:
     volumes:
       - /sys:/sys:ro
       - /proc:/proc:ro
-      - ./config/hwexp:/etc/hwexp:ro,z
+      - ./config/hwexp:/etc/hwexp:z
     environment:
       - HWEXP_HOST=${HOSTNAME:-localhost}
     ports:

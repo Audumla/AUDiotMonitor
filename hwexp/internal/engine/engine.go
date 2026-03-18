@@ -3,10 +3,14 @@ package engine
 import (
 	"context"
 	"log"
+	"os"
+	"sync"
 	"time"
 
-	"hwexp/internal/model"
+	"gopkg.in/yaml.v3"
+	"hwexp/internal/automapper"
 	"hwexp/internal/mapper"
+	"hwexp/internal/model"
 	"hwexp/internal/store"
 )
 
@@ -17,19 +21,32 @@ type Adapter interface {
 }
 
 type Engine struct {
-	store        *store.StateStore
-	mapper       *mapper.Engine
-	adapters     []Adapter
-	pollInterval time.Duration
+	store          *store.StateStore
+	mapper         *mapper.Engine
+	adapters       []Adapter
+	pollInterval   time.Duration
+	autoMapEnabled bool
+	generatedFile  string
+	generatedRules map[string]model.MappingRule // keyed by rule ID
+	mu             sync.Mutex
 }
 
 func NewEngine(s *store.StateStore, m *mapper.Engine, adapters []Adapter) *Engine {
 	return &Engine{
-		store:        s,
-		mapper:       m,
-		adapters:     adapters,
-		pollInterval: 5 * time.Second, // Default from spec
+		store:          s,
+		mapper:         m,
+		adapters:       adapters,
+		pollInterval:   5 * time.Second,
+		generatedRules: make(map[string]model.MappingRule),
 	}
+}
+
+// EnableAutoMap turns on dynamic rule inference for unmapped measurements.
+// If generatedFile is non-empty, inferred rules are persisted there so they
+// survive restarts and can be promoted to manual rules.
+func (e *Engine) EnableAutoMap(generatedFile string) {
+	e.autoMapEnabled = true
+	e.generatedFile = generatedFile
 }
 
 func (e *Engine) Start(ctx context.Context) {
@@ -92,7 +109,14 @@ func (e *Engine) executeCycle(ctx context.Context) {
 			if decision != nil {
 				newDecisions = append(newDecisions, *decision)
 			}
-			
+
+			// Auto-map: infer a rule for any measurement that has no manual mapping.
+			if e.autoMapEnabled && decision != nil && decision.Decision == "ignored" {
+				if rule := automapper.InferRule(device, r); rule != nil {
+					e.applyAutoRule(*rule)
+				}
+			}
+
 			if norm != nil {
 				// Combine logical name and device for uniqueness
 				key := norm.StableDeviceID + ":" + norm.LogicalName
@@ -103,4 +127,61 @@ func (e *Engine) executeCycle(ctx context.Context) {
 
 	// 4. Update snapshot atomically
 	e.store.UpdateSnapshot(newDevices, newMeasurements, newRaw, newDecisions)
+}
+
+// applyAutoRule adds a newly inferred rule to the mapper and persists it.
+func (e *Engine) applyAutoRule(rule model.MappingRule) {
+	e.mu.Lock()
+	_, alreadyKnown := e.generatedRules[rule.ID]
+	if !alreadyKnown {
+		e.generatedRules[rule.ID] = rule
+	}
+	e.mu.Unlock()
+
+	if alreadyKnown {
+		return
+	}
+
+	added, err := e.mapper.AddRules([]model.MappingRule{rule})
+	if err != nil {
+		log.Printf("automapper: failed to add rule %s: %v", rule.ID, err)
+		return
+	}
+	if len(added) == 0 {
+		return // duplicate, already in mapper from a previous load
+	}
+
+	log.Printf("automapper: inferred rule %s for %s/%s", rule.ID, rule.Match.DeviceClass, rule.Match.RawNameRegex)
+
+	if e.generatedFile != "" {
+		e.persistGeneratedRules()
+	}
+}
+
+// persistGeneratedRules writes all auto-generated rules to the configured file.
+func (e *Engine) persistGeneratedRules() {
+	e.mu.Lock()
+	rules := make([]model.MappingRule, 0, len(e.generatedRules))
+	for _, r := range e.generatedRules {
+		rules = append(rules, r)
+	}
+	e.mu.Unlock()
+
+	wrapper := struct {
+		SchemaVersion string             `yaml:"schema_version"`
+		Rules         []model.MappingRule `yaml:"rules"`
+	}{
+		SchemaVersion: "1.0.0",
+		Rules:         rules,
+	}
+
+	data, err := yaml.Marshal(wrapper)
+	if err != nil {
+		log.Printf("automapper: failed to marshal rules: %v", err)
+		return
+	}
+
+	if err := os.WriteFile(e.generatedFile, data, 0644); err != nil {
+		log.Printf("automapper: failed to write %s: %v", e.generatedFile, err)
+	}
 }

@@ -53,10 +53,16 @@ type AdapterConfig struct {
 }
 
 type MappingConfig struct {
-	RulesFile          string `yaml:"rules_file"`
-	AliasesFile        string `yaml:"aliases_file,omitempty"`
-	StrictMode         bool   `yaml:"strict_mode"`
-	DefaultDropUnmapped bool   `yaml:"default_drop_unmapped"`
+	RulesFile           string        `yaml:"rules_file"`
+	AliasesFile         string        `yaml:"aliases_file,omitempty"`
+	StrictMode          bool          `yaml:"strict_mode"`
+	DefaultDropUnmapped bool          `yaml:"default_drop_unmapped"`
+	AutoMap             AutoMapConfig `yaml:"auto_map,omitempty"`
+}
+
+type AutoMapConfig struct {
+	Enabled       bool   `yaml:"enabled"`
+	GeneratedFile string `yaml:"generated_file,omitempty"`
 }
 
 type FiltersConfig struct {

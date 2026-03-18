@@ -14,3 +14,6 @@ adapters:
 mapping:
   rules_file: "/etc/hwexp/mappings.yaml"
   strict_mode: false
+  auto_map:
+    enabled: true
+    generated_file: "/etc/hwexp/mappings.auto.yaml"

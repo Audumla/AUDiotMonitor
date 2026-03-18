@@ -119,7 +119,7 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write output
-	fmt.Fprintf(w, "# HELP hwexp_up Test harness is running\n# TYPE hwexp_up gauge\nhwexp_up 1\n")
+	fmt.Fprintf(w, "# HELP hwexp_up Exporter is running\n# TYPE hwexp_up gauge\nhwexp_up{host=%q} 1\n", s.cfg.Identity.Host)
 	for family, lines := range grouped {
 		fmt.Fprintf(w, "# TYPE %s %s\n", family, types[family])
 		for _, line := range lines {

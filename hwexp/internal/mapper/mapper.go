@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -19,6 +20,7 @@ type compiledRule struct {
 }
 
 type Engine struct {
+	mu    sync.RWMutex
 	rules []compiledRule
 }
 
@@ -67,9 +69,56 @@ func LoadRules(path string) ([]model.MappingRule, error) {
 	return wrapper.Rules, nil
 }
 
+// AddRules compiles and appends rules that are not already present (by ID).
+// Returns the IDs of rules that were actually added.
+// It is safe to call concurrently with Map.
+func (e *Engine) AddRules(rules []model.MappingRule) ([]string, error) {
+	newEngine, err := NewEngine(rules)
+	if err != nil {
+		return nil, err
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	existing := make(map[string]struct{}, len(e.rules))
+	for _, cr := range e.rules {
+		existing[cr.rule.ID] = struct{}{}
+	}
+
+	var added []string
+	for _, cr := range newEngine.rules {
+		if _, dup := existing[cr.rule.ID]; !dup {
+			e.rules = append(e.rules, cr)
+			added = append(added, cr.rule.ID)
+		}
+	}
+	return added, nil
+}
+
+// ReloadRules reloads the mapping rules from path atomically.
+// It is safe to call concurrently with Map.
+func (e *Engine) ReloadRules(path string) error {
+	rules, err := LoadRules(path)
+	if err != nil {
+		return err
+	}
+	newEngine, err := NewEngine(rules)
+	if err != nil {
+		return err
+	}
+	e.mu.Lock()
+	e.rules = newEngine.rules
+	e.mu.Unlock()
+	return nil
+}
+
 // Map evaluates a raw measurement against rules and returns a normalized measurement.
 func (e *Engine) Map(device model.DiscoveredDevice, raw model.RawMeasurement) (*model.NormalizedMeasurement, *model.MappingDecision) {
-	for _, cr := range e.rules {
+	e.mu.RLock()
+	rules := e.rules
+	e.mu.RUnlock()
+	for _, cr := range rules {
 		if match, matches := e.evaluateMatch(&cr, device, raw); match {
 			if cr.rule.Normalize.Drop {
 				return nil, &model.MappingDecision{
