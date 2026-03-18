@@ -1,0 +1,40 @@
+[
+  {
+    "id": "CHG-9c1c7a06",
+    "agent": "gemini",
+    "change_group": "audiotmonitor",
+    "plugin_version": "unreleased",
+    "date": "2026-03-19",
+    "recorded_at": "2026-03-18T23:05:05.331803Z",
+    "summary_tags": [
+      "New Feature",
+      "Code Refactoring"
+    ],
+    "summary": "Implemented missing API endpoints and self-metrics to align with specifications.",
+    "details": [
+      "Added /readyz and /debug/catalog endpoints.",
+      "Implemented tracking and exposure of self-metrics (refresh duration, success, last success time, discovered devices, mapping failures).",
+      "Updated StateStore to track if at least one poll cycle has completed (readiness).",
+      "Updated HTTP server to expose these metrics in /metrics."
+    ]
+  },
+  {
+    "id": "CHG-9c1c7a06-1",
+    "agent": "gemini",
+    "change_group": "audiotmonitor",
+    "plugin_version": "unreleased",
+    "date": "2026-03-19",
+    "recorded_at": "2026-03-18T23:15:01.103987Z",
+    "summary_tags": [
+      "Test Update"
+    ],
+    "summary": "Added comprehensive testing suite including mocks and cross-stack integration tests.",
+    "details": [
+      "Created unit tests for hwmon adapter using simulated sysfs.",
+      "Created unit tests for Engine using mock adapters.",
+      "Created unit tests for HTTP API using httptest and StateStore mocks.",
+      "Developed cross-stack integration test in Python to verify end-to-end data flow from hwexp to Prometheus to Grafana.",
+      "Verified and highlighted firewall requirements in INSTALL.md."
+    ]
+  }
+]

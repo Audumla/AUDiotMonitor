@@ -20,6 +20,14 @@ type Adapter interface {
 	Poll(ctx context.Context) ([]model.RawMeasurement, error)
 }
 
+type SelfMetrics struct {
+	LastRefreshDuration time.Duration
+	LastRefreshSuccess  bool
+	LastSuccessTime     time.Time
+	DiscoveredDevices   int
+	MappingFailures     int
+}
+
 type Engine struct {
 	store          *store.StateStore
 	mapper         *mapper.Engine
@@ -28,7 +36,10 @@ type Engine struct {
 	autoMapEnabled bool
 	generatedFile  string
 	generatedRules map[string]model.MappingRule // keyed by rule ID
-	mu             sync.Mutex
+	mu             sync.RWMutex
+
+	// Self-metrics
+	metrics SelfMetrics
 }
 
 func NewEngine(s *store.StateStore, m *mapper.Engine, adapters []Adapter) *Engine {
@@ -41,10 +52,16 @@ func NewEngine(s *store.StateStore, m *mapper.Engine, adapters []Adapter) *Engin
 	}
 }
 
+func (e *Engine) GetSelfMetrics() SelfMetrics {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.metrics
+}
+
 // EnableAutoMap turns on dynamic rule inference for unmapped measurements.
-// If generatedFile is non-empty, inferred rules are persisted there so they
-// survive restarts and can be promoted to manual rules.
 func (e *Engine) EnableAutoMap(generatedFile string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.autoMapEnabled = true
 	e.generatedFile = generatedFile
 }
@@ -71,16 +88,21 @@ func (e *Engine) loop(ctx context.Context) {
 }
 
 func (e *Engine) executeCycle(ctx context.Context) {
+	start := time.Now()
 	newDevices := make(map[string]model.DiscoveredDevice)
 	newMeasurements := make(map[string]model.NormalizedMeasurement)
 	newRaw := make(map[string]model.RawMeasurement)
 	var newDecisions []model.MappingDecision
+
+	success := true
+	mappingFailures := 0
 
 	for _, a := range e.adapters {
 		// 1. Discover
 		devices, err := a.Discover(ctx)
 		if err != nil {
 			log.Printf("Adapter discovery error: %v", err)
+			success = false
 			continue
 		}
 		for _, d := range devices {
@@ -91,6 +113,7 @@ func (e *Engine) executeCycle(ctx context.Context) {
 		raws, err := a.Poll(ctx)
 		if err != nil {
 			log.Printf("Adapter poll error: %v", err)
+			success = false
 			continue
 		}
 
@@ -100,25 +123,28 @@ func (e *Engine) executeCycle(ctx context.Context) {
 
 			device, exists := newDevices[r.StableDeviceID]
 			if !exists {
-				// We have a measurement for a device we didn't discover this cycle.
-				// In a real app, we'd check grace periods here.
 				continue 
 			}
 
 			norm, decision := e.mapper.Map(device, r)
 			if decision != nil {
 				newDecisions = append(newDecisions, *decision)
+				if decision.Decision == "ignored" {
+					mappingFailures++
+				}
 			}
 
 			// Auto-map: infer a rule for any measurement that has no manual mapping.
-			if e.autoMapEnabled && decision != nil && decision.Decision == "ignored" {
+			e.mu.RLock()
+			autoMapEnabled := e.autoMapEnabled
+			e.mu.RUnlock()
+			if autoMapEnabled && decision != nil && decision.Decision == "ignored" {
 				if rule := automapper.InferRule(device, r); rule != nil {
 					e.applyAutoRule(*rule)
 				}
 			}
 
 			if norm != nil {
-				// Combine logical name and device for uniqueness
 				key := norm.StableDeviceID + ":" + norm.LogicalName
 				newMeasurements[key] = *norm
 			}
@@ -127,6 +153,17 @@ func (e *Engine) executeCycle(ctx context.Context) {
 
 	// 4. Update snapshot atomically
 	e.store.UpdateSnapshot(newDevices, newMeasurements, newRaw, newDecisions)
+
+	// 5. Update self-metrics
+	e.mu.Lock()
+	e.metrics.LastRefreshDuration = time.Since(start)
+	e.metrics.LastRefreshSuccess = success
+	if success {
+		e.metrics.LastSuccessTime = time.Now()
+	}
+	e.metrics.DiscoveredDevices = len(newDevices)
+	e.metrics.MappingFailures += mappingFailures
+	e.mu.Unlock()
 }
 
 // applyAutoRule adds a newly inferred rule to the mapper and persists it.

@@ -37,12 +37,69 @@ sudo usermod -aG docker $USER
 
 ---
 
-## Deploy: Server Stack (monitored machine)
+## Server Stack — `dashboard/server/docker-compose.yml`
 
-Copy `dashboard/server/` to the target machine, then:
+Runs on every machine you want to monitor. Exposes hardware and OS metrics to Prometheus.
+
+```yaml
+services:
+
+  hwexp:
+    image: audumla/audiot-hwexp:latest
+    container_name: hwexp
+    privileged: true                        # required to read /sys/class/hwmon
+    volumes:
+      - /sys:/sys:ro
+      - /proc:/proc:ro
+      - ./config/hwexp:/etc/hwexp:z         # hwexp.yaml + mappings.yaml config
+    environment:
+      - HWEXP_HOST=${HOSTNAME:-localhost}   # label applied to all hw_device_* metrics
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+```
+
+**`.env.example` (copy to `.env` and customise):**
+
+```env
+# Hostname label on all hw_device_* metrics — defaults to $HOSTNAME
+HWEXP_HOST=myserver
+```
+
+### Deploy server
 
 ```bash
 cd dashboard/server
+cp .env.example .env          # optional — edit HWEXP_HOST if needed
 docker compose up -d
 ```
 
@@ -51,13 +108,13 @@ docker compose up -d
 ```bash
 docker compose ps
 
-# Hardware exporter metrics (available within ~5 s of first start)
+# Hardware metrics (available within ~5 s of first start)
 curl http://localhost:9200/metrics | head -20
 
-# What sensors were auto-discovered
+# Sensors discovered on this machine
 curl http://localhost:9200/debug/discovery
 
-# Prometheus health
+# Prometheus health check
 curl http://localhost:9090/-/healthy
 ```
 
@@ -80,38 +137,68 @@ Port 9100 (node-exporter) is internal to the server stack and does not need exte
 
 ---
 
-## Deploy: Display Stack (Grafana)
+## Display Stack — `dashboard/display/docker-compose.yml`
 
-Copy `dashboard/display/` to the display machine, then set `PROMETHEUS_URL` to point at your server:
+Runs Grafana only. Can be on the same machine as the server or anywhere else on the network.
+
+```yaml
+services:
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: audiot-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro,z
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro,z
+      - ./dashboards:/var/lib/grafana/dashboards:ro,z
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}   # point at your server
+
+volumes:
+  grafana-data:
+```
+
+**`.env.example` (copy to `.env` and customise):**
+
+```env
+# URL of Prometheus on the server stack — change to the server's IP or hostname
+PROMETHEUS_URL=http://192.168.1.10:9090
+
+# Grafana admin password (default: admin — change in production)
+GF_ADMIN_PASSWORD=admin
+
+# Anonymous read-only access — set to false to require login for all users
+GF_AUTH_ANONYMOUS_ENABLED=true
+GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+```
+
+### Deploy display
 
 ```bash
 cd dashboard/display
-
-# Point at your server (replace with the server's IP or hostname)
-export PROMETHEUS_URL=http://192.168.1.10:9090
-
+cp .env.example .env
+# Edit .env — set PROMETHEUS_URL to your server's IP
 docker compose up -d
 ```
-
-Or create a `.env` file in `dashboard/display/`:
-
-```
-PROMETHEUS_URL=http://192.168.1.10:9090
-GF_ADMIN_PASSWORD=changeme
-```
-
-Then run `docker compose up -d`.
 
 ### Open Grafana
 
 Navigate to `http://<display-host>:3000`.
 
-Default login: **admin / admin** (you'll be prompted to change the password).
+Default login: **admin / admin** (you'll be prompted to change the password on first login).
 
 Three dashboards are pre-loaded in the **AUDiot** folder:
 - **AUDiot System Overview** — comprehensive view: OS stats, all hardware sensors, network, disk
 - **AUDiot Panel Display** — compact at-a-glance status board
 - **AUDiot Discovery / Operations** — debug views
+
+Use the **host** template variable at the top of each dashboard to switch between monitored machines.
 
 ### Open firewall ports (if needed)
 
@@ -120,6 +207,27 @@ sudo firewall-cmd --zone=public --add-port=3000/tcp --permanent && sudo firewall
 # or
 sudo ufw allow 3000/tcp
 ```
+
+---
+
+## Common Scenarios
+
+### Single machine (all-in-one)
+
+```bash
+cd dashboard/server  && docker compose up -d
+cd dashboard/display && docker compose up -d   # PROMETHEUS_URL defaults to localhost:9090
+```
+
+### Dedicated display (RPi kiosk + multiple servers)
+
+```text
+Server A (192.168.1.10) — runs dashboard/server/
+Server B (192.168.1.11) — runs dashboard/server/
+RPi display            — runs dashboard/display/ → PROMETHEUS_URL=http://192.168.1.10:9090
+```
+
+*To scrape multiple servers from one Prometheus, add extra scrape targets to `server/config/prometheus/prometheus.yml`.*
 
 ---
 
@@ -136,6 +244,7 @@ cat dashboard/server/config/hwexp/mappings.auto.yaml
 Rules are grouped by device class and sensor type (e.g., one rule covers all AMD GPU temperature sensors). To customise a rule, copy it from `mappings.auto.yaml` into `mappings.yaml` and set a higher `priority`. Manual rules always override auto-generated ones.
 
 To reload `mappings.yaml` after editing (no container restart needed):
+
 ```bash
 docker kill --signal=SIGHUP hwexp
 ```
@@ -145,10 +254,7 @@ docker kill --signal=SIGHUP hwexp
 ## Updates
 
 ```bash
-# Server
-cd dashboard/server && docker compose pull && docker compose up -d
-
-# Display
+cd dashboard/server  && docker compose pull && docker compose up -d
 cd dashboard/display && docker compose pull && docker compose up -d
 ```
 

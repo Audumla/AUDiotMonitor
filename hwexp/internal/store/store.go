@@ -9,6 +9,7 @@ import (
 // As per spec Section 6: "All stores MUST be atomically replaceable per refresh cycle."
 type StateStore struct {
 	mu           sync.RWMutex
+	ready        bool
 	devices      map[string]model.DiscoveredDevice
 	measurements map[string]model.NormalizedMeasurement
 	raw          map[string]model.RawMeasurement
@@ -17,6 +18,7 @@ type StateStore struct {
 
 func NewStateStore() *StateStore {
 	return &StateStore{
+		ready:        false,
 		devices:      make(map[string]model.DiscoveredDevice),
 		measurements: make(map[string]model.NormalizedMeasurement),
 		raw:          make(map[string]model.RawMeasurement),
@@ -37,6 +39,13 @@ func (s *StateStore) UpdateSnapshot(
 	s.measurements = newMeasurements
 	s.raw = newRaw
 	s.decisions = newDecisions
+	s.ready = true
+}
+
+func (s *StateStore) IsReady() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.ready
 }
 
 // GetAllNormalized returns a copy of all current normalized measurements.

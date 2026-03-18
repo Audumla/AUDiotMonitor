@@ -116,7 +116,7 @@ func main() {
 	}()
 
 	// 9. Start HTTP Server
-	server := httpapi.NewServer(cfg, stateStore, authStore)
+	server := httpapi.NewServer(cfg, stateStore, coreEngine, authStore)
 	l.Info("startup", "HTTP server listening", map[string]interface{}{"address": cfg.Server.ListenAddress})
 	if err := server.Start(); err != nil {
 		l.Fatal("startup", "Server failed", "HTTP_INTERNAL_ERROR", map[string]interface{}{"error": err.Error()})
