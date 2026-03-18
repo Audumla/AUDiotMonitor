@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.3](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.2...v0.3.3) (2026-03-18)
+
+
+### Bug Fixes
+
+* hardware monitoring ([0e3f46f](https://github.com/Audumla/AUDiotMonitor/commit/0e3f46f4bd4a84d992f590c4228aaa0655292a92))
+* host issue ([8ea5efc](https://github.com/Audumla/AUDiotMonitor/commit/8ea5efce371c9d9235fc1af77de10ee8e42e10b8))
+
 ## [0.3.2](https://github.com/Audumla/AUDiotMonitor/compare/v0.3.1...v0.3.2) (2026-03-17)
 
 
