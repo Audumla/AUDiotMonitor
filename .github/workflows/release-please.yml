@@ -22,7 +22,6 @@ jobs:
   release:
     runs-on: ubuntu-latest
     outputs:
-      releases_created: ${{ steps.release.outputs.releases_created }}
       hwexp_release_created: ${{ steps.release.outputs['hwexp--release_created'] }}
       hwexp_tag_name: ${{ steps.release.outputs['hwexp--tag_name'] }}
     steps:
