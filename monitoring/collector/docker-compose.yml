@@ -10,28 +10,6 @@
 
 services:
 
-  # ── Init: write Prometheus scrape config ──────────────────────────────────
-  prometheus-init:
-    image: busybox
-    command:
-      - sh
-      - -c
-      - |
-        cat > /config/prometheus.yml << 'EOF'
-        global:
-          scrape_interval: 5s
-          evaluation_interval: 5s
-        scrape_configs:
-          - job_name: hwexp
-            static_configs:
-              - targets: ['hwexp:9200']
-          - job_name: node
-            static_configs:
-              - targets: ['node-exporter:9100']
-        EOF
-    volumes:
-      - prometheus-config:/config
-
   # ── Hardware sensor exporter ───────────────────────────────────────────────
   hwexp:
     image: audumla/audiot-hwexp:latest
@@ -68,22 +46,31 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    depends_on:
-      prometheus-init:
-        condition: service_completed_successfully
+    entrypoint:
+      - sh
+      - -c
+      - |
+        cat > /tmp/prometheus.yml << 'EOF'
+        global:
+          scrape_interval: 5s
+          evaluation_interval: 5s
+        scrape_configs:
+          - job_name: hwexp
+            static_configs:
+              - targets: ['hwexp:9200']
+          - job_name: node
+            static_configs:
+              - targets: ['node-exporter:9100']
+        EOF
+        exec /bin/prometheus \
+          --config.file=/tmp/prometheus.yml \
+          --storage.tsdb.path=/prometheus
     volumes:
-      - prometheus-config:/etc/prometheus:ro
       - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
     ports:
       - "9090:9090"
     restart: unless-stopped
 
 volumes:
-  prometheus-config:
   prometheus-data:
   hwexp-state:
