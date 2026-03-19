@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"hwexp/internal/adapters/hwmon"
@@ -20,7 +22,60 @@ import (
 	"hwexp/internal/logger"
 	"hwexp/internal/mapper"
 	"hwexp/internal/store"
+	"hwexp/internal/version"
 )
+
+func printBanner(cfg *config.Config, configPath string) {
+	var adapters []string
+	if cfg.Adapters.LinuxHwmon.Enabled {
+		adapters = append(adapters, "linux_hwmon")
+	}
+	if cfg.Adapters.LinuxGpuVendor.Enabled {
+		adapters = append(adapters, "linux_gpu_vendor")
+	}
+	if cfg.Adapters.LinuxVendorExec.Enabled {
+		adapters = append(adapters, "linux_vendor_exec")
+	}
+	if cfg.Adapters.Llamaswap.Enabled {
+		adapters = append(adapters, "llamaswap")
+	}
+	adapterStr := strings.Join(adapters, ", ")
+	if adapterStr == "" {
+		adapterStr = "(none)"
+	}
+
+	autoMap := "disabled"
+	if cfg.Mapping.AutoMap.Enabled {
+		autoMap = "enabled"
+	}
+
+	fmt.Fprintf(os.Stderr, `
+ ╔══════════════════════════════════════════════════════╗
+ ║          AUDiot Hardware Exporter  %-17s║
+ ╠══════════════════════════════════════════════════════╣
+ ║  Host       : %-38s║
+ ║  Listen     : %-38s║
+ ║  Config     : %-38s║
+ ║  Refresh    : %-38s║
+ ║  Discovery  : %-38s║
+ ║  Auto-map   : %-38s║
+ ║  Adapters   : %-38s║
+ ║  Go version : %-38s║
+ ║  Build time : %-38s║
+ ╚══════════════════════════════════════════════════════╝
+`,
+		"v"+version.Version,
+		cfg.Identity.Host,
+		cfg.Server.ListenAddress,
+		configPath,
+		cfg.Server.RefreshInterval,
+		cfg.Server.DiscoveryInterval,
+		autoMap,
+		adapterStr,
+		version.GoVersion(),
+		version.BuildTime,
+	)
+}
 
 func main() {
 	configPath := flag.String("config", "configs/hwexp.yaml", "Path to config YAML")
@@ -35,6 +90,10 @@ func main() {
 
 	// 2. Initialize Logger
 	l := logger.New(cfg.Identity.Host, "hwexp")
+
+	// Print human-readable startup banner to stderr before structured logs
+	printBanner(cfg, *configPath)
+
 	l.Info("startup", "Starting AUDiot Exporter...", nil)
 
 	// 3. Load Mapping Rules (manual + previously auto-generated)

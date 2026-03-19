@@ -8,7 +8,7 @@ BINARY=hwexp
 all: build package
 
 build:
-	go build -o $(BINARY) ./cmd/hwexp/main.go
+	go build -ldflags "-X hwexp/internal/version.Version=$(VERSION) -X hwexp/internal/version.BuildTime=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" -o $(BINARY) ./cmd/hwexp/main.go
 
 package:
 	mkdir -p dist
