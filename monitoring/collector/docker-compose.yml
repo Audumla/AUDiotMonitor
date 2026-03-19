@@ -10,47 +10,14 @@
 
 services:
 
-  # ── Hardware sensor exporter ───────────────────────────────────────────────
-  hwexp:
-    image: audumla/audiot-hwexp:latest
-    container_name: hwexp
-    privileged: true                  # required to read /sys/class/hwmon
-    volumes:
-      - /sys:/sys:ro
-      - /proc:/proc:ro
-      - hwexp-state:/var/lib/hwexp    # persists auto-generated mapping rules
-    environment:
-      - HWEXP_HOST=${HWEXP_HOST:-${HOSTNAME:-localhost}}
-    ports:
-      - "9200:9200"
-    restart: unless-stopped
-
-  # ── OS metrics exporter ───────────────────────────────────────────────────
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
+  # ── Init: write Prometheus scrape config ──────────────────────────────────
+  prometheus-init:
+    image: busybox
     command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    restart: unless-stopped
-
-  # ── Metrics database ──────────────────────────────────────────────────────
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    entrypoint:
       - sh
       - -c
       - |
-        cat > /tmp/prometheus.yml << 'EOF'
+        cat > /config/prometheus.yml << 'EOF'
         global:
           scrape_interval: 5s
           evaluation_interval: 5s
@@ -62,15 +29,59 @@ services:
             static_configs:
               - targets: ['node-exporter:9100']
         EOF
-        exec /bin/prometheus \
-          --config.file=/tmp/prometheus.yml \
-          --storage.tsdb.path=/prometheus
     volumes:
-      - prometheus-data:/prometheus
+      - ./prometheus/config:/config:z
+
+  # ── Hardware sensor exporter ───────────────────────────────────────────────
+  hwexp:
+    image: audumla/audiot-hwexp:latest
+    container_name: hwexp
+    privileged: true                  # required to read /sys/class/hwmon
+    volumes:
+      - /sys:/sys:ro
+      - /proc:/proc:ro
+      - ./hwexp/config:/var/lib/hwexp # persists auto-generated mapping rules
+    environment:
+      HWEXP_HOST: ${HWEXP_HOST:-${HOSTNAME:-localhost}}
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+
+  # ── OS metrics exporter ───────────────────────────────────────────────────
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    privileged: true
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/rootfs
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  # ── Metrics database ──────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    user: "1000:1000"
+    depends_on:
+      prometheus-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./prometheus/config:/etc/prometheus:ro,z
+      - ./prometheus/data:/prometheus:z
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
     ports:
       - "9090:9090"
     restart: unless-stopped
-
-volumes:
-  prometheus-data:
-  hwexp-state:
