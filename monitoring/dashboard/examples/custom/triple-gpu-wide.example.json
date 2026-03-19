@@ -5,45 +5,38 @@
   "timezone": "browser",
   "schemaVersion": 38,
   "refresh": "5s",
-  "time": { "from": "now-15m", "to": "now" },
-  "templating": {
-    "list": [
-      {
-        "name": "host",
-        "label": "Host",
-        "type": "query",
-        "query": "label_values(hwexp_up, host)",
-        "refresh": 2,
-        "multi": false,
-        "includeAll": false,
-        "sort": 1
-      }
-    ]
-  },
+  "time": { "from": "now-5m", "to": "now" },
   "panels": [
     {
       "id": 1,
       "type": "gauge",
-      "title": "CPU Usage",
-      "gridPos": { "h": 10, "w": 3, "x": 0, "y": 0 },
-      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "legendFormat": "CPU" }],
+      "title": "GPU 1 Compute",
+      "description": "Navi 31 - pci-0000:03:00.0",
+      "gridPos": { "h": 9, "w": 3, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:03:00.0\"}",
+        "legendFormat": "GPU 1"
+      }],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
           "max": 100,
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "orange", "value": 70 },
-              { "color": "red", "value": 85 }
+              { "color": "yellow", "value": 60 },
+              { "color": "orange", "value": 80 },
+              { "color": "red", "value": 95 }
             ]
           }
         }
@@ -52,26 +45,33 @@
     {
       "id": 2,
       "type": "gauge",
-      "title": "RAM Usage",
-      "gridPos": { "h": 10, "w": 3, "x": 3, "y": 0 },
-      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "RAM" }],
+      "title": "GPU 2 Compute",
+      "description": "Navi 31 - pci-0000:06:00.0",
+      "gridPos": { "h": 9, "w": 3, "x": 3, "y": 0 },
+      "targets": [{
+        "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:06:00.0\"}",
+        "legendFormat": "GPU 2"
+      }],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
           "max": 100,
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
               { "color": "orange", "value": 80 },
-              { "color": "red", "value": 92 }
+              { "color": "red", "value": 95 }
             ]
           }
         }
@@ -80,24 +80,31 @@
     {
       "id": 3,
       "type": "gauge",
-      "title": "GPU Processor Usage",
-      "gridPos": { "h": 10, "w": 9, "x": 6, "y": 0 },
-      "targets": [{ "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"compute\", device_class=\"gpu\"}", "legendFormat": "{{logical_name}}" }],
+      "title": "GPU 3 Compute",
+      "description": "Navi 21 - pci-0000:7e:00.0",
+      "gridPos": { "h": 9, "w": 3, "x": 6, "y": 0 },
+      "targets": [{
+        "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:7e:00.0\"}",
+        "legendFormat": "GPU 3"
+      }],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "horizontal",
+        "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
           "max": 100,
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
               { "color": "orange", "value": 80 },
               { "color": "red", "value": 95 }
             ]
@@ -108,26 +115,173 @@
     {
       "id": 4,
       "type": "gauge",
-      "title": "GPU Memory Usage",
-      "gridPos": { "h": 10, "w": 9, "x": 15, "y": 0 },
-      "targets": [{ "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"memory\", sensor=\"usage\", device_class=\"gpu\"}", "legendFormat": "{{logical_name}}" }],
+      "title": "GPU 1 VRAM",
+      "description": "Navi 31 - pci-0000:03:00.0",
+      "gridPos": { "h": 9, "w": 3, "x": 9, "y": 0 },
+      "targets": [{
+        "expr": "hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", sensor=\"used\", device_id=\"pci-0000:03:00.0\"} / hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", sensor=\"capacity\", device_id=\"pci-0000:03:00.0\"} * 100",
+        "legendFormat": "VRAM 1"
+      }],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "horizontal",
+        "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
           "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 85 },
+              { "color": "red", "value": 95 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "gauge",
+      "title": "GPU 2 VRAM",
+      "description": "Navi 31 - pci-0000:06:00.0",
+      "gridPos": { "h": 9, "w": 3, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", sensor=\"used\", device_id=\"pci-0000:06:00.0\"} / hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", sensor=\"capacity\", device_id=\"pci-0000:06:00.0\"} * 100",
+        "legendFormat": "VRAM 2"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 85 },
+              { "color": "red", "value": 95 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "gauge",
+      "title": "GPU 3 VRAM",
+      "description": "Navi 21 - pci-0000:7e:00.0",
+      "gridPos": { "h": 9, "w": 3, "x": 15, "y": 0 },
+      "targets": [{
+        "expr": "hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", sensor=\"used\", device_id=\"pci-0000:7e:00.0\"} / hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", sensor=\"capacity\", device_id=\"pci-0000:7e:00.0\"} * 100",
+        "legendFormat": "VRAM 3"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 85 },
+              { "color": "red", "value": 95 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "gauge",
+      "title": "CPU",
+      "description": "Aggregate CPU utilization",
+      "gridPos": { "h": 9, "w": 3, "x": 18, "y": 0 },
+      "targets": [{
+        "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+        "legendFormat": "CPU"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "orange", "value": 75 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "gauge",
+      "title": "RAM",
+      "description": "System memory utilization",
+      "gridPos": { "h": 9, "w": 3, "x": 21, "y": 0 },
+      "targets": [{
+        "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
+        "legendFormat": "RAM"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "noValue": "N/A"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
               { "color": "orange", "value": 80 },
-              { "color": "red", "value": 95 }
+              { "color": "red", "value": 92 }
             ]
           }
         }
