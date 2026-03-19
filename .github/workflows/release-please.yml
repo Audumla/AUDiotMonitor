@@ -95,9 +95,11 @@ jobs:
 
   docker-publish:
     name: Publish Docker Image
-    needs: [release, build-packages]
+    # Runs in parallel with build-packages — Docker builds from source directly
+    # and does not depend on the binary artifacts uploaded by build-packages.
+    needs: [release]
     if: |
-      always() && needs.build-packages.result == 'success' && (
+      always() && needs.release.result != 'failure' && (
         needs.release.outputs.hwexp_release_created == 'true' ||
         (inputs.publish_version != '' && inputs.publish_version != null)
       )
@@ -106,8 +108,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve version
-        id: version
+      - name: Resolve version and build time
+        id: meta
         run: |
           if [ -n "${{ inputs.publish_version }}" ]; then
             echo "version=${{ inputs.publish_version }}" >> $GITHUB_OUTPUT
@@ -115,6 +117,7 @@ jobs:
             TAG="${{ needs.release.outputs.hwexp_tag_name }}"
             echo "version=${TAG#hwexp-v}" >> $GITHUB_OUTPUT
           fi
+          echo "buildtime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -135,7 +138,10 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            audumla/audiot-hwexp:${{ steps.version.outputs.version }}
+            audumla/audiot-hwexp:${{ steps.meta.outputs.version }}
             audumla/audiot-hwexp:latest
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            BUILDTIME=${{ steps.meta.outputs.buildtime }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

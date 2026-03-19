@@ -1,10 +1,17 @@
-# Stage 1: build
-FROM golang:1.22-alpine AS builder
+# Stage 1: build — always runs on the host platform (amd64) to avoid QEMU
+# overhead. Go's native cross-compilation handles the target arch instead.
+FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS builder
+ARG TARGETARCH
+ARG VERSION=dev
+ARG BUILDTIME=unknown
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /hwexp ./cmd/hwexp/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+    -trimpath \
+    -ldflags="-s -w -X hwexp/internal/version.Version=${VERSION} -X hwexp/internal/version.BuildTime=${BUILDTIME}" \
+    -o /hwexp ./cmd/hwexp/main.go
 
 # Stage 2: runtime
 FROM alpine:3
