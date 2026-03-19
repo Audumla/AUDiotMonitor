@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.8.0...hwexp-v0.9.0) (2026-03-19)
+
+
+### Features
+
+* self-contained deploy — no repo clone needed ([69b899c](https://github.com/Audumla/AUDiotMonitor/commit/69b899cd42c5dedc1fb9e4ff93ae69117a08b85a))
+
 ## [0.8.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.7.1...hwexp-v0.8.0) (2026-03-19)
 
 
