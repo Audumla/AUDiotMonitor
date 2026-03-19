@@ -100,6 +100,21 @@ func (a *Adapter) discoverOne(hwmonDir string) (model.DiscoveredDevice, error) {
 		displayName = pciDeviceName
 	}
 
+	// For I2C memory SPD chips, derive a DIMM slot label from the device address.
+	bus := "pci"
+	location := pciAddr
+	if (driver == "spd5118" || driver == "ee1004") && pciAddr == "" {
+		if slot, addr := spdSlotInfo(hwmonDir); slot != "" {
+			displayName = "DDR5 DIMM " + slot
+			bus = "i2c"
+			location = addr
+			if rawIDs == nil {
+				rawIDs = map[string]string{}
+			}
+			rawIDs["i2c_addr"] = addr
+		}
+	}
+
 	now := time.Now().UTC()
 	return model.DiscoveredDevice{
 		StableID:          stableID,
@@ -110,8 +125,8 @@ func (a *Adapter) discoverOne(hwmonDir string) (model.DiscoveredDevice, error) {
 		Vendor:            vendor,
 		Model:             pciDeviceName,
 		Driver:            driver,
-		Bus:               "pci",
-		Location:          pciAddr,
+		Bus:               bus,
+		Location:          location,
 		DisplayName:       displayName,
 		LogicalDeviceName: filepath.Base(hwmonDir),
 		Capabilities:      caps,
@@ -238,11 +253,22 @@ func classifyDriver(driver string) (vendor, class, subclass string) {
 
 // isNetDevice returns true when the hwmon device is backed by a network interface.
 // Wired adapters expose a "net" subdirectory; wireless adapters expose "ieee80211".
+// For WiFi the hwmon may be nested under the PHY object (device → ieee80211/phyN),
+// so we also check the parent of "device" and the resolved real path.
 func isNetDevice(hwmonDir string) bool {
 	devBase := filepath.Join(hwmonDir, "device")
-	for _, sub := range []string{"net", "ieee80211"} {
-		fi, err := os.Stat(filepath.Join(devBase, sub))
-		if err == nil && fi.IsDir() {
+	// Check device/ and device/../ (one level up handles PHY-nested hwmon)
+	for _, base := range []string{devBase, filepath.Join(devBase, "..")} {
+		for _, sub := range []string{"net", "ieee80211"} {
+			if fi, err := os.Stat(filepath.Join(base, sub)); err == nil && fi.IsDir() {
+				return true
+			}
+		}
+	}
+	// If the resolved sysfs path itself passes through an ieee80211 directory,
+	// it is a wireless device (e.g. /sys/devices/.../ieee80211/phy0/hwmon/hwmonN).
+	if real, err := filepath.EvalSymlinks(devBase); err == nil {
+		if strings.Contains(real, "/ieee80211/") {
 			return true
 		}
 	}
@@ -277,6 +303,47 @@ func detectCapabilities(hwmonDir string) []string {
 		caps = append(caps, k)
 	}
 	return caps
+}
+
+// spdSlotInfo extracts the I2C address from an SPD chip's device path and
+// maps it to a DIMM slot label. DDR5 SPD hubs occupy addresses 0x18-0x1F;
+// DDR4 EEPROMs use 0x50-0x57. Returns ("", "") if not determinable.
+func spdSlotInfo(hwmonDir string) (slot, addr string) {
+	// Resolve the device symlink to get the real sysfs path.
+	devLink := filepath.Join(hwmonDir, "device")
+	real, err := filepath.EvalSymlinks(devLink)
+	if err != nil {
+		return "", ""
+	}
+	// The I2C device directory name is like "2-0018" (bus-addr) or "i2c-2/2-0018".
+	// Walk up the resolved path looking for a component matching N-00NN.
+	parts := strings.Split(filepath.ToSlash(real), "/")
+	i2cRE := regexp.MustCompile(`^\d+-00([0-9a-fA-F]{2})$`)
+	for _, part := range parts {
+		if m := i2cRE.FindStringSubmatch(part); m != nil {
+			hexAddr := strings.ToLower(m[1])
+			addr = part
+			// Map I2C address to a DIMM slot index.
+			// DDR5 SPD hub: 0x18=slot0, 0x19=slot1, ..., 0x1F=slot7
+			// DDR4 EEPROM:  0x50=slot0, 0x51=slot1, ..., 0x57=slot7
+			var idx int
+			switch {
+			case hexAddr >= "18" && hexAddr <= "1f":
+				idx = int(hexAddr[1]-'8') // '8'..'f' → 0..7
+			case hexAddr >= "50" && hexAddr <= "57":
+				idx = int(hexAddr[1] - '0') // '0'..'7' → 0..7
+			default:
+				return "", addr
+			}
+			// Map index to a label like "A1", "A2", "B1", "B2" (2 DIMMs per channel)
+			channels := []string{"A", "B", "C", "D"}
+			ch := channels[idx/2]
+			dimm := idx%2 + 1
+			slot = fmt.Sprintf("%s%d", ch, dimm)
+			return slot, addr
+		}
+	}
+	return "", ""
 }
 
 func readSysFile(path string) string {

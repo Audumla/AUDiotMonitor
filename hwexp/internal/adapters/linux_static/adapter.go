@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"hwexp/internal/model"
+	"hwexp/internal/pcidb"
 )
 
 const DMIBasePath = "/sys/class/dmi/id"
@@ -329,9 +330,30 @@ func getNetDevices(now time.Time) []model.DiscoveredDevice {
 		// This causes the network device to merge with the hwmon entry for
 		// the same NIC (which also uses pci-<addr> as its stable ID).
 		stableID := "net-" + iface
+		var pciDir string
 		if realPath, err := filepath.EvalSymlinks(deviceLink); err == nil {
 			if base := filepath.Base(realPath); isPCIAddress(base) {
 				stableID = "pci-" + base
+				pciDir = realPath
+			}
+		}
+
+		// Enrich vendor/model from pci.ids
+		var nicVendor, nicModel, displayName string
+		displayName = iface
+		rawIDs := map[string]string{}
+		if pciDir != "" {
+			vendorHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(readSysFile(filepath.Join(pciDir, "vendor")))), "0x")
+			deviceHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(readSysFile(filepath.Join(pciDir, "device")))), "0x")
+			if vendorHex != "" && deviceHex != "" {
+				rawIDs["pci_id"] = vendorHex + ":" + deviceHex
+				rawIDs["pci_slot"] = filepath.Base(pciDir)
+				vendorName, modelName := pcidb.Lookup(vendorHex, deviceHex)
+				nicVendor = vendorName
+				nicModel = modelName
+				if modelName != "" {
+					displayName = modelName
+				}
 			}
 		}
 
@@ -358,9 +380,12 @@ func getNetDevices(now time.Time) []model.DiscoveredDevice {
 			Platform:          "linux",
 			Source:            "linux_static",
 			DeviceClass:       "network",
+			Vendor:            nicVendor,
+			Model:             nicModel,
 			LogicalDeviceName: iface,
-			DisplayName:       iface,
+			DisplayName:       displayName,
 			Capabilities:      []string{"inventory", "statistics"},
+			RawIdentifiers:    rawIDs,
 			Present:           true,
 			FirstSeen:         now,
 			LastSeen:          now,
