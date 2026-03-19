@@ -1,0 +1,164 @@
+{
+  "uid": "hwexp-state-main",
+  "title": "AUDiot State (Live JSON)",
+  "tags": ["hwexp", "debug", "infinity"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Device Inventory",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Discovered Devices",
+      "description": "All hardware devices discovered by hwexp, enriched with vendor/model from pci.ids",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 1 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-hwexp" },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/debug/state",
+          "url_options": { "method": "GET" },
+          "root_selector": "devices",
+          "columns": [
+            { "selector": "stable_id",       "text": "ID",           "type": "string" },
+            { "selector": "display_name",     "text": "Name",         "type": "string" },
+            { "selector": "device_class",     "text": "Class",        "type": "string" },
+            { "selector": "device_subclass",  "text": "Subclass",     "type": "string" },
+            { "selector": "vendor",           "text": "Vendor",       "type": "string" },
+            { "selector": "model",            "text": "Model",        "type": "string" },
+            { "selector": "driver",           "text": "Driver",       "type": "string" },
+            { "selector": "bus",              "text": "Bus",          "type": "string" },
+            { "selector": "location",         "text": "Location",     "type": "string" },
+            { "selector": "source",           "text": "Source",       "type": "string" }
+          ]
+        }
+      ],
+      "options": {
+        "sortBy": [{ "displayName": "Class", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": true }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Class" },
+            "properties": [{ "id": "custom.width", "value": 100 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "ID" },
+            "properties": [{ "id": "custom.width", "value": 220 }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "type": "row",
+      "title": "Live Measurements",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "All Sensor Readings",
+      "description": "Current normalised measurements from all adapters via /debug/catalog",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 12 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-hwexp" },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/debug/catalog",
+          "url_options": { "method": "GET" },
+          "root_selector": "items",
+          "columns": [
+            { "selector": "stable_device_id", "text": "Device",        "type": "string" },
+            { "selector": "logical_name",      "text": "Metric",        "type": "string" },
+            { "selector": "metric_family",     "text": "Family",        "type": "string" },
+            { "selector": "value",             "text": "Value",         "type": "number" },
+            { "selector": "unit",              "text": "Unit",          "type": "string" },
+            { "selector": "quality",           "text": "Quality",       "type": "string" },
+            { "selector": "timestamp",         "text": "Timestamp",     "type": "timestamp" }
+          ]
+        }
+      ],
+      "options": {
+        "sortBy": [{ "displayName": "Device", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": true }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background-solid" },
+              { "id": "custom.width", "value": 100 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Device" },
+            "properties": [{ "id": "custom.width", "value": 220 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Timestamp" },
+            "properties": [
+              { "id": "unit", "value": "dateTimeAsIso" },
+              { "id": "custom.width", "value": 180 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Device Detail",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Devices with Measurements (Joined)",
+      "description": "Each device with its current measurement count and latest values via /debug/state",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 29 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-hwexp" },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/debug/state",
+          "url_options": { "method": "GET" },
+          "root_selector": "devices",
+          "columns": [
+            { "selector": "stable_id",                              "text": "Device ID",    "type": "string" },
+            { "selector": "display_name",                           "text": "Name",         "type": "string" },
+            { "selector": "device_class",                           "text": "Class",        "type": "string" },
+            { "selector": "vendor",                                 "text": "Vendor",       "type": "string" },
+            { "selector": "measurements",                           "text": "Measurements", "type": "string" }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": true }
+        }
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ services:
     image: busybox
     environment:
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
+      - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
       - SKIP_DASHBOARD_DOWNLOAD=${SKIP_DASHBOARD_DOWNLOAD:-false}
     command:
       - sh
@@ -22,7 +23,7 @@ services:
 
         mkdir -p /provisioning/datasources /provisioning/dashboards /dashboards/profiles/standard /dashboards/profiles/wide-screens /dashboards/profiles/mobile /dashboards/profiles/debug
 
-        # Datasource — only write if not already present
+        # Prometheus datasource — only write if not already present
         if [ ! -f /provisioning/datasources/prometheus.yaml ]; then
           cat > /provisioning/datasources/prometheus.yaml << EOF
         apiVersion: 1
@@ -33,6 +34,23 @@ services:
             url: ${PROMETHEUS_URL:-http://localhost:9090}
             isDefault: true
             editable: false
+        EOF
+        fi
+
+        # Infinity datasource — only write if not already present
+        if [ ! -f /provisioning/datasources/infinity.yaml ]; then
+          cat > /provisioning/datasources/infinity.yaml << EOF
+        apiVersion: 1
+        datasources:
+          - name: Infinity (hwexp)
+            type: yesoreyeram-infinity-datasource
+            uid: infinity-hwexp
+            access: proxy
+            url: ${HWEXP_URL:-http://localhost:9200}
+            isDefault: false
+            editable: false
+            jsonData:
+              tlsSkipVerify: true
         EOF
         fi
 
@@ -70,7 +88,7 @@ services:
             [ ! -f "/dashboards/profiles/mobile/$${d}.json" ] && wget -q -O "/dashboards/profiles/mobile/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/mobile/$${d}.json" || true
           done
           # debug
-          for d in discovery-dashboard operations-dashboard panel-dashboard; do
+          for d in discovery-dashboard operations-dashboard panel-dashboard state-dashboard; do
             [ ! -f "/dashboards/profiles/debug/$${d}.json" ] && wget -q -O "/dashboards/profiles/debug/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/debug/$${d}.json" || true
           done
         else
@@ -99,6 +117,7 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
       - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
     restart: unless-stopped
 
 volumes:

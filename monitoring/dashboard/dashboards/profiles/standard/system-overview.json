@@ -911,6 +911,149 @@
       "gridPos": { "h": 6, "w": 24, "x": 0, "y": 84 },
       "targets": [{ "expr": "hw_device_info{device_class=\"llm\"}", "format": "table", "instant": true }],
       "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } } }
+    },
+
+    { "id": 400, "type": "row", "title": "Power (RAPL)", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 91 } },
+
+    { "id": 401, "type": "timeseries", "title": "CPU Package Power",
+      "description": "Intel RAPL — package-level power draw reported by node_rapl_package_joules_total",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 92 },
+      "targets": [
+        {
+          "expr": "rate(node_rapl_package_joules_total[2m])",
+          "legendFormat": "{{index}} — {{path}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+
+    { "id": 402, "type": "timeseries", "title": "DRAM / Uncore Power",
+      "description": "Intel RAPL — DRAM and uncore power domains",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 92 },
+      "targets": [
+        {
+          "expr": "rate(node_rapl_dram_joules_total[2m])",
+          "legendFormat": "DRAM {{index}}"
+        },
+        {
+          "expr": "rate(node_rapl_uncore_joules_total[2m])",
+          "legendFormat": "Uncore {{index}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+
+    { "id": 403, "type": "timeseries", "title": "Core / GT Power",
+      "description": "Intel RAPL — per-core and GPU (GT) power domains",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 100 },
+      "targets": [
+        {
+          "expr": "rate(node_rapl_core_joules_total[2m])",
+          "legendFormat": "Core {{index}}"
+        },
+        {
+          "expr": "rate(node_rapl_gt_joules_total[2m])",
+          "legendFormat": "GT {{index}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+
+    { "id": 500, "type": "row", "title": "Systemd Services", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 109 } },
+
+    { "id": 501, "type": "table", "title": "Failed / Inactive Services",
+      "description": "Systemd units in a failed or inactive state (node_systemd_unit_state collector)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 110 },
+      "targets": [
+        {
+          "expr": "node_systemd_unit_state{state=~\"failed|inactive\"} == 1",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        { "id": "filterFieldsByName", "options": { "include": { "names": ["name", "state", "type"] } } },
+        { "id": "sortBy", "options": { "fields": [{ "displayName": "state", "desc": false }] } }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": true }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "state" },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "failed":   { "color": "red",    "index": 0 } } },
+                  { "type": "value", "options": { "inactive": { "color": "yellow", "index": 1 } } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    { "id": 502, "type": "timeseries", "title": "Services by State (counts)",
+      "description": "Count of systemd units in each state over time",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 120 },
+      "targets": [
+        {
+          "expr": "sum by (state) (node_systemd_unit_state)",
+          "legendFormat": "{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10 }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "failed" },   "properties": [{ "id": "color", "value": { "fixedColor": "red",    "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "active" },   "properties": [{ "id": "color", "value": { "fixedColor": "green",  "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "inactive" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
     }
     ]
     }
