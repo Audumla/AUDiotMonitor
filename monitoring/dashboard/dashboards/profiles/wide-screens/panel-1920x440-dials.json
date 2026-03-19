@@ -110,7 +110,7 @@
       "type": "gauge",
       "title": "GPU Memory Usage",
       "gridPos": { "h": 10, "w": 9, "x": 15, "y": 0 },
-      "targets": [{ "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"memory\", sensor=\"usage\", device_class=\"gpu\"}", "legendFormat": "{{logical_name}}" }],
+      "targets": [{ "expr": "sum by (device_id) (hw_device_capacity_bytes{host=~\"$host\", device_class=\"gpu\", component=\"memory\", logical_name=~\".*_vram_used_bytes\"}) / sum by (device_id) (hw_device_capacity_bytes{host=~\"$host\", device_class=\"gpu\", component=\"memory\", logical_name=~\".*_vram_capacity_bytes\"}) * 100", "legendFormat": "{{device_id}} VRAM" }],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "orientation": "horizontal",
