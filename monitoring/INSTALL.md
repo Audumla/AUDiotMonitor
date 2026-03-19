@@ -283,31 +283,49 @@ volumes:
 
 ### Notes for Raspberry Pi
 
-**First-boot plugin install**
+#### First-boot plugin install
+
 `GF_INSTALL_PLUGINS` causes Grafana to download and install the Infinity plugin on first start.
 On a Pi with a slow SD card this may take 2–3 minutes before the UI is responsive.
 Subsequent restarts are fast because the plugin is persisted in the `grafana-data` volume.
 
-**SD card longevity**
+### SD card longevity
+
 Prometheus write-ahead logs generate significant I/O. Run the **collector** stack on the machine you're monitoring (typically x86), not on the Pi. The Pi only needs Grafana.
 
-**Kiosk mode**
-To launch a full-screen dashboard on a Pi with a desktop:
+### Kiosk mode — auto resolution
+
+`kiosk.sh` detects the connected screen resolution and automatically opens the best-matching dashboard profile in Chromium fullscreen mode, then restarts Chromium if it exits.
+
+| Resolution | Dashboard |
+| ---------- | --------- |
+| Width ≥ 1800, height ≤ 500 | Panel [1920×440] — ultra-wide ticker strip |
+| Portrait (height > width) or width ≤ 800 | Panel [Portrait] |
+| Width ≥ 1920, height ≥ 1000 | Dashboard [1080p] |
+| Everything else | System Overview |
+
+**One-shot installer** — run as the display user (not root):
 
 ```bash
-# Install Chromium if not present
-sudo apt install chromium-browser -y
+cd /opt/docker/dashboard
 
-# Launch kiosk pointing at the System Overview dashboard
-chromium-browser \
-  --kiosk \
-  --noerrdialogs \
-  --disable-infobars \
-  --disable-session-crashed-bubble \
-  "http://localhost:3000/d/audiot-system-overview?kiosk"
+# Point at Grafana (default: http://localhost:3000)
+GRAFANA_URL=http://localhost:3000 ./kiosk-install.sh
 ```
 
-Add this to your desktop autostart (e.g. `~/.config/autostart/grafana-kiosk.desktop`) to launch on login.
+The installer:
+
+1. Installs `chromium-browser` if missing
+2. Registers `kiosk.sh` as a **systemd user service** (Debian bookworm) or **XDG autostart entry** (LXDE / other desktops)
+3. Starts the kiosk immediately
+
+Override the auto-selected dashboard with `KIOSK_DASHBOARD=audiot-system-overview` if you want a fixed layout regardless of screen size.
+
+**Manual launch** (without installing):
+
+```bash
+GRAFANA_URL=http://localhost:3000 ./kiosk.sh
+```
 
 ---
 

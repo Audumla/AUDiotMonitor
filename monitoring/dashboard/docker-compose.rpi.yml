@@ -93,25 +93,26 @@ services:
         # Download dashboards (skipped if files already exist — edits are preserved)
         if [ "$SKIP_DASHBOARD_DOWNLOAD" != "true" ]; then
           echo "Downloading dashboard profiles..."
+          BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
           for d in system-overview panel-1080p; do
-            [ ! -f "/dashboards/profiles/standard/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/standard/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/standard/${d}.json" || true
+            [ ! -f "/dashboards/profiles/standard/$${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/standard/$${d}.json" \
+                "$${BASE}/monitoring/dashboard/dashboards/profiles/standard/$${d}.json" || true
           done
           for d in panel-1920x440; do
-            [ ! -f "/dashboards/profiles/wide-screens/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/wide-screens/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/${d}.json" || true
+            [ ! -f "/dashboards/profiles/wide-screens/$${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/wide-screens/$${d}.json" \
+                "$${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/$${d}.json" || true
           done
           for d in panel-portrait; do
-            [ ! -f "/dashboards/profiles/mobile/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/mobile/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/mobile/${d}.json" || true
+            [ ! -f "/dashboards/profiles/mobile/$${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/mobile/$${d}.json" \
+                "$${BASE}/monitoring/dashboard/dashboards/profiles/mobile/$${d}.json" || true
           done
           for d in discovery-dashboard operations-dashboard panel-dashboard state-dashboard; do
-            [ ! -f "/dashboards/profiles/debug/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/debug/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/debug/${d}.json" || true
+            [ ! -f "/dashboards/profiles/debug/$${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/debug/$${d}.json" \
+                "$${BASE}/monitoring/dashboard/dashboards/profiles/debug/$${d}.json" || true
           done
         else
           echo "Skipping dashboard download as requested"
