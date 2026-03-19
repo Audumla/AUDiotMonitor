@@ -181,11 +181,82 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 
 		if dev.Vendor == "amd" {
 			if sysfsPath, ok := dev.AdapterMetadata["sysfs_path"].(string); ok {
+				// Prefer the binary gpu_metrics file (atomic SMU snapshot, supported
+				// on all RDNA/RDNA2/RDNA3 cards). Fall back to the per-file sysfs
+				// text interface when gpu_metrics is absent (older kernels/drivers).
+				gm := readGPUMetrics(sysfsPath)
+				if gm.Valid {
+					all = append(all,
+						model.RawMeasurement{
+							MeasurementID:  fmt.Sprintf("linux_gpu:%s:gpu_busy_percent", dev.StableID),
+							StableDeviceID: dev.StableID,
+							Source:         "linux_gpu",
+							RawName:        "gpu_busy_percent",
+							RawValue:       float64(gm.GFXActivity),
+							RawUnit:        "percent",
+							Timestamp:      now,
+							Quality:        "good",
+							ComponentHint:  "compute",
+							SensorHint:     "utilization",
+						},
+						model.RawMeasurement{
+							MeasurementID:  fmt.Sprintf("linux_gpu:%s:mem_busy_percent", dev.StableID),
+							StableDeviceID: dev.StableID,
+							Source:         "linux_gpu",
+							RawName:        "mem_busy_percent",
+							RawValue:       float64(gm.UMCActivity),
+							RawUnit:        "percent",
+							Timestamp:      now,
+							Quality:        "good",
+							ComponentHint:  "memory",
+							SensorHint:     "utilization",
+						},
+					)
+					if gm.MMActivity > 0 {
+						all = append(all, model.RawMeasurement{
+							MeasurementID:  fmt.Sprintf("linux_gpu:%s:mm_busy_percent", dev.StableID),
+							StableDeviceID: dev.StableID,
+							Source:         "linux_gpu",
+							RawName:        "mm_busy_percent",
+							RawValue:       float64(gm.MMActivity),
+							RawUnit:        "percent",
+							Timestamp:      now,
+							Quality:        "good",
+							ComponentHint:  "media",
+							SensorHint:     "utilization",
+						})
+					}
+				} else {
+					// Fallback: plain sysfs text files
+					for _, m := range []struct {
+						file, name, unit, comp, sensor string
+					}{
+						{"gpu_busy_percent", "gpu_busy_percent", "percent", "compute", "utilization"},
+						{"mem_busy_percent", "mem_busy_percent", "percent", "memory", "utilization"},
+					} {
+						if raw := readSysFile(filepath.Join(sysfsPath, m.file)); raw != "" {
+							if val, err := strconv.ParseFloat(raw, 64); err == nil {
+								all = append(all, model.RawMeasurement{
+									MeasurementID:  fmt.Sprintf("linux_gpu:%s:%s", dev.StableID, m.file),
+									StableDeviceID: dev.StableID,
+									Source:         "linux_gpu",
+									RawName:        m.name,
+									RawValue:       val,
+									RawUnit:        m.unit,
+									Timestamp:      now,
+									Quality:        "good",
+									ComponentHint:  m.comp,
+									SensorHint:     m.sensor,
+								})
+							}
+						}
+					}
+				}
+
+				// VRAM / GTT used — always from sysfs text files (not in gpu_metrics)
 				for _, m := range []struct {
 					file, name, unit, comp, sensor string
 				}{
-					{"gpu_busy_percent", "gpu_busy_percent", "percent", "compute", "utilization"},
-					{"mem_busy_percent", "mem_busy_percent", "percent", "memory", "utilization"},
 					{"mem_info_vram_used", "vram_used_bytes", "bytes", "memory", "used"},
 					{"mem_info_gtt_used", "gtt_used_bytes", "bytes", "memory", "used"},
 				} {
