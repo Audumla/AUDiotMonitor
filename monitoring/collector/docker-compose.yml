@@ -14,7 +14,7 @@ services:
   hwexp:
     image: audumla/audiot-hwexp:latest
     container_name: hwexp
-    privileged: true                  # required to read /sys/class/hwmon
+    privileged: true                  # required for hwmon, dmidecode, /sys writes
     volumes:
       - /sys:/sys:ro
       - /proc:/proc:ro
@@ -26,42 +26,49 @@ services:
     restart: unless-stopped
 
   # ── OS metrics exporter ───────────────────────────────────────────────────
+  # network_mode: host is required for:
+  #   - ethtool: ioctl calls must run in the host network namespace
+  #   - systemd/logind: dbus socket is on the host filesystem
+  # With host networking, node-exporter binds directly to host port 9100
+  # (no ports: mapping needed). Prometheus reaches it via host.docker.internal.
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
-    privileged: true
+    network_mode: host
     pid: host
+    privileged: true
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+      - /run/dbus:/run/dbus:ro         # systemd/logind dbus socket
+      - /run/dbus:/var/run/dbus:ro     # same socket at alternate path
+      - /run/udev:/run/udev:ro         # udev data for disk model/serial labels
     command:
       - --path.procfs=/host/proc
       - --path.rootfs=/rootfs
       - --path.sysfs=/host/sys
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
-      # Extra collectors disabled by default — enable them all
-      - --collector.thermal_zone     # thermal zones via sysfs
-      - --collector.rapl             # Intel RAPL power domain readings
-      - --collector.processes        # process/thread counts from /proc
-      - --collector.interrupts       # per-CPU hardware interrupt counts
-      - --collector.softirqs         # per-CPU software interrupt counts
-      - --collector.tcpstat          # TCP connection state counts
-      - --collector.systemd          # systemd unit states
-      - --collector.ethtool          # extended NIC ethtool statistics
-      - --collector.wifi             # WiFi interface link statistics
-      - --collector.buddyinfo        # kernel buddy memory allocator
-      - --collector.drbd             # DRBD replication (no-op if absent)
-      - --collector.mdadm            # Linux software RAID arrays
-      - --collector.xfs              # XFS filesystem statistics
-      - --collector.zfs              # ZFS pool statistics (no-op if absent)
-      - --collector.slabinfo         # kernel slab allocator statistics
-      - --collector.network_route    # routing table entry counts
-      - --collector.meminfo_numa     # NUMA memory node statistics
-      - --collector.ksmd             # kernel samepage merging daemon stats
-      - --collector.logind           # login session counts via logind
-    ports:
-      - "9100:9100"
+      # Extra collectors disabled by default
+      - --collector.thermal_zone       # thermal zones via sysfs
+      - --collector.rapl               # Intel RAPL power domain readings
+      - --collector.processes          # process/thread counts from /proc
+      - --collector.interrupts         # per-CPU hardware interrupt counts
+      - --collector.softirqs           # per-CPU software interrupt counts
+      - --collector.tcpstat            # TCP connection state counts
+      - --collector.systemd            # systemd unit states (needs dbus)
+      - --collector.ethtool            # extended NIC ethtool stats (needs host net)
+      - --collector.wifi               # WiFi interface link statistics
+      - --collector.buddyinfo          # kernel buddy memory allocator
+      - --collector.drbd               # DRBD replication (no-op if absent)
+      - --collector.mdadm              # Linux software RAID arrays
+      - --collector.xfs                # XFS filesystem statistics
+      - --collector.zfs                # ZFS pool statistics (no-op if absent)
+      - --collector.network_route      # routing table entry counts
+      - --collector.meminfo_numa       # NUMA memory node statistics
+      - --collector.ksmd               # kernel samepage merging daemon stats
+      - --collector.logind             # login session counts via logind (needs dbus)
+      - --no-collector.slabinfo        # requires root UID inside container — disable
     restart: unless-stopped
 
   # ── Metrics database ──────────────────────────────────────────────────────
@@ -69,12 +76,16 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     user: "1000:1000"
+    # Resolves host.docker.internal → host gateway IP to reach node-exporter
+    # which runs in host network mode (no container hostname).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     entrypoint:
       - sh
       - -c
       - |
         if [ ! -f /prometheus/prometheus.yml ]; then
-          cat > /prometheus/prometheus.yml << 'EOF'
+          cat > /prometheus/prometheus.yml << 'PROMEOF'
         global:
           scrape_interval: 5s
           evaluation_interval: 5s
@@ -84,8 +95,8 @@ services:
               - targets: ['hwexp:9200']
           - job_name: node
             static_configs:
-              - targets: ['node-exporter:9100']
-        EOF
+              - targets: ['host.docker.internal:9100']
+        PROMEOF
         fi
         exec /bin/prometheus \
           --config.file=/prometheus/prometheus.yml \
