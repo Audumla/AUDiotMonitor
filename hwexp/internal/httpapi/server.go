@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"hwexp/internal/config"
@@ -121,26 +123,26 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	for _, m := range measurements {
 		types[m.MetricFamily] = m.MetricType
-		
+
 		// Build labels string: {host="x",sensor="y"}
-		labelStr := ""
-		ls := []string{
-			fmt.Sprintf(`host="%s"`, s.cfg.Identity.Host),
-		}
+		var lb strings.Builder
+		lb.WriteByte('{')
+		lb.WriteString(`host="`)
+		lb.WriteString(s.cfg.Identity.Host)
+		lb.WriteByte('"')
 		for k, v := range m.Labels {
 			if k == "host" {
 				continue // host is always injected from config above
 			}
-			ls = append(ls, fmt.Sprintf(`%s="%s"`, k, v))
+			lb.WriteByte(',')
+			lb.WriteString(k)
+			lb.WriteString(`="`)
+			lb.WriteString(v)
+			lb.WriteByte('"')
 		}
-		labelStr = "{"
-		for i, l := range ls {
-			if i > 0 { labelStr += "," }
-			labelStr += l
-		}
-		labelStr += "}"
-		
-		line := fmt.Sprintf("%s%s %f", m.MetricFamily, labelStr, m.Value)
+		lb.WriteByte('}')
+
+		line := fmt.Sprintf("%s%s %f", m.MetricFamily, lb.String(), m.Value)
 		grouped[m.MetricFamily] = append(grouped[m.MetricFamily], line)
 	}
 
@@ -168,9 +170,9 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
-	
+
 	// Open endpoints
 	mux.HandleFunc("/healthz", s.HandleHealthz)
 	mux.HandleFunc("/readyz", s.HandleReadyz)
@@ -197,6 +199,26 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/debug/raw", rawHandler)
 	mux.HandleFunc("/debug/mappings", mappingsHandler)
 
-	return http.ListenAndServe(s.cfg.Server.ListenAddress, mux)
+	srv := &http.Server{
+		Addr:    s.cfg.Server.ListenAddress,
+		Handler: mux,
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutCtx)
+	case err := <-errCh:
+		return err
+	}
 }
 

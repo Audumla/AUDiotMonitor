@@ -454,6 +454,28 @@ The SIGHUP reload goroutine MUST call `signal.Stop` on the signal channel
 and exit when the root context is cancelled, to prevent goroutine leaks
 when the HTTP server terminates abnormally.
 
+## 9.6 HTTP server lifecycle
+
+The HTTP server MUST use `http.Server` with a context-aware `Shutdown()` path.
+
+`Start(ctx context.Context)` MUST:
+
+* start `ListenAndServe` in a goroutine
+* block waiting for either context cancellation or a fatal listen error
+* on context cancellation, call `srv.Shutdown()` with a bounded timeout (≤ 10 s)
+  so in-flight requests are allowed to drain before the process exits
+
+SIGTERM and SIGINT MUST cancel the root context, which triggers graceful
+HTTP shutdown as part of the normal cancellation chain. This ensures container
+stop signals are handled cleanly without abruptly dropping open connections.
+
+## 9.7 State store snapshot safety
+
+`StateStore.GetDecisions()` and similar read accessors MUST return copies of
+internal slices, not references to the backing store. Returning a direct
+reference would allow callers to observe concurrent mutations without holding
+the read lock.
+
 ---
 
 # 10. Mapping engine behavior

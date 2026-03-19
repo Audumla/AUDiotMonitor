@@ -83,5 +83,7 @@ func (s *StateStore) GetRaw() []model.RawMeasurement {
 func (s *StateStore) GetDecisions() []model.MappingDecision {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.decisions
+	res := make([]model.MappingDecision, len(s.decisions))
+	copy(res, s.decisions)
+	return res
 }

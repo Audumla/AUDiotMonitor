@@ -108,6 +108,19 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Handle SIGTERM/SIGINT for graceful shutdown
+	go func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+		defer signal.Stop(sigs)
+		select {
+		case <-ctx.Done():
+		case sig := <-sigs:
+			l.Info("shutdown", "Received signal, initiating graceful shutdown", map[string]interface{}{"signal": sig.String()})
+			cancel()
+		}
+	}()
+
 	l.Info("startup", "Starting background telemetry loop", map[string]interface{}{"interval": cfg.Server.RefreshInterval})
 	coreEngine.Start(ctx)
 
@@ -131,10 +144,10 @@ func main() {
 		}
 	}()
 
-	// 9. Start HTTP Server
+	// 9. Start HTTP Server — blocks until ctx cancelled or fatal error
 	server := httpapi.NewServer(cfg, stateStore, coreEngine, authStore)
 	l.Info("startup", "HTTP server listening", map[string]interface{}{"address": cfg.Server.ListenAddress})
-	if err := server.Start(); err != nil {
+	if err := server.Start(ctx); err != nil {
 		l.Fatal("startup", "Server failed", "HTTP_INTERNAL_ERROR", map[string]interface{}{"error": err.Error()})
 	}
 }
