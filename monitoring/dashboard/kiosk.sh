@@ -152,7 +152,7 @@ copy_example_dashboard_if_missing() {
     local example_dir="$SCRIPT_DIR/examples/custom"
     local custom_dir="$SCRIPT_DIR/dashboards/custom"
 
-    [ -d "$example_dir" ] || return
+    [ -d "$example_dir" ] || return 0
     mkdir -p "$custom_dir"
 
     while IFS= read -r src; do
