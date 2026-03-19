@@ -23,6 +23,25 @@ set -euo pipefail
 
 GRAFANA_URL="${GRAFANA_URL:-${1:-http://localhost:3000}}"
 REFRESH="${KIOSK_REFRESH:-30s}"
+USER_ID="$(id -u)"
+
+# Fill in common desktop session variables when kiosk.sh is launched from a
+# stripped-down autostart environment.
+XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$USER_ID}"
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
+    WAYLAND_DISPLAY="wayland-0"
+fi
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+if [ -z "${XAUTHORITY:-}" ] && [ -f "$HOME/.Xauthority" ]; then
+    XAUTHORITY="$HOME/.Xauthority"
+fi
+
+export XDG_RUNTIME_DIR
+[ -n "${WAYLAND_DISPLAY:-}" ] && export WAYLAND_DISPLAY
+[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] && export DBUS_SESSION_BUS_ADDRESS
+[ -n "${XAUTHORITY:-}" ] && export XAUTHORITY
 
 # ── Detect resolution ────────────────────────────────────────────────────────
 
@@ -31,7 +50,7 @@ detect_resolution() {
     if command -v xrandr &>/dev/null && [ -n "${DISPLAY:-}" ]; then
         local res
         res=$(xrandr --current 2>/dev/null \
-              | awk '/ connected/{p=1} p && /[0-9]+x[0-9]+\*/{match($0,/([0-9]+x[0-9]+)/,a); print a[0]; p=0}' \
+              | awk '/ connected/{p=1} p && /[0-9]+x[0-9]+\*/{if (match($0, /[0-9]+x[0-9]+/)) { print substr($0, RSTART, RLENGTH); p=0 }}' \
               | head -1)
         [ -n "$res" ] && { echo "$res"; return; }
     fi
@@ -40,7 +59,7 @@ detect_resolution() {
     if command -v wlr-randr &>/dev/null; then
         local res
         res=$(wlr-randr 2>/dev/null \
-              | awk '/current/{match($0,/([0-9]+x[0-9]+)/,a); print a[0]}' \
+              | awk '/current/{if (match($0, /[0-9]+x[0-9]+/)) print substr($0, RSTART, RLENGTH)}' \
               | head -1)
         [ -n "$res" ] && { echo "$res"; return; }
     fi
@@ -125,8 +144,25 @@ fi
 
 echo "[kiosk] Launching $CHROMIUM in kiosk mode"
 
+# Use a dedicated profile so kiosk mode does not reuse or fight with a
+# desktop Chromium session.
+KIOSK_PROFILE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/chromium-kiosk"
+mkdir -p "$KIOSK_PROFILE_DIR"
+
+# Clear stale Chromium single-instance markers in the kiosk profile.
+if [ -L "$KIOSK_PROFILE_DIR/SingletonLock" ]; then
+    lock_target=$(readlink "$KIOSK_PROFILE_DIR/SingletonLock" 2>/dev/null || true)
+    lock_pid="${lock_target##*-}"
+    if ! [ -n "$lock_pid" ] || ! [ "$lock_pid" -eq "$lock_pid" ] 2>/dev/null || ! kill -0 "$lock_pid" 2>/dev/null; then
+        rm -f \
+            "$KIOSK_PROFILE_DIR/SingletonLock" \
+            "$KIOSK_PROFILE_DIR/SingletonCookie" \
+            "$KIOSK_PROFILE_DIR/SingletonSocket"
+    fi
+fi
+
 # Remove leftover crash flags that prevent kiosk from starting cleanly
-rm -f ~/.config/chromium/Default/Preferences 2>/dev/null || true
+rm -f "$KIOSK_PROFILE_DIR/Default/Preferences" 2>/dev/null || true
 
 # Launch loop — Chromium is restarted automatically on exit
 while true; do
@@ -139,7 +175,10 @@ while true; do
         --disable-pinch \
         --overscroll-history-navigation=0 \
         --check-for-update-interval=604800 \
+        --no-first-run \
+        --no-default-browser-check \
         --password-store=basic \
+        --user-data-dir="$KIOSK_PROFILE_DIR" \
         --app="$KIOSK_URL" \
         2>/dev/null || true
 
