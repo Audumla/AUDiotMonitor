@@ -10,6 +10,8 @@ Hardware, OS, and AI telemetry stack for Linux machines. Collects sensor data, s
 - **AI/LLM Monitoring** — built-in adapter for **Llamaswap** to monitor local LLM model status.
 - **Extensible Architecture** — support for custom collection scripts (Bash, Python, etc.) via the `vendor_exec` plugin system.
 - **Auto-mapping** — generates Prometheus metric rules for unmapped sensors automatically.
+- **Dashboard Profiles** — Pre-built layouts for standard monitors, wide sensor panels (1920x440), and mobile screens.
+- **Automatic Scaffolding** — Automatically populates your dashboard library on first run while preserving your custom edits.
 - **OS metrics** — CPU usage, memory, disk, network via integrated `node_exporter`.
 - **Modular Config** — support for `conf.d` directory for easy, non-destructive configuration.
 

@@ -1,0 +1,88 @@
+{
+  "uid": "audiot-panel-1080p",
+  "title": "AUDiot Dashboard [1080p]",
+  "tags": ["audiot", "dashboard", "desktop"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "query": "label_values(hwexp_up, host)",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": false,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "row", "title": "System Overview", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+    { "id": 2, "type": "stat", "title": "CPU Load",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 85 }]}}}
+    },
+    { "id": 3, "type": "stat", "title": "Memory Load",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}}}
+    },
+    { "id": 4, "type": "stat", "title": "GPU Load",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [{ "expr": "max(hw_device_utilization_percent{component=\"compute\"})", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}}}
+    },
+    { "id": 5, "type": "stat", "title": "VRAM Load",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [{ "expr": "max(hw_device_utilization_percent{component=\"memory\"})", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}}}
+    },
+
+    { "id": 10, "type": "row", "title": "Thermal & Cooling", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 } },
+    { "id": 11, "type": "timeseries", "title": "Temperature Trends",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 6 },
+      "targets": [{ "expr": "hw_device_temperature_celsius{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }],
+      "fieldConfig": { "defaults": { "unit": "celsius", "color": { "mode": "palette-classic" }}}
+    },
+    { "id": 12, "type": "stat", "title": "Current Temps",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "targets": [{ "expr": "hw_device_temperature_celsius{host=~\"$host\"}", "legendFormat": "{{logical_name}}", "instant": true }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "vertical", "colorMode": "background" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 85 }]}}}
+    },
+
+    { "id": 20, "type": "row", "title": "Network & Disk", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 } },
+    { "id": 21, "type": "timeseries", "title": "Network Traffic",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m])", "legendFormat": "rx {{device}}" },
+        { "expr": "-rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m])", "legendFormat": "tx {{device}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }}
+    },
+    { "id": 22, "type": "timeseries", "title": "Disk I/O",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "targets": [
+        { "expr": "rate(node_disk_read_bytes_total[2m])", "legendFormat": "read {{device}}" },
+        { "expr": "-rate(node_disk_written_bytes_total[2m])", "legendFormat": "write {{device}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }}
+    },
+
+    { "id": 30, "type": "row", "title": "Hardware Inventory", "collapsed": true, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 } },
+    { "id": 31, "type": "table", "title": "Detected Hardware",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "targets": [{ "expr": "hw_device_info{host=~\"$host\"}", "format": "table", "instant": true }],
+      "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } }}
+    }
+  ]
+}

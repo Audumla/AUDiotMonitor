@@ -4,18 +4,15 @@
 # No config files or repo clone needed — just run:
 #
 #   PROMETHEUS_URL=http://<collector-ip>:9090 docker compose up -d
-#
-# If collector is on the same machine, the default (http://localhost:9090) works:
-#
-#   docker compose up -d
 
 services:
 
-  # ── Init: download dashboards and write Grafana provisioning ──────────────
+  # ── Init: scaffold dashboard profiles and write Grafana provisioning ────────
   grafana-init:
     image: busybox
     environment:
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
+      - SKIP_DASHBOARD_DOWNLOAD=${SKIP_DASHBOARD_DOWNLOAD:-false}
     command:
       - sh
       - -c
@@ -23,9 +20,9 @@ services:
         set -e
         BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
 
-        mkdir -p /provisioning/datasources /provisioning/dashboards /dashboards
+        mkdir -p /provisioning/datasources /provisioning/dashboards /dashboards/profiles/standard /dashboards/profiles/wide-screens /dashboards/profiles/mobile /dashboards/profiles/debug
 
-        # Datasource — only write if not already present (preserves manual edits)
+        # Datasource — only write if not already present
         if [ ! -f /provisioning/datasources/prometheus.yaml ]; then
           cat > /provisioning/datasources/prometheus.yaml << EOF
         apiVersion: 1
@@ -39,30 +36,46 @@ services:
         EOF
         fi
 
-        # Dashboard provider — only write if not already present
+        # Dashboard provider — recursive structure enabled
         if [ ! -f /provisioning/dashboards/dashboards.yaml ]; then
           cat > /provisioning/dashboards/dashboards.yaml << 'EOF'
         apiVersion: 1
         providers:
-          - name: AUDiot Dashboards
+          - name: 'AUDiot Profiles'
             orgId: 1
-            folder: AUDiot
+            folder: ''
             type: file
             disableDeletion: false
             editable: true
             allowUiUpdates: true
             options:
               path: /var/lib/grafana/dashboards
+              foldersFromFilesStructure: true
         EOF
         fi
 
-        # Download dashboard JSON files from GitHub (skip if already present)
-        for dash in system-overview panel-dashboard discovery-dashboard operations-dashboard; do
-          if [ ! -f "/dashboards/${dash}.json" ]; then
-            echo "Downloading ${dash}.json..."
-            wget -q -O "/dashboards/${dash}.json" "$BASE/monitoring/dashboard/dashboards/${dash}.json"
-          fi
-        done
+        # Download profiles if missing (allows persistence of user edits)
+        if [ "$SKIP_DASHBOARD_DOWNLOAD" != "true" ]; then
+          echo "Downloading dashboard profiles..."
+          # standard
+          for d in system-overview panel-1080p; do
+            [ ! -f "/dashboards/profiles/standard/$${d}.json" ] && wget -q -O "/dashboards/profiles/standard/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/standard/$${d}.json" || true
+          done
+          # wide-screens
+          for d in panel-1920x440; do
+            [ ! -f "/dashboards/profiles/wide-screens/$${d}.json" ] && wget -q -O "/dashboards/profiles/wide-screens/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/$${d}.json" || true
+          done
+          # mobile
+          for d in panel-portrait; do
+            [ ! -f "/dashboards/profiles/mobile/$${d}.json" ] && wget -q -O "/dashboards/profiles/mobile/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/mobile/$${d}.json" || true
+          done
+          # debug
+          for d in discovery-dashboard operations-dashboard panel-dashboard; do
+            [ ! -f "/dashboards/profiles/debug/$${d}.json" ] && wget -q -O "/dashboards/profiles/debug/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/debug/$${d}.json" || true
+          done
+        else
+          echo "Skipping dashboard download as requested"
+        fi
 
         echo "Grafana init complete"
     volumes:

@@ -879,12 +879,17 @@ Known keys in v1:
 
 * `linux_hwmon`
 * `linux_gpu_vendor`
-* `linux_vendor_exec`
+* `linux_vendor_exec`: Supports `scripts_dir` (default: `/etc/hwexp/custom.d`)
 * `linux_node_bridge`
+* `llamaswap`: Supports `endpoint` (default: `http://localhost:50099`)
 * `windows_exporter_bridge`
 * `darwin_node_bridge`
 
-Unknown adapter keys MAY be rejected in strict mode.
+## 8.5 Configuration Merging (`conf.d`)
+The configuration loader MUST support a `conf.d/` directory relative to the main configuration file.
+- All `.yaml` files in this directory MUST be parsed in lexical order.
+- Top-level objects from these files MUST be merged into the main configuration.
+- In case of conflict, the last file parsed takes precedence (merging into the base config).
 
 ### `mapping`
 

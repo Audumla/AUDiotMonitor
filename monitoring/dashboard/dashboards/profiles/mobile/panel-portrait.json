@@ -1,0 +1,96 @@
+{
+  "uid": "audiot-panel-portrait",
+  "title": "AUDiot Panel [Portrait]",
+  "tags": ["audiot", "panel", "portrait"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "query": "label_values(hwexp_up, host)",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": false,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "stat", "title": "CPU",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 85 }]}
+      }}
+    },
+    { "id": 2, "type": "stat", "title": "RAM",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}
+      }}
+    },
+    { "id": 3, "type": "stat", "title": "GPU",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 4 },
+      "targets": [{ "expr": "max(hw_device_utilization_percent{component=\"compute\"})", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}
+      }}
+    },
+    { "id": 4, "type": "stat", "title": "VRAM",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 4 },
+      "targets": [{ "expr": "max(hw_device_utilization_percent{component=\"memory\"})", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}
+      }}
+    },
+    { "id": 5, "type": "stat", "title": "CPU Temp",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "max(hw_device_temperature_celsius{device_class=\"cpu\"})", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "unit": "celsius",
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 85 }]}
+      }}
+    },
+    { "id": 6, "type": "stat", "title": "GPU Temp",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "max(hw_device_temperature_celsius{device_class=\"gpu\"})", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "unit": "celsius",
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 75 }, { "color": "red", "value": 85 }]}
+      }}
+    },
+    { "id": 7, "type": "stat", "title": "Net RX",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 12 },
+      "targets": [{ "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m]))", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "Bps", "color": { "mode": "fixed", "fixedColor": "blue" } }}
+    },
+    { "id": 8, "type": "stat", "title": "Net TX",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 12 },
+      "targets": [{ "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m]))", "legendFormat": "" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "Bps", "color": { "mode": "fixed", "fixedColor": "yellow" } }}
+    },
+    { "id": 9, "type": "stat", "title": "All Temperatures",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
+      "targets": [{ "expr": "hw_device_temperature_celsius{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}", "instant": true }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "vertical", "colorMode": "background" },
+      "fieldConfig": { "defaults": { "unit": "celsius",
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "blue", "value": null }, { "color": "green", "value": 20 },
+          { "color": "orange", "value": 70 }, { "color": "red", "value": 85 }
+        ]}, "color": { "mode": "thresholds" }
+      }}
+    }
+  ]
+}

@@ -87,6 +87,28 @@ To monitor local LLM models running in **Llamaswap**:
 
 ---
 
+## Dashboards & Profiles
+
+Dashboards are organized into **Profiles** based on screen size and use-case. These are automatically provisioned into matching folders in Grafana.
+
+| Profile Folder | Contents | Target |
+| --- | --- | --- |
+| **Standard** | `System Overview`, `Dashboard [1080p]` | Desktop monitors. |
+| **Wide-Screens** | `Panel [1920x440]` | Ultra-wide internal displays. |
+| **Mobile** | `Panel [Portrait]` | Vertical side-screens/mobile. |
+| **Debug** | `Discovery`, `Operations`, `Legacy Panel` | Troubleshooting & Bring-up. |
+
+### Persisting Edits
+By default, the dashboard stack uses Docker volumes to store your changes. To manage dashboards as files on your host machine:
+1. Map a local directory to `/var/lib/grafana/dashboards` in `docker-compose.yml`.
+2. On first run, AUDiot will populate this directory with the default profile folders.
+3. Any changes you make to these JSON files (or via the Grafana UI) will be persisted locally.
+
+**Optional: Skip Downloads**
+If you want to prevent the bootstrapper from downloading default dashboards (e.g. if you already have your own set), set `SKIP_DASHBOARD_DOWNLOAD=true` in your environment.
+
+---
+
 ## Verified Ports & Firewall
 
 | Component | Port | Usage | Access |

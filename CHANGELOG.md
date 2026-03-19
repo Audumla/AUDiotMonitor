@@ -46,4 +46,21 @@
 - Updated exporter_interface_spec.md to reflect implemented API endpoints and self-metrics.
 - Updated installation_spec.md with new directory layouts for external customization (conf.d, custom.d).
 
+### Created specialized dashboard defaults for common screen sizes, including 1920x440. (UI Improvement)
+- Developed AUDiot Panel [1920x440] optimized for wide sensor panels.
+- Developed AUDiot Panel [Portrait] optimized for vertical side-screens or mobile.
+- Developed AUDiot Dashboard [1080p] for standard desktop monitoring.
+- Updated documentation in INSTALL.md to guide users on selecting the right dashboard for their display.
+
+### Implemented dashboard profiles with first-run scaffolding and persistent user edits. (UI Improvement, Configuration Cleanup)
+- Organized dashboards into logical profile folders (Standard, Wide-Screens, Mobile, Debug).
+- Updated docker-compose.yml with a grafana-init bootstrapper to populate mapped volumes with default profiles if empty.
+- Configured Grafana to automatically create UI folders based on the filesystem structure.
+- Ensured user edits to dashboards are persisted across container restarts.
+
+### Synchronized all documentation and specifications with new dashboard profile and scaffolding architecture. (Documentation Update)
+- Updated README.md with dashboard profile and scaffolding features.
+- Updated specifications/overview.md and specifications/dashboard_implementation_spec.md to reflect logical profile organization and grafana-init behavior.
+- Ensured INSTALL.md provides clear instructions for persisting user edits via local folder mapping.
+
 ---

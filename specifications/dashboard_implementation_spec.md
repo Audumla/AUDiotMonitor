@@ -786,87 +786,42 @@ The following folder structure is the normative reference for the provisioning p
 
 ```text
 monitoring/
-  INSTALL.md
   collector/                          # deploy on every machine being monitored
-    docker-compose.yml                # hwexp + node-exporter + Prometheus
-    .env.example
-    config/
-      hwexp/
-        hwexp.yaml
-        mappings.yaml
-        mappings.auto.yaml            # auto-generated on first run, not committed
-      prometheus/
-        prometheus.yml
-  dashboard/                          # deploy on the Grafana host (anywhere on the network)
-    docker-compose.yml                # Grafana only — PROMETHEUS_URL points at collector
-    .env.example
+    ...
+  dashboard/                          # deploy on the Grafana host
+    docker-compose.yml                # Includes grafana-init bootstrapper
     config/
       grafana/
-        grafana.ini
         provisioning/
-          datasources/
-            prometheus.yaml           # datasource URL read from PROMETHEUS_URL env var
           dashboards/
-            dashboards.yaml
+            dashboards.yaml           # Configured for recursive folder loading
     dashboards/
-      panel/
-        panel-dashboard.json
-      ops/
-        operations-dashboard.json
-      discovery/
-        discovery-dashboard.json
-  scripts/
-    start-kiosk.sh
-    validate-config.sh
-    start-kiosk.sh
-    install-kiosk-autostart.sh
+      profiles/                       # Profile-based organization
+        standard/                     # Desktop / 1080p profiles
+        wide-screens/                 # Internal panels (1920x440)
+        mobile/                       # Portrait / mobile layouts
+        debug/                        # Troubleshooting and bring-up
 ```
 
-## 9.1 Grafana datasource provisioning path
+## 9.4 Scaffolding and Bootstrapping
+The dashboard stack MUST include an initialization service (`grafana-init`) that:
+1.  Creates the `profiles/` directory structure on the host if it does not exist.
+2.  Populates the directories with default dashboard JSON files from the repository.
+3.  Avoids overwriting existing files to ensure user customizations are persisted.
 
-Recommended path:
-
-```text
-config/grafana/provisioning/datasources/prometheus.yaml
-```
-
-## 9.2 Grafana dashboard provider provisioning path
-
-Recommended path:
-
-```text
-config/grafana/provisioning/dashboards/dashboards.yaml
-```
-
-## 9.3 Dashboard JSON paths
-
-Recommended paths:
-
-```text
-/dashboards/panel/panel-dashboard.json
-/dashboards/ops/operations-dashboard.json
-/dashboards/discovery/discovery-dashboard.json
-```
+## 9.5 Optional Dashboard Downloads
+The initialization service SHOULD support an environment variable `SKIP_DASHBOARD_DOWNLOAD`.
+- If set to `true`, the service MUST skip the download phase of dashboard JSON files.
+- The service MUST still ensure the directory structure and provisioning configuration files are created.
 
 ---
 
 # 10. Concrete provisioning expectations
 
-## 10.1 Datasource provider
-
-Grafana MUST provision a Prometheus datasource automatically.
-
-Expected logical datasource name:
-
-* `Prometheus`
-
-## 10.2 Dashboard providers
-
-Grafana MUST provision dashboard folders or providers for:
-
-* `Panel`
-* `Operations`
-* `Discovery`
+## 10.2 Profile-Based Providers
+Grafana MUST provision dashboard folders automatically based on the directory structure under `/var/lib/grafana/dashboards/profiles/`.
+- The provider MUST use `foldersFromFilesStructure: true`.
+- Each subfolder (e.g., `standard`, `wide-screens`) MUST appear as a matching folder in the Grafana UI.
 
 ## 10.3 Stable dashboard UID guidance
 

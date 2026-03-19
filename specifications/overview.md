@@ -17,6 +17,19 @@ Implemented endpoints:
 - `/debug/catalog`: JSON summary of the normalized sensor catalog.
 - `/debug/raw`: Raw sensor data (requires `debug.enable_raw_endpoint` in config).
 
+### 10.2 Dashboard Profiles and Scaffolding
+Dashboards are organized into **Profiles** based on display hardware and use-case:
+- **Standard**: Full desktop monitoring (1080p+).
+- **Wide-Screens**: Internal case displays and sensor panels (e.g., 1920x440).
+- **Mobile**: Vertical/Portrait layouts for side-screens and mobile devices.
+- **Debug**: Operational views for troubleshooting and hardware bring-up.
+
+#### 10.2.1 Scaffolding (`grafana-init`)
+A dedicated initialization service (`grafana-init`) handles the first-run setup:
+- **Automatic Deployment**: Populates the local dashboard volume with the default profile library.
+- **Non-Destructive**: Checks for file existence before writing, ensuring user edits and custom dashboards are never overwritten.
+- **Persistence**: Supports mapping local host directories to the Grafana dashboard volume for external file-based management.
+
 ---
 
 ## 13. Taxonomy
