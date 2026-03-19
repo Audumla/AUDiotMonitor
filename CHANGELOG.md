@@ -22,4 +22,11 @@
 - Verified that OS metrics (CPU/RAM) are provided by node-exporter and already integrated into dashboards.
 - Enabled linux_gpu_vendor adapter in default and collector configurations.
 
+### Added hwinfo-level hardware specifications and inventory tracking. (New Feature, UI Improvement)
+- Implemented linux_static adapter to collect Motherboard model, BIOS version, CPU core/thread counts, and total system RAM.
+- Updated linux_gpu adapter to report VRAM capacity for AMD and NVIDIA GPUs.
+- Introduced hw_device_info metric to expose hardware metadata as Prometheus labels.
+- Added Hardware Inventory table and spec stats (Cores, RAM) to the System Overview dashboard.
+- Enhanced automapper to support 'count' and 'bytes' units for inventory metrics.
+
 ---

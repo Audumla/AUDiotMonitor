@@ -77,6 +77,18 @@ var unitToMapping = map[string]sensorMapping{
 		component:    "compute",
 		sensor:       "utilization",
 	},
+	"count": {
+		metricFamily: "hw_device_sensor_count",
+		scale:        1.0,
+		component:    "system",
+		sensor:       "count",
+	},
+	"bytes": {
+		metricFamily: "hw_device_capacity_bytes",
+		scale:        1.0,
+		component:    "system",
+		sensor:       "capacity",
+	},
 }
 
 // inputRE extracts the sensor prefix (e.g. "temp") from a raw hwmon filename

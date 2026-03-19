@@ -10,6 +10,7 @@ import (
 
 	"hwexp/internal/adapters/hwmon"
 	"hwexp/internal/adapters/linux_gpu"
+	"hwexp/internal/adapters/linux_static"
 	"hwexp/internal/adapters/mock"
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
@@ -92,6 +93,11 @@ func main() {
 	if cfg.Adapters.LinuxGpuVendor.Enabled && *fixturePath == "" {
 		l.Info("startup", "Using linux_gpu adapter", nil)
 		adapters = append(adapters, linux_gpu.NewAdapter(""))
+	}
+
+	if *fixturePath == "" {
+		l.Info("startup", "Using linux_static adapter", nil)
+		adapters = append(adapters, linux_static.NewAdapter(""))
 	}
 
 	if len(adapters) == 0 {

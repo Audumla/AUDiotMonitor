@@ -62,6 +62,13 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 		}
 
 		now := time.Now().UTC()
+		vramBytes := 0.0
+		if vendorName == "amd" {
+			if vramRaw := readSysFile(filepath.Join(devicePath, "mem_info_vram_total")); vramRaw != "" {
+				vramBytes, _ = strconv.ParseFloat(vramRaw, 64)
+			}
+		}
+
 		devices = append(devices, model.DiscoveredDevice{
 			StableID:          stableID,
 			Platform:          "linux",
@@ -70,12 +77,13 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			Vendor:            vendorName,
 			DisplayName:       fmt.Sprintf("GPU %s (%s)", vendorName, filepath.Base(card)),
 			LogicalDeviceName: filepath.Base(card),
-			Capabilities:      []string{"utilization"},
+			Capabilities:      []string{"utilization", "inventory"},
 			FirstSeen:         now,
 			LastSeen:          now,
 			Present:           true,
 			AdapterMetadata: map[string]interface{}{
-				"sysfs_path": devicePath,
+				"sysfs_path":     devicePath,
+				"capacity_bytes": vramBytes,
 			},
 		})
 	}
@@ -86,8 +94,15 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 		for _, nd := range nvDevices {
 			// Check if already discovered via sysfs (stableID match)
 			exists := false
-			for _, d := range devices {
+			for i, d := range devices {
 				if d.StableID == nd.StableID {
+					// Supplement sysfs info with nvidia-smi info if available
+					if d.Vendor == "nvidia" {
+						devices[i].Capabilities = append(devices[i].Capabilities, "inventory")
+						devices[i].AdapterMetadata["capacity_bytes"] = nd.AdapterMetadata["capacity_bytes"]
+						devices[i].Model = nd.Model
+						devices[i].DisplayName = nd.DisplayName
+					}
 					exists = true
 					break
 				}
@@ -111,6 +126,21 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 	now := time.Now().UTC()
 
 	for _, dev := range devices {
+		if cap, ok := dev.AdapterMetadata["capacity_bytes"].(float64); ok && cap > 0 {
+			all = append(all, model.RawMeasurement{
+				MeasurementID:  fmt.Sprintf("linux_gpu:%s:vram_capacity", dev.StableID),
+				StableDeviceID: dev.StableID,
+				Source:         "linux_gpu",
+				RawName:        "vram_capacity_bytes",
+				RawValue:       cap,
+				RawUnit:        "bytes",
+				Timestamp:      now,
+				Quality:        "good",
+				ComponentHint:  "memory",
+				SensorHint:     "capacity",
+			})
+		}
+
 		if dev.Vendor == "amd" {
 			if sysfsPath, ok := dev.AdapterMetadata["sysfs_path"].(string); ok {
 				if busy := readSysFile(filepath.Join(sysfsPath, "gpu_busy_percent")); busy != "" {

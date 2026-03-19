@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -115,6 +116,7 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	
 	measurements := s.store.GetAllNormalized()
+	devices := s.store.GetDevices()
 	sm := s.engine.GetSelfMetrics()
 	
 	// Group by MetricFamily for OpenMetrics formatting
@@ -149,6 +151,33 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	// Write output
 	fmt.Fprintf(w, "# HELP hwexp_up Exporter is running\n# TYPE hwexp_up gauge\nhwexp_up{host=%q} 1\n", s.cfg.Identity.Host)
 	
+	// Device Info Metrics
+	fmt.Fprintf(w, "# HELP hw_device_info Metadata about discovered hardware devices\n# TYPE hw_device_info gauge\n")
+	for _, dev := range devices {
+		var lb strings.Builder
+		lb.WriteByte('{')
+		lb.WriteString(fmt.Sprintf(`host=%q`, s.cfg.Identity.Host))
+		lb.WriteString(fmt.Sprintf(`,device_id=%q`, dev.StableID))
+		lb.WriteString(fmt.Sprintf(`,device_class=%q`, dev.DeviceClass))
+		lb.WriteString(fmt.Sprintf(`,vendor=%q`, dev.Vendor))
+		lb.WriteString(fmt.Sprintf(`,model=%q`, dev.Model))
+		lb.WriteString(fmt.Sprintf(`,driver=%q`, dev.Driver))
+		
+		// Add some metadata if available
+		if bios, ok := dev.AdapterMetadata["bios_version"].(string); ok {
+			lb.WriteString(fmt.Sprintf(`,bios_version=%q`, bios))
+		}
+		if cpuCores, ok := dev.AdapterMetadata["cores"].(int); ok {
+			lb.WriteString(fmt.Sprintf(`,cpu_cores=%q`, strconv.Itoa(cpuCores)))
+		}
+		if cpuThreads, ok := dev.AdapterMetadata["threads"].(int); ok {
+			lb.WriteString(fmt.Sprintf(`,cpu_threads=%q`, strconv.Itoa(cpuThreads)))
+		}
+
+		lb.WriteByte('}')
+		fmt.Fprintf(w, "hw_device_info%s 1\n", lb.String())
+	}
+
 	// Self-metrics
 	fmt.Fprintf(w, "# HELP hwexp_adapter_refresh_duration_seconds Duration of the last adapter refresh\n# TYPE hwexp_adapter_refresh_duration_seconds gauge\nhwexp_adapter_refresh_duration_seconds{host=%q} %f\n", s.cfg.Identity.Host, sm.LastRefreshDuration.Seconds())
 	

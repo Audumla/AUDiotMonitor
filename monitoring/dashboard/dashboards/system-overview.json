@@ -27,28 +27,35 @@
     ]
   },
   "panels": [
-    {
-      "id": 1,
-      "type": "row",
-      "title": "System Status",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
+    { "id": 1, "type": "row", "title": "System Status", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+
+    { "id": 200, "type": "table", "title": "Hardware Inventory",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 1 },
+      "targets": [{ "expr": "hw_device_info{host=~\"$host\"}", "format": "table", "instant": true }],
+      "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "custom", "value": { "displayMode": "hidden" } }] },
+          { "matcher": { "id": "byName", "options": "Time" }, "properties": [{ "id": "custom", "value": { "displayMode": "hidden" } }] }
+        ]
       }
     },
-    {
-      "id": 2,
-      "type": "stat",
-      "title": "CPU Usage",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 1
-      },
+
+    { "id": 201, "type": "stat", "title": "CPU Cores",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 7 },
+      "targets": [{ "expr": "hw_device_sensor_count{host=~\"$host\", sensor=\"cores\"}", "legendFormat": "Cores" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "green" } }}
+    },
+
+    { "id": 202, "type": "stat", "title": "Total RAM",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 7 },
+      "targets": [{ "expr": "hw_device_capacity_bytes{host=~\"$host\", device_id=\"system-mem\"}", "legendFormat": "RAM" }],
+      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "fixed", "fixedColor": "blue" } }}
+    },
+
+    { "id": 2, "type": "stat", "title": "CPU Usage",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 7 },
+
       "targets": [
         {
           "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
