@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.14.1...hwexp-v0.15.0) (2026-03-19)
+
+
+### Features
+
+* **hwexp:** improve device classification and model enrichment ([e9a28c8](https://github.com/Audumla/AUDiotMonitor/commit/e9a28c88523719eb0df950b0ac70d7c76617bea8))
+
+
+### Bug Fixes
+
+* **hwexp:** normalise startup banner line widths ([152e2ca](https://github.com/Audumla/AUDiotMonitor/commit/152e2cac21c02b3921f9a6aa661cfaf51e1614c8))
+* mappings ([2b819eb](https://github.com/Audumla/AUDiotMonitor/commit/2b819ebb967718c8a074499cd8d94e82a6c01b97))
+
 ## [0.14.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.14.0...hwexp-v0.14.1) (2026-03-19)
 
 
