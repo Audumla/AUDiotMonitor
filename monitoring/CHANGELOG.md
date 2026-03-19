@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.4.0...monitoring-v0.4.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* **monitoring:** build dashboard image without chmod step ([489ed8a](https://github.com/Audumla/AUDiotMonitor/commit/489ed8a0f223cb4d7df9bb579d54f94b8114dd1a))
+
 ## [0.4.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.3.0...monitoring-v0.4.0) (2026-03-19)
 
 
