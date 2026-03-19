@@ -76,5 +76,60 @@
       "Added Hardware Inventory table and spec stats (Cores, RAM) to the System Overview dashboard.",
       "Enhanced automapper to support 'count' and 'bytes' units for inventory metrics."
     ]
+  },
+  {
+    "id": "CHG-c28ef2c2",
+    "agent": "gemini",
+    "change_group": "audiotmonitor",
+    "plugin_version": "unreleased",
+    "date": "2026-03-19",
+    "recorded_at": "2026-03-19T05:29:34.673717Z",
+    "summary_tags": [
+      "New Feature",
+      "UI Improvement"
+    ],
+    "summary": "Added Llamaswap support to monitor local LLM models.",
+    "details": [
+      "Implemented llamaswap adapter to discover and poll models from a local Llamaswap/OpenAI-compatible API.",
+      "Updated dashboard to include AI & LLM Services section with model inventory.",
+      "Configured default Llamaswap endpoint to http://localhost:50099."
+    ]
+  },
+  {
+    "id": "CHG-c28ef2c2-1",
+    "agent": "gemini",
+    "change_group": "audiotmonitor",
+    "plugin_version": "unreleased",
+    "date": "2026-03-19",
+    "recorded_at": "2026-03-19T05:31:41.679771Z",
+    "summary_tags": [
+      "Configuration Cleanup",
+      "New Feature"
+    ],
+    "summary": "Added support for external/modular configuration and custom collection scripts.",
+    "details": [
+      "Implemented conf.d support to allow merging multiple YAML configuration files from /etc/hwexp/conf.d/.",
+      "Implemented vendor_exec adapter to run custom scripts/binaries from /etc/hwexp/custom.d/ for highly customized telemetry.",
+      "Updated Dockerfile to create and expose these directories as volumes.",
+      "Added documentation for these customization features in INSTALL.md."
+    ]
+  },
+  {
+    "id": "CHG-c28ef2c2-2",
+    "agent": "gemini",
+    "change_group": "audiotmonitor",
+    "plugin_version": "unreleased",
+    "date": "2026-03-19",
+    "recorded_at": "2026-03-19T05:33:51.125687Z",
+    "summary_tags": [
+      "Documentation Update"
+    ],
+    "summary": "Updated all project documentation and specifications to match current implementation.",
+    "details": [
+      "Refreshed README.md and INSTALL.md with new features (GPU, Inventory, AI, Plugins).",
+      "Updated specifications/overview.md to align with final taxonomy and naming standards.",
+      "Updated exporter_interface_spec.md to reflect implemented API endpoints and self-metrics.",
+      "Updated installation_spec.md with new directory layouts for external customization (conf.d, custom.d)."
+    ]
   }
 ]

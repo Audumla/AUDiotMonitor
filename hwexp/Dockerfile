@@ -12,7 +12,7 @@ RUN apk add --no-cache tzdata
 COPY --from=builder /hwexp /usr/bin/hwexp
 # Bake in default config — works out of the box with no mounted volumes.
 # Override by mounting your own files at /etc/hwexp/ or /var/lib/hwexp/.
-RUN mkdir -p /etc/hwexp /var/lib/hwexp
+RUN mkdir -p /etc/hwexp/conf.d /etc/hwexp/custom.d /var/lib/hwexp
 COPY configs/hwexp.yaml /etc/hwexp/hwexp.yaml
 COPY configs/mappings.yaml /etc/hwexp/mappings.yaml
 EXPOSE 9200

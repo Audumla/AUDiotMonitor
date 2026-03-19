@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -117,7 +118,21 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	// Environment variable overrides (useful when running in Docker)
+	// Merge from conf.d if it exists
+	confD := filepath.Join(filepath.Dir(path), "conf.d")
+	if files, err := filepath.Glob(filepath.Join(confD, "*.yaml")); err == nil {
+		for _, f := range files {
+			extraData, err := os.ReadFile(f)
+			if err != nil {
+				continue
+			}
+			if err := yaml.Unmarshal(extraData, cfg); err != nil {
+				continue
+			}
+		}
+	}
+
+	// Environment variable overrides
 	if v := os.Getenv("HWEXP_HOST"); v != "" {
 		cfg.Identity.Host = v
 	}

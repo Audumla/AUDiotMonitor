@@ -894,43 +894,23 @@
         }
       }
     },
-    {
-      "id": 26,
-      "type": "timeseries",
-      "title": "Filesystem Usage",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 75
-      },
+    { "id": 26, "type": "timeseries", "title": "Filesystem Usage",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 75 },
       "targets": [
-        {
-          "expr": "node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}",
-          "legendFormat": "used {{mountpoint}}"
-        },
-        {
-          "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}",
-          "legendFormat": "free {{mountpoint}}"
-        }
+        { "expr": "node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}", "legendFormat": "used {{mountpoint}}" },
+        { "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}", "legendFormat": "free {{mountpoint}}" }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "color": {
-            "mode": "palette-classic"
-          }
-        }
-      },
-      "options": {
-        "tooltip": {
-          "mode": "multi"
-        },
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }},
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+
+    { "id": 300, "type": "row", "title": "AI & LLM Services", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 83 } },
+
+    { "id": 301, "type": "table", "title": "Llamaswap Models",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 84 },
+      "targets": [{ "expr": "hw_device_info{device_class=\"llm\"}", "format": "table", "instant": true }],
+      "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } } }
     }
-  ]
-}
+    ]
+    }

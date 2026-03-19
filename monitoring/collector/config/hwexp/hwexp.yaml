@@ -12,6 +12,10 @@ adapters:
     enabled: true
   linux_gpu_vendor:
     enabled: true
+  llamaswap:
+    enabled: true
+    settings:
+      endpoint: "http://localhost:50099"
 
 mapping:
   rules_file: "/etc/hwexp/mappings.yaml"

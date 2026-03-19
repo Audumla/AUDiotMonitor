@@ -1,23 +1,26 @@
 # AUDiot Monitor
 
-Hardware and OS telemetry stack for Linux machines. Collects sensor data from the kernel's hwmon subsystem, exposes it as Prometheus metrics, and visualises it in Grafana.
+Hardware, OS, and AI telemetry stack for Linux machines. Collects sensor data, system specifications, and service status, exposes them as Prometheus metrics, and visualises them in Grafana.
 
-## What it does
+## Features
 
-- **Automatic sensor discovery** — reads every sensor in `/sys/class/hwmon` on startup (temperatures, fan speeds, voltages, power, current, frequencies)
-- **Auto-mapping** — generates Prometheus metric rules for unmapped sensors on first run, no manual config needed
-- **OS metrics** — CPU usage, memory, disk, network and load via node_exporter
-- **Grafana dashboards** — pre-built dashboards provisioned automatically on deploy
-- **Multi-arch Docker image** — runs on x86_64, arm64 and Raspberry Pi (armv7)
+- **Automatic sensor discovery** — reads temperatures, fan speeds, voltages, power, and frequencies from `/sys/class/hwmon`.
+- **GPU Telemetry** — native support for **AMD** (sysfs) and **NVIDIA** (nvidia-smi) utilization and VRAM tracking.
+- **Hardware Inventory** — exports deep system specs: Motherboard model, BIOS version, CPU core/thread counts, and total RAM.
+- **AI/LLM Monitoring** — built-in adapter for **Llamaswap** to monitor local LLM model status.
+- **Extensible Architecture** — support for custom collection scripts (Bash, Python, etc.) via the `vendor_exec` plugin system.
+- **Auto-mapping** — generates Prometheus metric rules for unmapped sensors automatically.
+- **OS metrics** — CPU usage, memory, disk, network via integrated `node_exporter`.
+- **Modular Config** — support for `conf.d` directory for easy, non-destructive configuration.
 
 ## Components
 
 | Component | Purpose |
 | --------- | ------- |
-| `hwexp` | Go binary — reads hwmon sysfs, exposes metrics on `:9200/metrics` |
-| `node-exporter` | OS-level metrics (CPU%, memory, disk, network) |
-| `prometheus` | Metrics storage and query engine |
-| `grafana` | Dashboard visualisation |
+| `hwexp` | Go binary — universal hardware and service exporter (`:9200`) |
+| `node-exporter` | OS-level performance metrics (`:9100`) |
+| `prometheus` | Metrics storage and query engine (`:9090`) |
+| `grafana` | Dashboard visualisation (`:3000`) |
 
 ## Quick install
 
@@ -27,65 +30,35 @@ Full instructions: [`monitoring/INSTALL.md`](monitoring/INSTALL.md)
 # On every machine you want to monitor (collector stack):
 cd monitoring/collector && docker compose up -d
 
-# On the machine running Grafana — same host or separate (dashboard stack):
+# On the machine running Grafana (dashboard stack):
 PROMETHEUS_URL=http://<collector-ip>:9090 docker compose -f monitoring/dashboard/docker-compose.yml up -d
-```
-
-Grafana at `http://<dashboard-host>:3000` — default login `admin / admin`.
-
-## Docker Hub
-
-```text
-audumla/audiot-hwexp:latest
-```
-
-Multi-arch: `linux/amd64`, `linux/arm64`, `linux/arm/v7`
-
-## Repository layout
-
-```text
-hwexp/                      Go source for the hardware exporter
-  cmd/hwexp/                Binary entrypoint
-  internal/
-    adapters/hwmon/         Linux hwmon sysfs adapter
-    automapper/             Auto-generates metric rules for unmapped sensors
-    engine/                 Poll and discovery loop
-    mapper/                 Rule-based metric normalisation
-    httpapi/                Prometheus metrics + debug endpoints
-  packaging/                .deb / .rpm packaging (nfpm)
-  tests/integration/        Install and smoke tests
-
-monitoring/                 Deployment stacks
-  collector/                Deploy on every machine you want to monitor
-    docker-compose.yml      hwexp + node-exporter + Prometheus
-    config/
-      hwexp/                hwexp config and mapping rules
-      prometheus/           Prometheus scrape config
-  dashboard/                Deploy on your Grafana host (can be same machine)
-    docker-compose.yml      Grafana only — points at collector via PROMETHEUS_URL
-    config/grafana/         Grafana provisioning
-    dashboards/             Pre-built Grafana dashboard JSON
-  INSTALL.md                Step-by-step install guide
 ```
 
 ## Metrics
 
-All hardware metrics use the prefix `hw_device_` with a `host` label:
+All metrics use the prefix `hw_device_` or `hwexp_`:
 
-| Metric | Unit |
-| ------ | ---- |
-| `hw_device_temperature_celsius` | °C |
-| `hw_device_fan_rpm` | RPM |
-| `hw_device_power_watts` | W |
-| `hw_device_voltage_volts` | V |
-| `hw_device_current_amps` | A |
-| `hw_device_frequency_hz` | Hz |
+| Metric | Type | Purpose |
+| ------ | ---- | ------- |
+| `hw_device_temperature_celsius` | Gauge | Temperature sensors |
+| `hw_device_utilization_percent` | Gauge | CPU/GPU/LLM compute & memory load |
+| `hw_device_info` | Info | Metadata (Vendor, Model, BIOS, Driver) |
+| `hw_device_capacity_bytes` | Info | Fixed capacities (RAM, VRAM) |
+| `hw_device_sensor_count` | Info | Counts (CPU Cores, Threads) |
+| `hwexp_adapter_refresh_success`| Self | Health of the exporter itself |
 
-## CI / CD
+## API Endpoints
 
-- **PRs** — build, vet, unit tests, integration tests (deb/rpm install, hwmon smoke test)
-- **Nightly** — full test suite
-- **Release** — `hwexp-v*` tag → builds packages + pushes multi-arch Docker image to Docker Hub
+- `/metrics` — Prometheus metrics (includes hardware + self-metrics)
+- `/readyz` — Returns 200 OK once the first poll cycle is complete
+- `/debug/catalog` — JSON summary of all detected and normalized sensors
+- `/debug/discovery` — JSON view of raw discovered hardware devices
+
+## Extension & Customization
+
+AUDiot is designed to be customized without rebuilding the Docker image:
+- **Modular Config**: Drop `.yaml` files into `/etc/hwexp/conf.d/` to enable features.
+- **Custom Scripts**: Drop executable scripts into `/etc/hwexp/custom.d/` to collect your own data.
 
 ## License
 

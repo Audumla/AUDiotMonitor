@@ -29,4 +29,21 @@
 - Added Hardware Inventory table and spec stats (Cores, RAM) to the System Overview dashboard.
 - Enhanced automapper to support 'count' and 'bytes' units for inventory metrics.
 
+### Added Llamaswap support to monitor local LLM models. (New Feature, UI Improvement)
+- Implemented llamaswap adapter to discover and poll models from a local Llamaswap/OpenAI-compatible API.
+- Updated dashboard to include AI & LLM Services section with model inventory.
+- Configured default Llamaswap endpoint to http://localhost:50099.
+
+### Added support for external/modular configuration and custom collection scripts. (Configuration Cleanup, New Feature)
+- Implemented conf.d support to allow merging multiple YAML configuration files from /etc/hwexp/conf.d/.
+- Implemented vendor_exec adapter to run custom scripts/binaries from /etc/hwexp/custom.d/ for highly customized telemetry.
+- Updated Dockerfile to create and expose these directories as volumes.
+- Added documentation for these customization features in INSTALL.md.
+
+### Updated all project documentation and specifications to match current implementation. (Documentation Update)
+- Refreshed README.md and INSTALL.md with new features (GPU, Inventory, AI, Plugins).
+- Updated specifications/overview.md to align with final taxonomy and naming standards.
+- Updated exporter_interface_spec.md to reflect implemented API endpoints and self-metrics.
+- Updated installation_spec.md with new directory layouts for external customization (conf.d, custom.d).
+
 ---

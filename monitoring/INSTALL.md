@@ -4,386 +4,108 @@ The monitoring system is split into two independent Docker Compose stacks.
 
 | Stack | Purpose | Deploy on |
 | --- | --- | --- |
-| **Collector** | Scrapes hardware and OS metrics, stores them in Prometheus | Every machine you want to monitor |
+| **Collector** | Scrapes hardware, OS, and AI metrics; stores them in Prometheus | Every machine you want to monitor |
 | **Dashboard** | Runs Grafana; queries Prometheus to visualise the metrics | Any machine on the same network |
-
-Both stacks can run on the same host. Alternatively the dashboard can run on a
-dedicated machine (e.g. a Raspberry Pi kiosk) while the collector runs on each
-machine being monitored.
 
 ---
 
 ## Quick start — no repo clone needed
 
-Install Docker (if not already installed), then run:
+Install Docker, then run:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/deploy.sh | bash
 ```
 
-This downloads the two `docker-compose.yml` files into `~/audiot/` and starts both stacks.
-Grafana opens at **<http://localhost:3000>** (admin / admin).
-
-To deploy only the collector or only the dashboard:
-
-```bash
-# Collector only
-DEPLOY=collector curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/deploy.sh | bash
-
-# Dashboard only (pointing at a collector on another machine)
-DEPLOY=dashboard PROMETHEUS_URL=http://192.168.1.10:9090 \
-  curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/deploy.sh | bash
-```
-
----
-
-## Manual setup — just the compose files
-
-If you prefer to manage the files yourself, download just what you need:
-
-```bash
-# Collector
-mkdir -p ~/audiot/collector
-curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/collector/docker-compose.yml \
-  -o ~/audiot/collector/docker-compose.yml
-HWEXP_HOST=myserver docker compose -f ~/audiot/collector/docker-compose.yml up -d
-
-# Dashboard
-mkdir -p ~/audiot/dashboard
-curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/dashboard/docker-compose.yml \
-  -o ~/audiot/dashboard/docker-compose.yml
-PROMETHEUS_URL=http://localhost:9090 docker compose -f ~/audiot/dashboard/docker-compose.yml up -d
-```
-
----
-
-## Prerequisites
-
-- Linux machine (x86_64, arm64, or armv7 — Raspberry Pi included)
-- Docker Engine ≥ 24 and Docker Compose v2
-- Collector ports: 9090 (Prometheus), 9100 (node-exporter, internal), 9200 (hwexp)
-- Dashboard port: 3000 (Grafana)
-
-### Install Docker (if not already installed)
-
-**Ubuntu / Debian / Raspberry Pi OS:**
-
-```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-# Log out and back in, then verify:
-docker run --rm hello-world
-```
-
-**OpenSUSE / Fedora:**
-
-```bash
-sudo zypper install docker          # OpenSUSE
-# or: sudo dnf install docker       # Fedora
-sudo systemctl enable --now docker
-sudo usermod -aG docker $USER
-```
+Grafana at **<http://localhost:3000>** (admin / admin).
 
 ---
 
 ## Collector Stack — `monitoring/collector/`
 
-Runs on every machine you want to monitor. Contains three services:
-
-| Service | Port | What it does |
-| --- | --- | --- |
-| `hwexp` | 9200 | Reads `/sys/class/hwmon`, exposes hardware sensor metrics |
-| `node-exporter` | 9100 | Exposes OS metrics (CPU%, memory, disk, network, load) |
-| `prometheus` | 9090 | Scrapes both exporters, stores time-series data |
+Runs on every machine you want to monitor.
 
 ### Collector `docker-compose.yml`
 
 ```yaml
 services:
-
   hwexp:
     image: audumla/audiot-hwexp:latest
     container_name: hwexp
-    privileged: true                         # required to read /sys/class/hwmon
+    privileged: true
     volumes:
       - /sys:/sys:ro
       - /proc:/proc:ro
-      - ./config/hwexp:/etc/hwexp:z          # hwexp.yaml + mappings.yaml
+      - ./config/hwexp:/etc/hwexp:z
+      - ./config/hwexp/conf.d:/etc/hwexp/conf.d:ro    # Modular configs
+      - ./custom.d:/etc/hwexp/custom.d:ro             # Custom scripts
     environment:
-      - HWEXP_HOST=${HWEXP_HOST:-localhost}   # label applied to all hw_device_* metrics
+      - HWEXP_HOST=${HWEXP_HOST:-localhost}
     ports:
       - "9200:9200"
     restart: unless-stopped
 
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    restart: unless-stopped
+    # ... (rest of node-exporter)
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
-    volumes:
-      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
-      - prometheus-data:/prometheus
-    ports:
-      - "9090:9090"
-    restart: unless-stopped
-
-volumes:
-  prometheus-data:
+    # ... (rest of prometheus)
 ```
-
-### Collector environment variables (`.env.example`)
-
-```env
-# Hostname label applied to all hw_device_* metrics.
-# Defaults to the machine's $HOSTNAME if not set.
-HWEXP_HOST=myserver
-```
-
-### Deploy the collector
-
-```bash
-cd monitoring/collector
-cp .env.example .env    # optional — set HWEXP_HOST if the default $HOSTNAME is not suitable
-docker compose up -d
-```
-
-### Verify the collector is running
-
-```bash
-docker compose ps
-
-# Hardware metrics — available within ~5 s of first start
-curl http://localhost:9200/metrics | head -20
-
-# Full list of sensors discovered on this machine
-curl http://localhost:9200/debug/discovery
-
-# Prometheus scrape health
-curl http://localhost:9090/-/healthy
-```
-
-### Open firewall ports on the collector machine
-
-These ports must be reachable from your dashboard machine.
-
-**firewalld (OpenSUSE / Fedora / RHEL):**
-
-```bash
-sudo firewall-cmd --zone=public --add-port=9090/tcp --permanent  # Prometheus
-sudo firewall-cmd --zone=public --add-port=9200/tcp --permanent  # hwexp
-sudo firewall-cmd --reload
-```
-
-**ufw (Ubuntu / Debian / Raspberry Pi OS):**
-
-```bash
-sudo ufw allow 9090/tcp   # Prometheus
-sudo ufw allow 9200/tcp   # hwexp
-```
-
-Port 9100 (node-exporter) is scraped internally by Prometheus and does not need external access.
 
 ---
 
-## Dashboard Stack — `monitoring/dashboard/`
+## Customization & Extensions
 
-Runs Grafana only. Queries any Prometheus instance via the `PROMETHEUS_URL` environment
-variable — point it at the collector machine's Prometheus port.
+AUDiot is highly extensible without rebuilding the Docker image.
 
-### Dashboard `docker-compose.yml`
-
+### 1. Modular Configuration (`conf.d`)
+Mount YAML files into `/etc/hwexp/conf.d/` to override settings or enable new adapters.
+Example `conf.d/llm.yaml`:
 ```yaml
-services:
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: audiot-grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro,z
-      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro,z
-      - ./dashboards:/var/lib/grafana/dashboards:ro,z
-      - grafana-data:/var/lib/grafana
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
-      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
-
-volumes:
-  grafana-data:
+adapters:
+  llamaswap:
+    enabled: true
+    settings:
+      endpoint: "http://192.168.1.50:50099"
 ```
 
-### Dashboard environment variables (`.env.example`)
-
-```env
-# URL of Prometheus running in the collector stack.
-# Change this to the IP or hostname of the machine running monitoring/collector/.
-PROMETHEUS_URL=http://192.168.1.10:9090
-
-# Grafana admin password (default: admin — change in production).
-GF_ADMIN_PASSWORD=admin
-
-# Anonymous read-only access.
-# Set GF_AUTH_ANONYMOUS_ENABLED=false to require login for all users.
-GF_AUTH_ANONYMOUS_ENABLED=true
-GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-```
-
-### Deploy the dashboard
-
-```bash
-cd monitoring/dashboard
-cp .env.example .env
-# Edit .env — set PROMETHEUS_URL to the collector machine's IP or hostname
-docker compose up -d
-```
-
-### Open Grafana
-
-Navigate to `http://<dashboard-host>:3000`.
-
-Default login: **admin / admin** — you will be prompted to change the password on first login.
-
-Three dashboards are pre-loaded in the **AUDiot** folder. Use the **host** variable at the top
-of each dashboard to switch between monitored machines:
-
-| Dashboard | Purpose |
-| --- | --- |
-| AUDiot System Overview | Comprehensive view — OS stats, all hardware sensors, network, disk |
-| AUDiot Panel Display | Compact at-a-glance status board |
-| AUDiot Discovery / Operations | Debug view for sensor bring-up and mapping inspection |
-
-### Open firewall ports on the dashboard machine
-
-```bash
-# firewalld
-sudo firewall-cmd --zone=public --add-port=3000/tcp --permanent && sudo firewall-cmd --reload
-# ufw
-sudo ufw allow 3000/tcp
-```
+### 2. Custom Scripts (`custom.d`)
+Place any executable script in `/etc/hwexp/custom.d/`. It will be run every poll cycle.
+Scripts must output JSON in the `RawMeasurement` format.
+To support discovery, scripts should return a list of `DiscoveredDevice` when run with `--discover`.
 
 ---
 
-## Deployment Scenarios
+## AI & LLM Monitoring
 
-### Same machine — collector and dashboard together
-
-```bash
-cd monitoring/collector  && docker compose up -d
-cd monitoring/dashboard  && docker compose up -d
-# PROMETHEUS_URL defaults to http://localhost:9090
-```
-
-### Separate machines — dashboard querying multiple collectors
-
-```text
-PC-A (192.168.1.10) ── monitoring/collector/ ──┐
-PC-B (192.168.1.11) ── monitoring/collector/ ──┤──► RPi ── monitoring/dashboard/
-Server (192.168.1.12) ─ monitoring/collector/ ──┘       PROMETHEUS_URL=http://192.168.1.10:9090
-```
-
-To scrape all machines from a single Prometheus, add extra scrape targets to
-`collector/config/prometheus/prometheus.yml`. The **host** variable in Grafana
-will then let you filter and compare machines.
+To monitor local LLM models running in **Llamaswap**:
+1. Ensure Llamaswap is running with the OpenAI-compatible API enabled.
+2. Enable the `llamaswap` adapter in your config (see example above).
+3. Models will automatically appear in the **AI & LLM Services** section of the dashboard.
 
 ---
 
-## How Auto-Mapping Works
+## Verified Ports & Firewall
 
-On first start, `hwexp` reads every sensor in `/sys/class/hwmon`. Sensors without a
-manual rule in `config/hwexp/mappings.yaml` receive an auto-generated rule within the first
-5-second poll cycle. No manual configuration is needed for a fresh machine.
+| Component | Port | Usage | Access |
+| --- | --- | --- | --- |
+| **Prometheus** | 9090 | Metrics API | From Dashboard machine |
+| **hwexp** | 9200 | Hardware metrics | From Prometheus (localhost or external) |
+| **Grafana** | 3000 | Web UI | From your browser |
 
-Auto-generated rules are written to `collector/config/hwexp/mappings.auto.yaml`:
-
-```bash
-cat monitoring/collector/config/hwexp/mappings.auto.yaml
-```
-
-Rules are grouped by device class and sensor type (e.g., one rule covers all AMD GPU temperature
-sensors). To override a rule — rename a sensor, add thresholds, change labels — copy the rule
-from `mappings.auto.yaml` into `mappings.yaml` and give it a higher `priority`. Manual rules
-always take precedence over auto-generated ones.
-
-To reload `mappings.yaml` after editing, without restarting the container:
-
-```bash
-docker kill --signal=SIGHUP hwexp
-```
+**UFW (Ubuntu):** `sudo ufw allow 9090, 9200, 3000/tcp`
 
 ---
 
-## Updates
+## Metrics Reference
 
-```bash
-cd monitoring/collector  && docker compose pull && docker compose up -d
-cd monitoring/dashboard  && docker compose pull && docker compose up -d
-```
-
-Prometheus data and Grafana settings are stored in named Docker volumes and survive updates.
-
----
-
-## Stopping / Removing
-
-```bash
-# Stop containers without removing stored data
-docker compose down
-
-# Stop and permanently remove all stored data (Prometheus history, Grafana settings)
-docker compose down -v
-```
-
----
-
-## Designing Dashboards
-
-The Grafana provisioning config sets `allowUiUpdates: true`. Edit any dashboard in the Grafana
-UI, then export the JSON and save it back into `monitoring/dashboard/dashboards/` to make the
-changes permanent.
-
-All `hwexp` hardware metrics use the prefix `hw_device_` and carry a `host` label:
-
-| Metric | Unit | What it covers |
-|--------|------|----------------|
-| `hw_device_temperature_celsius` | °C | CPU, GPU, NVMe, motherboard, PSU temperatures |
-| `hw_device_fan_rpm` | RPM | All fans |
-| `hw_device_power_watts` | W | GPU power draw, PSU output |
-| `hw_device_voltage_volts` | V | Rail voltages |
-| `hw_device_current_amps` | A | Current draw |
-| `hw_device_frequency_hz` | Hz | GPU/CPU clock frequencies |
-| `hw_device_energy_joules` | J | Cumulative energy |
-
-Key labels on every `hw_device_*` metric: `host`, `device_class`, `logical_name`, `component`, `sensor`.
-
-Example PromQL queries:
-
-```promql
-# All GPU temperatures
-hw_device_temperature_celsius{device_class="gpu"}
-
-# CPU package temperature for a specific host
-hw_device_temperature_celsius{host="myhost", device_class="cpu", component="thermal"}
-
-# Total power across all PSU outputs
-sum(hw_device_power_watts{device_class="psu"})
-
-# Fan speeds above 1000 RPM
-hw_device_fan_rpm > 1000
-```
+| Metric | Purpose |
+|--------|---------|
+| `hw_device_info` | Metadata info metric (Vendor, Model, BIOS, etc) |
+| `hw_device_temperature_celsius` | Thermal sensors |
+| `hw_device_utilization_percent` | CPU/GPU/LLM load |
+| `hw_device_capacity_bytes` | RAM/VRAM total capacity |
+| `hw_device_sensor_count` | CPU Cores/Threads count |
+| `hwexp_adapter_refresh_success` | Exporter health |

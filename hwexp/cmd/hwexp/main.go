@@ -11,7 +11,9 @@ import (
 	"hwexp/internal/adapters/hwmon"
 	"hwexp/internal/adapters/linux_gpu"
 	"hwexp/internal/adapters/linux_static"
+	"hwexp/internal/adapters/llamaswap"
 	"hwexp/internal/adapters/mock"
+	"hwexp/internal/adapters/vendor_exec"
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
 	"hwexp/internal/httpapi"
@@ -98,6 +100,24 @@ func main() {
 	if *fixturePath == "" {
 		l.Info("startup", "Using linux_static adapter", nil)
 		adapters = append(adapters, linux_static.NewAdapter(""))
+	}
+
+	if cfg.Adapters.Llamaswap.Enabled && *fixturePath == "" {
+		endpoint := "http://localhost:50099"
+		if e, ok := cfg.Adapters.Llamaswap.Settings["endpoint"].(string); ok && e != "" {
+			endpoint = e
+		}
+		l.Info("startup", "Using llamaswap adapter", map[string]interface{}{"endpoint": endpoint})
+		adapters = append(adapters, llamaswap.NewAdapter(endpoint))
+	}
+
+	if cfg.Adapters.LinuxVendorExec.Enabled && *fixturePath == "" {
+		scriptsDir := "/etc/hwexp/custom.d"
+		if d, ok := cfg.Adapters.LinuxVendorExec.Settings["scripts_dir"].(string); ok && d != "" {
+			scriptsDir = d
+		}
+		l.Info("startup", "Using vendor_exec adapter", map[string]interface{}{"dir": scriptsDir})
+		adapters = append(adapters, vendor_exec.NewAdapter(scriptsDir))
 	}
 
 	if len(adapters) == 0 {
