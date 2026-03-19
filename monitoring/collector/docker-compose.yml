@@ -40,6 +40,26 @@ services:
       - --path.rootfs=/rootfs
       - --path.sysfs=/host/sys
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      # Extra collectors disabled by default — enable them all
+      - --collector.thermal_zone     # thermal zones via sysfs
+      - --collector.rapl             # Intel RAPL power domain readings
+      - --collector.processes        # process/thread counts from /proc
+      - --collector.interrupts       # per-CPU hardware interrupt counts
+      - --collector.softirqs         # per-CPU software interrupt counts
+      - --collector.tcpstat          # TCP connection state counts
+      - --collector.systemd          # systemd unit states
+      - --collector.ethtool          # extended NIC ethtool statistics
+      - --collector.wifi             # WiFi interface link statistics
+      - --collector.buddyinfo        # kernel buddy memory allocator
+      - --collector.drbd             # DRBD replication (no-op if absent)
+      - --collector.mdadm            # Linux software RAID arrays
+      - --collector.xfs              # XFS filesystem statistics
+      - --collector.zfs              # ZFS pool statistics (no-op if absent)
+      - --collector.slabinfo         # kernel slab allocator statistics
+      - --collector.network_route    # routing table entry counts
+      - --collector.meminfo_numa     # NUMA memory node statistics
+      - --collector.ksmd             # kernel samepage merging daemon stats
+      - --collector.logind           # login session counts via logind
     ports:
       - "9100:9100"
     restart: unless-stopped
