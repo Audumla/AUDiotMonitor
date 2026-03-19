@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.7.0...hwexp-v0.7.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* **tests:** update all integration tests to handle hwexp_up host label ([b9119f3](https://github.com/Audumla/AUDiotMonitor/commit/b9119f36a2e12cc378f0a3593ea41323fee9c4d5))
+
 ## [0.7.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.6.0...hwexp-v0.7.0) (2026-03-18)
 
 
