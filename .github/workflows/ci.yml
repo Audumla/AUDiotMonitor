@@ -58,8 +58,8 @@ jobs:
           platforms: linux/amd64
           push: false
           tags: audumla/audiot-hwexp:ci-check
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=audumla/audiot-hwexp:buildcache
+          cache-to: type=registry,ref=audumla/audiot-hwexp:buildcache,mode=max
 
   integration-test:
     name: Integration Tests

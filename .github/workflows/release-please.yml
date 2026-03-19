@@ -143,5 +143,7 @@ jobs:
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             BUILDTIME=${{ steps.meta.outputs.buildtime }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Registry cache is warmed by the dev-publish workflow on every
+          # main push, so release builds typically hit a fully-warm cache.
+          cache-from: type=registry,ref=audumla/audiot-hwexp:buildcache
+          cache-to: type=registry,ref=audumla/audiot-hwexp:buildcache,mode=max
