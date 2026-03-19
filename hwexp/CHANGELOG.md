@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.13.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.13.1...hwexp-v0.13.2) (2026-03-19)
+
+
+### Bug Fixes
+
+* added more monitoring ([c28ef2c](https://github.com/Audumla/AUDiotMonitor/commit/c28ef2c251565dce7df6aacb1de912ca9d3c3b37))
+* update monitoring capabilities ([0e9e610](https://github.com/Audumla/AUDiotMonitor/commit/0e9e61006149ec576e609aa4b2c5b8357d54d192))
+* updated extension monitoring ([444f052](https://github.com/Audumla/AUDiotMonitor/commit/444f05267d93cd17688c1799e28a8f80f272d7ea))
+
 ## [0.13.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.13.0...hwexp-v0.13.1) (2026-03-19)
 
 
