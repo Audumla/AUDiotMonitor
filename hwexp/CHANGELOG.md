@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.13.2...hwexp-v0.14.0) (2026-03-19)
+
+
+### Features
+
+* **hwexp:** print startup banner with version, config, and adapter summary ([889f701](https://github.com/Audumla/AUDiotMonitor/commit/889f701a2c8444b5c0412201735367d3d6132c76))
+
+
+### Bug Fixes
+
+* added version output on start ([2c32ad1](https://github.com/Audumla/AUDiotMonitor/commit/2c32ad1b465421b5384c340858cba436c9179901))
+
 ## [0.13.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.13.1...hwexp-v0.13.2) (2026-03-19)
 
 
