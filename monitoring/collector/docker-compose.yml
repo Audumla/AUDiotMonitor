@@ -10,28 +10,6 @@
 
 services:
 
-  # ── Init: write Prometheus scrape config ──────────────────────────────────
-  prometheus-init:
-    image: busybox
-    command:
-      - sh
-      - -c
-      - |
-        cat > /config/prometheus.yml << 'EOF'
-        global:
-          scrape_interval: 5s
-          evaluation_interval: 5s
-        scrape_configs:
-          - job_name: hwexp
-            static_configs:
-              - targets: ['hwexp:9200']
-          - job_name: node
-            static_configs:
-              - targets: ['node-exporter:9100']
-        EOF
-    volumes:
-      - ./prometheus/config:/config:z
-
   # ── Hardware sensor exporter ───────────────────────────────────────────────
   hwexp:
     image: audumla/audiot-hwexp:latest
@@ -40,7 +18,7 @@ services:
     volumes:
       - /sys:/sys:ro
       - /proc:/proc:ro
-      - ./hwexp/config:/var/lib/hwexp # persists auto-generated mapping rules
+      - ./hwexp:/var/lib/hwexp        # persists auto-generated mapping rules
     environment:
       HWEXP_HOST: ${HWEXP_HOST:-${HOSTNAME:-localhost}}
     ports:
@@ -71,17 +49,29 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     user: "1000:1000"
-    depends_on:
-      prometheus-init:
-        condition: service_completed_successfully
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ ! -f /prometheus/prometheus.yml ]; then
+          cat > /prometheus/prometheus.yml << 'EOF'
+        global:
+          scrape_interval: 5s
+          evaluation_interval: 5s
+        scrape_configs:
+          - job_name: hwexp
+            static_configs:
+              - targets: ['hwexp:9200']
+          - job_name: node
+            static_configs:
+              - targets: ['node-exporter:9100']
+        EOF
+        fi
+        exec /bin/prometheus \
+          --config.file=/prometheus/prometheus.yml \
+          --storage.tsdb.path=/prometheus/data
     volumes:
-      - ./prometheus/config:/etc/prometheus:ro,z
-      - ./prometheus/data:/prometheus:z
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --web.console.libraries=/usr/share/prometheus/console_libraries
-      - --web.console.templates=/usr/share/prometheus/consoles
+      - ./prometheus:/prometheus:z
     ports:
       - "9090:9090"
     restart: unless-stopped
