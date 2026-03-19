@@ -11,6 +11,7 @@ import (
 
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
+	"hwexp/internal/model"
 	"hwexp/internal/store"
 )
 
@@ -59,6 +60,89 @@ func (s *Server) HandleVersion(w http.ResponseWriter, r *http.Request) {
 		"metric_schema_version": "1.0.0",
 		"config_schema_version": "1.0.0",
 		"platform":              s.cfg.Identity.Platform,
+	})
+}
+
+// HandleDebugState returns a single consolidated JSON view of every device
+// and its current measurements, joined on stable_id. This is the "everything
+// in one place" endpoint.
+func (s *Server) HandleDebugState(w http.ResponseWriter, r *http.Request) {
+	devices := s.store.GetDevices()
+	measurements := s.store.GetAllNormalized()
+
+	// Index measurements by device ID
+	byDevice := make(map[string][]model.NormalizedMeasurement, len(devices))
+	for _, m := range measurements {
+		byDevice[m.StableDeviceID] = append(byDevice[m.StableDeviceID], m)
+	}
+
+	type MeasurementView struct {
+		LogicalName  string            `json:"logical_name"`
+		MetricFamily string            `json:"metric_family"`
+		Value        float64           `json:"value"`
+		Unit         string            `json:"unit"`
+		Labels       map[string]string `json:"labels,omitempty"`
+		Quality      string            `json:"quality"`
+		Timestamp    time.Time         `json:"timestamp"`
+	}
+
+	type DeviceView struct {
+		StableID          string                 `json:"stable_id"`
+		DisplayName       string                 `json:"display_name"`
+		DeviceClass       string                 `json:"device_class"`
+		DeviceSubclass    string                 `json:"device_subclass,omitempty"`
+		Vendor            string                 `json:"vendor,omitempty"`
+		Model             string                 `json:"model,omitempty"`
+		Driver            string                 `json:"driver,omitempty"`
+		Bus               string                 `json:"bus,omitempty"`
+		Location          string                 `json:"location,omitempty"`
+		Source            string                 `json:"source"`
+		Capabilities      []string               `json:"capabilities"`
+		RawIdentifiers    map[string]string      `json:"raw_identifiers,omitempty"`
+		AdapterMetadata   map[string]interface{} `json:"adapter_metadata,omitempty"`
+		Measurements      []MeasurementView      `json:"measurements"`
+	}
+
+	views := make([]DeviceView, 0, len(devices))
+	for _, dev := range devices {
+		ms := byDevice[dev.StableID]
+		mvs := make([]MeasurementView, 0, len(ms))
+		for _, m := range ms {
+			mvs = append(mvs, MeasurementView{
+				LogicalName:  m.LogicalName,
+				MetricFamily: m.MetricFamily,
+				Value:        m.Value,
+				Unit:         m.Unit,
+				Labels:       m.Labels,
+				Quality:      m.Quality,
+				Timestamp:    m.Timestamp,
+			})
+		}
+		views = append(views, DeviceView{
+			StableID:        dev.StableID,
+			DisplayName:     dev.DisplayName,
+			DeviceClass:     dev.DeviceClass,
+			DeviceSubclass:  dev.DeviceSubclass,
+			Vendor:          dev.Vendor,
+			Model:           dev.Model,
+			Driver:          dev.Driver,
+			Bus:             dev.Bus,
+			Location:        dev.Location,
+			Source:          dev.Source,
+			Capabilities:    dev.Capabilities,
+			RawIdentifiers:  dev.RawIdentifiers,
+			AdapterMetadata: dev.AdapterMetadata,
+			Measurements:    mvs,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"schema_version": "1.0.0",
+		"generated_at":   time.Now().UTC().Format(time.RFC3339),
+		"host":           s.cfg.Identity.Host,
+		"device_count":   len(views),
+		"devices":        views,
 	})
 }
 
@@ -222,7 +306,13 @@ func (s *Server) Start(ctx context.Context) error {
 		// metrics might be protected too depending on policy, spec says "MAY remain open"
 	}
 
+	stateHandler := s.HandleDebugState
+	if s.cfg.Security.AuthMode == "bearer_token" {
+		stateHandler = s.authStore.Middleware(stateHandler, "debug:read")
+	}
+
 	mux.HandleFunc("/metrics", metricsHandler)
+	mux.HandleFunc("/debug/state", stateHandler)
 	mux.HandleFunc("/debug/discovery", discoveryHandler)
 	mux.HandleFunc("/debug/catalog", catalogHandler)
 	mux.HandleFunc("/debug/raw", rawHandler)
