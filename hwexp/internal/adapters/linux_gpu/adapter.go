@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"hwexp/internal/model"
+	"hwexp/internal/pcidb"
 )
 
 const DRMBasePath = "/sys/class/drm"
@@ -39,14 +40,23 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			continue
 		}
 
-		vendor := readSysFile(filepath.Join(devicePath, "vendor"))
+		vendorHex := readSysFile(filepath.Join(devicePath, "vendor"))
+		deviceHex := readSysFile(filepath.Join(devicePath, "device"))
 		vendorName := "unknown"
-		if strings.Contains(vendor, "0x1002") {
+		if strings.Contains(vendorHex, "1002") {
 			vendorName = "amd"
-		} else if strings.Contains(vendor, "0x10de") {
+		} else if strings.Contains(vendorHex, "10de") {
 			vendorName = "nvidia"
-		} else if strings.Contains(vendor, "0x8086") {
+		} else if strings.Contains(vendorHex, "8086") {
 			vendorName = "intel"
+		}
+
+		// Build raw identifier
+		pciVendorHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(vendorHex)), "0x")
+		pciDeviceHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(deviceHex)), "0x")
+		rawIDs := map[string]string{}
+		if pciVendorHex != "" && pciDeviceHex != "" {
+			rawIDs["pci_id"] = pciVendorHex + ":" + pciDeviceHex
 		}
 
 		uevent := readSysFile(filepath.Join(devicePath, "uevent"))
@@ -56,6 +66,7 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 				if strings.HasPrefix(line, "PCI_SLOT_NAME=") {
 					addr := strings.TrimPrefix(line, "PCI_SLOT_NAME=")
 					stableID = "pci-" + addr
+					rawIDs["pci_slot"] = addr
 					break
 				}
 			}
@@ -81,12 +92,15 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			if vramVendor := readSysFile(filepath.Join(devicePath, "mem_info_vram_vendor")); vramVendor != "" {
 				meta["vram_vendor"] = vramVendor
 			}
-			// Try to read a human-readable model name from sysfs.
-			// "label" is the most common source; "product_name" is a fallback.
 			gpuModel = readSysFile(filepath.Join(devicePath, "label"))
 			if gpuModel == "" {
 				gpuModel = readSysFile(filepath.Join(devicePath, "product_name"))
 			}
+		}
+
+		// Fall back to pci.ids lookup for model name
+		if gpuModel == "" && pciVendorHex != "" && pciDeviceHex != "" {
+			_, gpuModel = pcidb.Lookup(pciVendorHex, pciDeviceHex)
 		}
 
 		displayName := fmt.Sprintf("GPU %s (%s)", vendorName, filepath.Base(card))
@@ -104,6 +118,7 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			DisplayName:       displayName,
 			LogicalDeviceName: filepath.Base(card),
 			Capabilities:      []string{"utilization", "inventory"},
+			RawIdentifiers:    rawIDs,
 			FirstSeen:         now,
 			LastSeen:          now,
 			Present:           true,

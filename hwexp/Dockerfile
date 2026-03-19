@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
 
 # Stage 2: runtime
 FROM alpine:3
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata pciutils dmidecode
 COPY --from=builder /hwexp /usr/bin/hwexp
 # Bake in default config — works out of the box with no mounted volumes.
 # Override by mounting your own files at /etc/hwexp/ or /var/lib/hwexp/.

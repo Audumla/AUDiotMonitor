@@ -5,11 +5,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"hwexp/internal/model"
 )
@@ -95,6 +98,9 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 		} else if boost := readSysFile("/sys/devices/system/cpu/cpufreq/boost"); boost != "" {
 			meta["turbo_enabled"] = boost == "1"
 		}
+		for k, v := range getCPUCacheInfo() {
+			meta[k] = v
+		}
 		devices = append(devices, model.DiscoveredDevice{
 			StableID:        "system-cpu",
 			Platform:        "linux",
@@ -128,6 +134,9 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			},
 		})
 	}
+
+	// 3b. Memory DIMMs (via dmidecode, cached after first run)
+	devices = append(devices, getDIMMDevices(now)...)
 
 	// 4. NVMe drives
 	devices = append(devices, getNVMeDevices(now)...)
@@ -606,6 +615,204 @@ func readSysFile(path string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(data))
+}
+
+// getCPUCacheInfo reads the CPU cache topology from sysfs and returns a map
+// of cache level keys to size strings (e.g. "l1_cache_data" -> "48K").
+func getCPUCacheInfo() map[string]interface{} {
+	result := map[string]interface{}{}
+	dirs, _ := filepath.Glob("/sys/devices/system/cpu/cpu0/cache/index*")
+	for _, d := range dirs {
+		level := readSysFile(filepath.Join(d, "level"))
+		cacheType := readSysFile(filepath.Join(d, "type"))
+		size := readSysFile(filepath.Join(d, "size"))
+		if level == "" || cacheType == "" || size == "" {
+			continue
+		}
+		var key string
+		switch cacheType {
+		case "Unified":
+			key = fmt.Sprintf("l%s_cache", level)
+		case "Instruction":
+			key = fmt.Sprintf("l%s_cache_instruction", level)
+		case "Data":
+			key = fmt.Sprintf("l%s_cache_data", level)
+		default:
+			key = fmt.Sprintf("l%s_cache_%s", level, strings.ToLower(cacheType))
+		}
+		result[key] = size
+	}
+	return result
+}
+
+// DIMM discovery via dmidecode — cached after first successful run.
+var (
+	dimmOnce    sync.Once
+	dimmDevices []model.DiscoveredDevice
+)
+
+func getDIMMDevices(now time.Time) []model.DiscoveredDevice {
+	dimmOnce.Do(func() {
+		dimmDevices = runDMIDecode()
+	})
+	if len(dimmDevices) == 0 {
+		return nil
+	}
+	// Return copies with updated LastSeen
+	out := make([]model.DiscoveredDevice, len(dimmDevices))
+	copy(out, dimmDevices)
+	for i := range out {
+		out[i].LastSeen = now
+	}
+	return out
+}
+
+func runDMIDecode() []model.DiscoveredDevice {
+	if _, err := exec.LookPath("dmidecode"); err != nil {
+		return nil
+	}
+	out, err := exec.Command("dmidecode", "-t", "17").Output()
+	if err != nil {
+		return nil
+	}
+	return parseDMIType17(string(out))
+}
+
+func parseDMIType17(output string) []model.DiscoveredDevice {
+	var devices []model.DiscoveredDevice
+	// Split on "Memory Device" section headers
+	sections := strings.Split(output, "\nMemory Device\n")
+	for i, section := range sections[1:] { // first element is preamble
+		fields := parseDMIFields(section)
+		sizeStr := fields["Size"]
+		if sizeStr == "" || sizeStr == "No Module Installed" || sizeStr == "Not Installed" {
+			continue
+		}
+		sizeBytes := parseDMISize(sizeStr)
+		if sizeBytes == 0 {
+			continue
+		}
+
+		slot := fields["Locator"]
+		dimmType := fields["Type"]
+		speed := fields["Speed"]
+		configSpeed := fields["Configured Memory Speed"]
+		if configSpeed == "" {
+			configSpeed = fields["Configured Clock Speed"]
+		}
+		manufacturer := fields["Manufacturer"]
+		partNumber := strings.TrimSpace(fields["Part Number"])
+		serialNumber := strings.TrimSpace(fields["Serial Number"])
+		formFactor := fields["Form Factor"]
+		rank := fields["Rank"]
+
+		vendor := normaliseDIMMVendor(manufacturer)
+		stableID := fmt.Sprintf("system-dimm-%d", i)
+		displayName := dimmType
+		if partNumber != "" {
+			displayName = partNumber
+		}
+
+		meta := map[string]interface{}{
+			"size_bytes":  sizeBytes,
+			"slot":        slot,
+			"type":        dimmType,
+			"form_factor": formFactor,
+		}
+		if speed != "" {
+			meta["speed"] = speed
+		}
+		if configSpeed != "" {
+			meta["configured_speed"] = configSpeed
+		}
+		if serialNumber != "" && serialNumber != "Not Specified" {
+			meta["serial"] = serialNumber
+		}
+		if rank != "" {
+			meta["rank"] = rank
+		}
+
+		devices = append(devices, model.DiscoveredDevice{
+			StableID:       stableID,
+			Platform:       "linux",
+			Source:         "linux_static",
+			DeviceClass:    "memory",
+			DeviceSubclass: "dimm",
+			Vendor:         vendor,
+			Model:          partNumber,
+			DisplayName:    displayName,
+			Capabilities:   []string{"inventory"},
+			Present:        true,
+			FirstSeen:      time.Now().UTC(),
+			LastSeen:       time.Now().UTC(),
+			AdapterMetadata: meta,
+		})
+	}
+	return devices
+}
+
+func parseDMIFields(section string) map[string]string {
+	fields := map[string]string{}
+	for _, line := range strings.Split(section, "\n") {
+		// DMI fields are indented with a tab
+		if !strings.HasPrefix(line, "\t") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "\t")
+		idx := strings.Index(line, ": ")
+		if idx < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		val := strings.TrimSpace(line[idx+2:])
+		fields[key] = val
+	}
+	return fields
+}
+
+func parseDMISize(s string) float64 {
+	parts := strings.Fields(s)
+	if len(parts) < 2 {
+		return 0
+	}
+	val, err := strconv.ParseFloat(parts[0], 64)
+	if err != nil {
+		return 0
+	}
+	switch strings.ToUpper(parts[1]) {
+	case "MB":
+		return val * 1024 * 1024
+	case "GB":
+		return val * 1024 * 1024 * 1024
+	case "TB":
+		return val * 1024 * 1024 * 1024 * 1024
+	}
+	return 0
+}
+
+func normaliseDIMMVendor(s string) string {
+	v := strings.ToLower(strings.TrimFunc(s, unicode.IsSpace))
+	switch {
+	case strings.Contains(v, "samsung"):
+		return "samsung"
+	case strings.Contains(v, "hynix") || strings.Contains(v, "sk hynix"):
+		return "sk_hynix"
+	case strings.Contains(v, "micron") || strings.Contains(v, "crucial"):
+		return "micron"
+	case strings.Contains(v, "kingston"):
+		return "kingston"
+	case strings.Contains(v, "corsair"):
+		return "corsair"
+	case strings.Contains(v, "g.skill") || strings.Contains(v, "gskill"):
+		return "gskill"
+	case strings.Contains(v, "teamgroup") || strings.Contains(v, "team group"):
+		return "teamgroup"
+	case strings.Contains(v, "patriot"):
+		return "patriot"
+	case v == "unknown" || v == "not specified" || v == "":
+		return ""
+	}
+	return s
 }
 
 // dmiPlaceholders are strings that OEMs write into DMI fields when they have

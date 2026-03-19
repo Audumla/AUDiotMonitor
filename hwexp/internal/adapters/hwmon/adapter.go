@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"hwexp/internal/model"
+	"hwexp/internal/pcidb"
 )
 
 const DefaultBasePath = "/sys/class/hwmon"
@@ -68,14 +69,36 @@ func (a *Adapter) discoverOne(hwmonDir string) (model.DiscoveredDevice, error) {
 		return model.DiscoveredDevice{}, fmt.Errorf("no name file in %s", hwmonDir)
 	}
 
-	stableID, pciAddr := stableIDFor(hwmonDir, driver)
+	stableID, pciAddr, pciID := stableIDFor(hwmonDir, driver)
 	vendor, class, subclass := classifyDriver(driver)
-	// Network adapters expose hwmon with the interface name as the driver string.
-	// Override the default "sensor" class when a net/ subdirectory is present.
+	// Network adapters expose a net/ or ieee80211/ subdirectory instead of a driver name
 	if class == "sensor" && isNetDevice(hwmonDir) {
 		class = "network"
 	}
 	caps := detectCapabilities(hwmonDir)
+
+	// Enrich vendor/model from pci.ids when classification left them empty
+	var pciDeviceName string
+	var rawIDs map[string]string
+	if pciID != "" {
+		rawIDs = map[string]string{"pci_id": pciID}
+		if pciAddr != "" {
+			rawIDs["pci_slot"] = pciAddr
+		}
+		parts := strings.SplitN(pciID, ":", 2)
+		if len(parts) == 2 {
+			pciVendorName, pciModelName := pcidb.Lookup(parts[0], parts[1])
+			if vendor == "" && pciVendorName != "" {
+				vendor = pciVendorName
+			}
+			pciDeviceName = pciModelName
+		}
+	}
+
+	displayName := driver
+	if pciDeviceName != "" {
+		displayName = pciDeviceName
+	}
 
 	now := time.Now().UTC()
 	return model.DiscoveredDevice{
@@ -85,12 +108,14 @@ func (a *Adapter) discoverOne(hwmonDir string) (model.DiscoveredDevice, error) {
 		DeviceClass:       class,
 		DeviceSubclass:    subclass,
 		Vendor:            vendor,
+		Model:             pciDeviceName,
 		Driver:            driver,
 		Bus:               "pci",
 		Location:          pciAddr,
-		DisplayName:       driver,
+		DisplayName:       displayName,
 		LogicalDeviceName: filepath.Base(hwmonDir),
 		Capabilities:      caps,
+		RawIdentifiers:    rawIDs,
 		FirstSeen:         now,
 		LastSeen:          now,
 		Present:           true,
@@ -112,7 +137,7 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 
 func (a *Adapter) pollOne(hwmonDir string) ([]model.RawMeasurement, error) {
 	driver := readSysFile(filepath.Join(hwmonDir, "name"))
-	stableID, _ := stableIDFor(hwmonDir, driver)
+	stableID, _, _ := stableIDFor(hwmonDir, driver)
 
 	entries, err := os.ReadDir(hwmonDir)
 	if err != nil {
@@ -163,18 +188,24 @@ func (a *Adapter) pollOne(hwmonDir string) ([]model.RawMeasurement, error) {
 
 // stableIDFor derives a stable ID from PCI slot name if available, otherwise
 // falls back to driver+hwmon index.
-func stableIDFor(hwmonDir, driver string) (stableID, pciAddr string) {
+func stableIDFor(hwmonDir, driver string) (stableID, pciAddr, pciID string) {
 	uevent := readSysFile(filepath.Join(hwmonDir, "device", "uevent"))
 	if uevent != "" {
 		scanner := bufio.NewScanner(strings.NewReader(uevent))
 		for scanner.Scan() {
-			if after, ok := strings.CutPrefix(scanner.Text(), "PCI_SLOT_NAME="); ok {
+			line := scanner.Text()
+			if after, ok := strings.CutPrefix(line, "PCI_SLOT_NAME="); ok {
 				pciAddr = strings.TrimSpace(after)
-				return "pci-" + pciAddr, pciAddr
+			}
+			if after, ok := strings.CutPrefix(line, "PCI_ID="); ok {
+				pciID = strings.ToLower(strings.TrimSpace(after))
 			}
 		}
+		if pciAddr != "" {
+			return "pci-" + pciAddr, pciAddr, pciID
+		}
 	}
-	return fmt.Sprintf("hwmon-%s-%s", driver, filepath.Base(hwmonDir)), ""
+	return fmt.Sprintf("hwmon-%s-%s", driver, filepath.Base(hwmonDir)), "", pciID
 }
 
 // classifyDriver maps a hwmon driver name to vendor, device class, subclass.
