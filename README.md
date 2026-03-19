@@ -15,7 +15,7 @@ Hardware, OS, and AI telemetry stack for Linux machines. Collects sensor data, s
 - **OS metrics** — CPU usage, memory, disk I/O, network, RAPL power, systemd service states via integrated `node_exporter`.
 - **Modular Config** — drop `.yaml` files into `/etc/hwexp/conf.d/` for non-destructive configuration.
 
-## Components
+## Components 
 
 | Component | Purpose | Port |
 | --------- | ------- | ---- |
