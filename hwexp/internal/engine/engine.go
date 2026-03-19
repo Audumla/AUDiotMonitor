@@ -89,10 +89,15 @@ func (e *Engine) loop(ctx context.Context) {
 
 func (e *Engine) executeCycle(ctx context.Context) {
 	start := time.Now()
-	newDevices := make(map[string]model.DiscoveredDevice)
-	newMeasurements := make(map[string]model.NormalizedMeasurement)
-	newRaw := make(map[string]model.RawMeasurement)
-	var newDecisions []model.MappingDecision
+	newDevices := make(map[string]model.DiscoveredDevice, 32)
+	newMeasurements := make(map[string]model.NormalizedMeasurement, 128)
+	newRaw := make(map[string]model.RawMeasurement, 128)
+	newDecisions := make([]model.MappingDecision, 0, 128)
+
+	// Read autoMapEnabled once per cycle rather than once per measurement.
+	e.mu.RLock()
+	autoMapEnabled := e.autoMapEnabled
+	e.mu.RUnlock()
 
 	success := true
 	mappingFailures := 0
@@ -135,9 +140,6 @@ func (e *Engine) executeCycle(ctx context.Context) {
 			}
 
 			// Auto-map: infer a rule for any measurement that has no manual mapping.
-			e.mu.RLock()
-			autoMapEnabled := e.autoMapEnabled
-			e.mu.RUnlock()
 			if autoMapEnabled && decision != nil && decision.Decision == "ignored" {
 				if rule := automapper.InferRule(device, r); rule != nil {
 					e.applyAutoRule(*rule)

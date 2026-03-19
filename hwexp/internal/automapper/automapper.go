@@ -115,7 +115,7 @@ func InferRule(device model.DiscoveredDevice, raw model.RawMeasurement) *model.M
 			Source:      device.Source,
 			Vendor:      device.Vendor,
 			DeviceClass: device.DeviceClass,
-			RawNameRegex: fmt.Sprintf(`^%s([0-9]+)_input$`, prefix),
+			RawNameRegex: fmt.Sprintf(`^%s([0-9]+)_input$`, regexp.QuoteMeta(prefix)),
 		},
 		Normalize: model.NormalizeConfig{
 			MetricFamily:        sm.metricFamily,

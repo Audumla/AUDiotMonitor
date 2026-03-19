@@ -41,14 +41,24 @@ func main() {
 	l.Info("startup", "Loaded mapping rules", map[string]interface{}{"count": len(rules), "file": cfg.Mapping.RulesFile})
 
 	if cfg.Mapping.AutoMap.Enabled && cfg.Mapping.AutoMap.GeneratedFile != "" {
-		if genRules, err := mapper.LoadRules(cfg.Mapping.AutoMap.GeneratedFile); err == nil {
+		genRules, err := mapper.LoadRules(cfg.Mapping.AutoMap.GeneratedFile)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				// A parse error in the auto-generated file is logged but not fatal;
+				// the engine will overwrite the file with fresh rules on next cycle.
+				l.Info("startup", "Could not load auto-generated rules (will regenerate)", map[string]interface{}{
+					"file":  cfg.Mapping.AutoMap.GeneratedFile,
+					"error": err.Error(),
+				})
+			}
+			// Missing file on first run is expected — do nothing.
+		} else {
 			rules = append(rules, genRules...)
 			l.Info("startup", "Loaded auto-generated rules", map[string]interface{}{
 				"count": len(genRules),
 				"file":  cfg.Mapping.AutoMap.GeneratedFile,
 			})
 		}
-		// Missing file is fine on first run — it will be created by the engine.
 	}
 
 	// 4. Initialize Auth Store
@@ -105,12 +115,18 @@ func main() {
 	go func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGHUP)
-		for range sigs {
-			l.Info("reload", "Reloading mapping rules (SIGHUP)", map[string]interface{}{"file": cfg.Mapping.RulesFile})
-			if err := mapperEngine.ReloadRules(cfg.Mapping.RulesFile); err != nil {
-				l.Info("reload", "Failed to reload mapping rules", map[string]interface{}{"error": err.Error()})
-			} else {
-				l.Info("reload", "Mapping rules reloaded successfully", nil)
+		defer signal.Stop(sigs)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-sigs:
+				l.Info("reload", "Reloading mapping rules (SIGHUP)", map[string]interface{}{"file": cfg.Mapping.RulesFile})
+				if err := mapperEngine.ReloadRules(cfg.Mapping.RulesFile); err != nil {
+					l.Info("reload", "Failed to reload mapping rules", map[string]interface{}{"error": err.Error()})
+				} else {
+					l.Info("reload", "Mapping rules reloaded successfully", nil)
+				}
 			}
 		}
 	}()

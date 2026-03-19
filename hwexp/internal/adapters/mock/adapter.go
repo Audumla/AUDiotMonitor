@@ -40,12 +40,13 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 	if a.fixture == nil {
 		return nil, nil
 	}
-	// Update timestamps for realism in the test harness
 	now := time.Now()
-	for i := range a.fixture.Devices {
-		a.fixture.Devices[i].LastSeen = now
+	devices := make([]model.DiscoveredDevice, len(a.fixture.Devices))
+	copy(devices, a.fixture.Devices)
+	for i := range devices {
+		devices[i].LastSeen = now
 	}
-	return a.fixture.Devices, nil
+	return devices, nil
 }
 
 func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
@@ -53,8 +54,10 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 		return nil, nil
 	}
 	now := time.Now()
-	for i := range a.fixture.Measurements {
-		a.fixture.Measurements[i].Timestamp = now
+	measurements := make([]model.RawMeasurement, len(a.fixture.Measurements))
+	copy(measurements, a.fixture.Measurements)
+	for i := range measurements {
+		measurements[i].Timestamp = now
 	}
-	return a.fixture.Measurements, nil
+	return measurements, nil
 }

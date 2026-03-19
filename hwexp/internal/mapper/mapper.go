@@ -5,6 +5,7 @@ import (
 	"hwexp/internal/model"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 
@@ -49,8 +50,17 @@ func NewEngine(rules []model.MappingRule) (*Engine, error) {
 		}
 		e.rules = append(e.rules, cr)
 	}
-	// Note: A robust implementation would sort e.rules by Priority descending here.
+	sortRules(e.rules)
 	return e, nil
+}
+
+// sortRules sorts compiled rules by Priority descending so higher-priority
+// rules are evaluated first in Map(). Manual rules (high priority) always
+// beat auto-generated rules (priority 1).
+func sortRules(rules []compiledRule) {
+	sort.Slice(rules, func(i, j int) bool {
+		return rules[i].rule.Priority > rules[j].rule.Priority
+	})
 }
 
 func LoadRules(path string) ([]model.MappingRule, error) {
@@ -92,6 +102,9 @@ func (e *Engine) AddRules(rules []model.MappingRule) ([]string, error) {
 			e.rules = append(e.rules, cr)
 			added = append(added, cr.rule.ID)
 		}
+	}
+	if len(added) > 0 {
+		sortRules(e.rules)
 	}
 	return added, nil
 }
