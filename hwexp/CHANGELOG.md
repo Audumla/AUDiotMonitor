@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.18.0...hwexp-v0.19.0) (2026-03-19)
+
+
+### Features
+
+* **httpapi:** add root index page listing all available endpoints ([ebb2adb](https://github.com/Audumla/AUDiotMonitor/commit/ebb2adbd4225e7552573ed37e206fc96df68bb7e))
+
 ## [0.18.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.17.2...hwexp-v0.18.0) (2026-03-19)
 
 
