@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.19.1...hwexp-v0.19.2) (2026-03-19)
+
+
+### Bug Fixes
+
+* calculate explicit VRAM capacity usage percent for GPUs and update dashboard queries ([61d07ec](https://github.com/Audumla/AUDiotMonitor/commit/61d07ec74b201332018f0b2463441941db71d5ab))
+
 ## [0.19.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.19.0...hwexp-v0.19.1) (2026-03-19)
 
 
