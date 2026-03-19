@@ -111,7 +111,13 @@ Recommended ranges:
 * 500–999: device-specific built-ins
 * 200–499: vendor/model class rules
 * 100–199: class-level generic rules
-* 0–99: fallback/default rules
+* 2–99: fallback/default rules
+* 1: auto-generated rules (written by the automapper on first run)
+
+The mapping engine sorts rules by priority descending at load time and after
+any dynamic rule addition. The first matching rule wins, so a manual rule with
+priority ≥ 2 will always take precedence over an auto-generated rule (priority 1)
+for the same sensor, even if the auto-generated rule was loaded first.
 
 ---
 

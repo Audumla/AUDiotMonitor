@@ -441,6 +441,19 @@ A safe pattern is:
 * initialize replacement runtime dependencies
 * switch active runtime references only after successful preparation
 
+## 9.5 Poll cycle concurrency contract
+
+Within a single poll cycle the engine MUST:
+
+* read any shared flags (e.g. `autoMapEnabled`) exactly once, before the
+  measurement loop, under a read lock — not once per measurement
+* preallocate intermediate maps with a capacity hint to avoid incremental
+  rehashing across a typical sensor set (~32 devices, ~128 measurements)
+
+The SIGHUP reload goroutine MUST call `signal.Stop` on the signal channel
+and exit when the root context is cancelled, to prevent goroutine leaks
+when the HTTP server terminates abnormally.
+
 ---
 
 # 10. Mapping engine behavior
