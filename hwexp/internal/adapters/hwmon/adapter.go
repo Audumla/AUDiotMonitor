@@ -206,13 +206,16 @@ func classifyDriver(driver string) (vendor, class, subclass string) {
 }
 
 // isNetDevice returns true when the hwmon device is backed by a network interface.
-// Network adapters expose a hwmon whose name is the interface name (e.g. "enp9s0",
-// "iwlwifi_1") rather than a kernel driver name. The reliable indicator is the
-// presence of a "net" subdirectory under the hwmon's device symlink.
+// Wired adapters expose a "net" subdirectory; wireless adapters expose "ieee80211".
 func isNetDevice(hwmonDir string) bool {
-	netDir := filepath.Join(hwmonDir, "device", "net")
-	fi, err := os.Stat(netDir)
-	return err == nil && fi.IsDir()
+	devBase := filepath.Join(hwmonDir, "device")
+	for _, sub := range []string{"net", "ieee80211"} {
+		fi, err := os.Stat(filepath.Join(devBase, sub))
+		if err == nil && fi.IsDir() {
+			return true
+		}
+	}
+	return false
 }
 
 // detectCapabilities returns a deduplicated list of capability strings

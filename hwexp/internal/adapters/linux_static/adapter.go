@@ -35,30 +35,42 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 	boardVendor := readSysFile(filepath.Join(a.basePath, "board_vendor"))
 	boardName := readSysFile(filepath.Join(a.basePath, "board_name"))
 	if boardName != "" {
+		meta := map[string]interface{}{
+			"bios_version": readSysFile(filepath.Join(a.basePath, "bios_version")),
+			"bios_date":    readSysFile(filepath.Join(a.basePath, "bios_date")),
+			"sys_vendor":   readSysFile(filepath.Join(a.basePath, "sys_vendor")),
+			"product_name": readSysFile(filepath.Join(a.basePath, "product_name")),
+		}
+		// Only include DMI fields that have real values — filter OEM placeholders
+		for k, path := range map[string]string{
+			"product_serial":  filepath.Join(a.basePath, "product_serial"),
+			"product_uuid":    filepath.Join(a.basePath, "product_uuid"),
+			"chassis_type":    filepath.Join(a.basePath, "chassis_type"),
+			"chassis_vendor":  filepath.Join(a.basePath, "chassis_vendor"),
+			"chassis_serial":  filepath.Join(a.basePath, "chassis_serial"),
+			"chassis_version": filepath.Join(a.basePath, "chassis_version"),
+		} {
+			v := readDMIFile(path)
+			if k == "chassis_type" {
+				v = chassisTypeStr(v)
+			}
+			if v != "" {
+				meta[k] = v
+			}
+		}
 		devices = append(devices, model.DiscoveredDevice{
-			StableID:     "system-motherboard",
-			Platform:     "linux",
-			Source:       "linux_static",
-			DeviceClass:  "motherboard",
-			Vendor:       boardVendor,
-			Model:        boardName,
-			DisplayName:  fmt.Sprintf("Motherboard: %s %s", boardVendor, boardName),
-			Capabilities: []string{"inventory"},
-			Present:      true,
-			FirstSeen:    now,
-			LastSeen:     now,
-			AdapterMetadata: map[string]interface{}{
-				"bios_version":    readSysFile(filepath.Join(a.basePath, "bios_version")),
-				"bios_date":       readSysFile(filepath.Join(a.basePath, "bios_date")),
-				"sys_vendor":      readSysFile(filepath.Join(a.basePath, "sys_vendor")),
-				"product_name":    readSysFile(filepath.Join(a.basePath, "product_name")),
-				"product_serial":  readSysFile(filepath.Join(a.basePath, "product_serial")),
-				"product_uuid":    readSysFile(filepath.Join(a.basePath, "product_uuid")),
-				"chassis_type":    chassisTypeStr(readSysFile(filepath.Join(a.basePath, "chassis_type"))),
-				"chassis_vendor":  readSysFile(filepath.Join(a.basePath, "chassis_vendor")),
-				"chassis_serial":  readSysFile(filepath.Join(a.basePath, "chassis_serial")),
-				"chassis_version": readSysFile(filepath.Join(a.basePath, "chassis_version")),
-			},
+			StableID:        "system-motherboard",
+			Platform:        "linux",
+			Source:          "linux_static",
+			DeviceClass:     "motherboard",
+			Vendor:          boardVendor,
+			Model:           boardName,
+			DisplayName:     fmt.Sprintf("Motherboard: %s %s", boardVendor, boardName),
+			Capabilities:    []string{"inventory"},
+			Present:         true,
+			FirstSeen:       now,
+			LastSeen:        now,
+			AdapterMetadata: meta,
 		})
 	}
 
@@ -527,6 +539,12 @@ func nvmeVendorFromModel(modelStr string) string {
 		return "intel"
 	case strings.Contains(ml, "sandisk"):
 		return "sandisk"
+	case strings.Contains(ml, "viper") || strings.Contains(ml, "patriot"):
+		return "patriot"
+	case strings.Contains(ml, "sabrent"):
+		return "sabrent"
+	case strings.Contains(ml, "teamgroup") || strings.Contains(ml, "team group"):
+		return "teamgroup"
 	}
 	return ""
 }
@@ -588,4 +606,27 @@ func readSysFile(path string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(data))
+}
+
+// dmiPlaceholders are strings that OEMs write into DMI fields when they have
+// no real value to report. Treat these as absent.
+var dmiPlaceholders = map[string]bool{
+	"default string":          true,
+	"to be filled by o.e.m.": true,
+	"not applicable":          true,
+	"not specified":           true,
+	"none":                    true,
+	"n/a":                     true,
+	"unknown":                 true,
+	"[s]":                     true,
+}
+
+// readDMIFile reads a DMI sysfs file and returns an empty string for known
+// OEM placeholder values so they don't pollute metadata.
+func readDMIFile(path string) string {
+	v := readSysFile(path)
+	if dmiPlaceholders[strings.ToLower(v)] {
+		return ""
+	}
+	return v
 }
