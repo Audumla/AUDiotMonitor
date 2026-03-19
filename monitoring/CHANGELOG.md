@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.2.0...monitoring-v0.3.0) (2026-03-19)
+
+
+### Features
+
+* **monitoring:** make kiosk dashboard selection config-driven ([50b8dfb](https://github.com/Audumla/AUDiotMonitor/commit/50b8dfbadb2543225ef7d26f4c6e4d1ad6d29d94))
+
+
+### Bug Fixes
+
+* **monitoring:** correct GPU VRAM dashboard queries ([8b90e52](https://github.com/Audumla/AUDiotMonitor/commit/8b90e52caddafd7513c3746d25f4d3e7b9c8cf19))
+* **monitoring:** keep kiosk running without example dashboards ([0fc0bc2](https://github.com/Audumla/AUDiotMonitor/commit/0fc0bc21cf187ced6f9f96230d64f438b283e1f8))
+* **monitoring:** remove empty dashboard panels ([b5c88e4](https://github.com/Audumla/AUDiotMonitor/commit/b5c88e4cacb36b7e6236e4b99d42ae002f0c9333))
+* **monitoring:** use 1920x440 triple GPU dashboard layout ([60fde0c](https://github.com/Audumla/AUDiotMonitor/commit/60fde0c5df1e0df55f28b3947eafbbcce2986d41))
+
 ## [0.2.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.1.0...monitoring-v0.2.0) (2026-03-19)
 
 
