@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.15.0...hwexp-v0.16.0) (2026-03-19)
+
+
+### Features
+
+* **hwexp:** expand hardware discovery and metrics collection ([9bb74f6](https://github.com/Audumla/AUDiotMonitor/commit/9bb74f6b11473cc20345393bd8f601ea38396eb8))
+
 ## [0.15.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.14.1...hwexp-v0.15.0) (2026-03-19)
 
 
