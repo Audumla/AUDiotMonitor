@@ -45,15 +45,15 @@ Browse to **<http://localhost:9200>** to see a live index of all available API e
 ### Recommended host-owned layout
 
 This is the preferred install if you want editable Prometheus rules and
-persistent system-specific config:
+persistent system-specific config. Run it from a repo checkout so the installer
+has the companion files it copies into the host-owned layout:
 
 ```bash
-mkdir -p ~/audiot && cd ~/audiot
-curl -O https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/collector/install-layout.sh
-curl -O https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/collector/docker-compose.yml
-chmod +x install-layout.sh
+git clone --depth=1 https://github.com/Audumla/AUDiotMonitor.git
+cd AUDiotMonitor/monitoring/collector
+chmod +x install-layout.sh manage-collector.sh
 INSTALL_DIR=/opt/docker/collector ./install-layout.sh
-cd /opt/docker/collector && docker compose up -d
+cd /opt/docker/collector && ./manage-collector.sh up
 ```
 
 This creates:
@@ -76,6 +76,17 @@ This creates:
 
 `system.rules.yml` is generated automatically on install only if it does not
 already exist. You can edit it freely afterwards; updates will not overwrite it.
+
+Common collector operations:
+
+```bash
+cd /opt/docker/collector
+./manage-collector.sh validate
+./manage-collector.sh generate-rules --force
+./manage-collector.sh restart-prometheus
+./manage-collector.sh restart-hwexp
+./manage-collector.sh status
+```
 
 ### Full `docker-compose.yml` reference
 
@@ -122,8 +133,8 @@ Re-generate the custom rules file manually:
 
 ```bash
 cd /opt/docker/collector
-python3 ./generate-prometheus-custom-rules.py --force
-docker compose restart prometheus
+./manage-collector.sh generate-rules --force
+./manage-collector.sh restart-prometheus
 ```
 
 Example `hwexp.yaml` override to enable LLM monitoring:
@@ -193,14 +204,16 @@ A Raspberry Pi 4 or 5 running Debian (bookworm/bullseye) makes an ideal always-o
 
 ### RPi / bind-mounted layout
 
-Use the dashboard installer to scaffold a simple host-owned layout:
+Use the dashboard installer to scaffold a simple host-owned layout. Copy the
+repo subtree so the installer has the dashboards, provisioning, and helper
+scripts it needs:
 
 ```bash
 rsync -a monitoring/dashboard/ pi@<rpi-ip>:/opt/docker/dashboard/
 
 ssh pi@<rpi-ip> '
   cd /opt/docker/dashboard && \
-  chmod +x install-layout.sh kiosk-install.sh kiosk.sh && \
+  chmod +x install-layout.sh kiosk-install.sh kiosk.sh manage-dashboard.sh && \
   INSTALL_DIR=/opt/docker/dashboard ./install-layout.sh
 '
 ```
@@ -220,13 +233,26 @@ That creates:
     custom/      # your host-local dashboards
 ```
 
-Then set the collector endpoints in `/opt/docker/dashboard/.env` or export them at launch:
+Then set the collector endpoints in `/opt/docker/dashboard/.env` or export them
+at launch:
 
 ```bash
 cd /opt/docker/dashboard
 PROMETHEUS_URL=http://192.168.1.x:9090 \
 HWEXP_URL=http://192.168.1.x:9200 \
-docker compose up -d
+./manage-dashboard.sh up
+```
+
+Common dashboard operations:
+
+```bash
+cd /opt/docker/dashboard
+./manage-dashboard.sh validate
+./manage-dashboard.sh status
+./manage-dashboard.sh restart-grafana
+./manage-dashboard.sh restart-kiosk
+./manage-dashboard.sh set-dashboard list
+./manage-dashboard.sh set-dashboard set ultrawide audiot-triple-gpu-wide
 ```
 
 ### Notes for Raspberry Pi

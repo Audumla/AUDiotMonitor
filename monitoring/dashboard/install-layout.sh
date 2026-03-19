@@ -32,9 +32,11 @@ copy_if_missing() {
 cp "$SCRIPT_DIR/docker-compose.rpi.yml" "$INSTALL_DIR/docker-compose.yml"
 cp "$SCRIPT_DIR/kiosk.sh" "$INSTALL_DIR/kiosk.sh"
 cp "$SCRIPT_DIR/install-layout.sh" "$INSTALL_DIR/install-layout.sh"
+cp "$SCRIPT_DIR/manage-dashboard.sh" "$INSTALL_DIR/manage-dashboard.sh"
 cp "$SCRIPT_DIR/set-dashboard.sh" "$INSTALL_DIR/set-dashboard.sh"
 chmod +x "$INSTALL_DIR/kiosk.sh"
 chmod +x "$INSTALL_DIR/install-layout.sh"
+chmod +x "$INSTALL_DIR/manage-dashboard.sh"
 chmod +x "$INSTALL_DIR/set-dashboard.sh"
 
 copy_if_missing "$SCRIPT_DIR/kiosk-install.sh" "$INSTALL_DIR/kiosk-install.sh"

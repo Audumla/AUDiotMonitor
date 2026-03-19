@@ -9,10 +9,16 @@ locally detected DRM cards so dashboards can avoid hard-coded PCI IDs.
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 
-DEFAULT_OUTPUT = Path("/opt/docker/collector/config/prometheus/rules/custom/system.rules.yml")
+DEFAULT_OUTPUT = Path(
+    os.environ.get(
+        "INSTALL_DIR",
+        "/opt/docker/collector",
+    )
+) / "config/prometheus/rules/custom/system.rules.yml"
 DRM_PATH = Path("/sys/class/drm")
 
 

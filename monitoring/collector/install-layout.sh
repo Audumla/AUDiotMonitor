@@ -30,9 +30,11 @@ copy_if_missing() {
 
 cp "$SCRIPT_DIR/docker-compose.yml" "$INSTALL_DIR/docker-compose.yml"
 cp "$SCRIPT_DIR/install-layout.sh" "$INSTALL_DIR/install-layout.sh"
+cp "$SCRIPT_DIR/manage-collector.sh" "$INSTALL_DIR/manage-collector.sh"
 cp "$SCRIPT_DIR/generate-prometheus-custom-rules.py" "$INSTALL_DIR/generate-prometheus-custom-rules.py"
 chmod +x "$INSTALL_DIR/generate-prometheus-custom-rules.py"
 chmod +x "$INSTALL_DIR/install-layout.sh"
+chmod +x "$INSTALL_DIR/manage-collector.sh"
 
 copy_if_missing "$SCRIPT_DIR/.env.example" "$INSTALL_DIR/.env"
 copy_if_missing "$SCRIPT_DIR/config/hwexp/hwexp.yaml" "$INSTALL_DIR/config/hwexp/hwexp.yaml"
