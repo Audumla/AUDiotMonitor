@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.19.0...hwexp-v0.19.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* gpu metics ([72e5153](https://github.com/Audumla/AUDiotMonitor/commit/72e515361898fc09233c44742de6016366f2db53))
+
 ## [0.19.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.18.0...hwexp-v0.19.0) (2026-03-19)
 
 
