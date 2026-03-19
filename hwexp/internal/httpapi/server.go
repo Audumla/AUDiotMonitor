@@ -66,6 +66,62 @@ func (s *Server) HandleVersion(w http.ResponseWriter, r *http.Request) {
 // HandleDebugState returns a single consolidated JSON view of every device
 // and its current measurements, joined on stable_id. This is the "everything
 // in one place" endpoint.
+func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	rawLine := ""
+	if s.cfg.Debug.EnableRawEndpoint {
+		rawLine = `<tr><td><a href="/debug/raw">/debug/raw</a></td><td>debug:read</td><td>Raw adapter measurements before mapping</td></tr>`
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>AUDiot Hardware Exporter</title>
+<style>
+  body{font-family:monospace;max-width:900px;margin:2em auto;padding:0 1em;background:#111;color:#ccc}
+  h1{color:#eee;border-bottom:1px solid #444;padding-bottom:.4em}
+  h2{color:#aaa;margin-top:1.5em}
+  table{border-collapse:collapse;width:100%%}
+  th{text-align:left;color:#888;font-weight:normal;border-bottom:1px solid #333;padding:.3em .6em}
+  td{padding:.35em .6em;border-bottom:1px solid #222;vertical-align:top}
+  a{color:#7af;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .badge{font-size:.8em;background:#333;color:#aaa;padding:.1em .4em;border-radius:3px}
+  .host{color:#888;font-size:.85em}
+</style>
+</head>
+<body>
+<h1>AUDiot Hardware Exporter</h1>
+<p class="host">host: <strong>%s</strong> &nbsp;|&nbsp; version: <strong>%s</strong></p>
+
+<h2>Observability</h2>
+<table>
+<tr><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+<tr><td><a href="/metrics">/metrics</a></td><td><span class="badge">open</span></td><td>Prometheus text exposition — scrape this with node_job=hwexp</td></tr>
+<tr><td><a href="/healthz">/healthz</a></td><td><span class="badge">open</span></td><td>Liveness probe — always 200 while the process is running</td></tr>
+<tr><td><a href="/readyz">/readyz</a></td><td><span class="badge">open</span></td><td>Readiness probe — 200 once the first adapter poll has completed</td></tr>
+<tr><td><a href="/version">/version</a></td><td><span class="badge">open</span></td><td>Exporter version and schema version strings</td></tr>
+</table>
+
+<h2>Debug / Inspection</h2>
+<table>
+<tr><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+<tr><td><a href="/debug/state">/debug/state</a></td><td><span class="badge">debug:read</span></td><td>All devices joined with their current measurements — use this as the primary JSON feed (Grafana Infinity)</td></tr>
+<tr><td><a href="/debug/catalog">/debug/catalog</a></td><td><span class="badge">debug:read</span></td><td>Flat list of every normalised measurement currently in the state store</td></tr>
+<tr><td><a href="/debug/discovery">/debug/discovery</a></td><td><span class="badge">debug:read</span></td><td>Discovered device inventory with vendor, model, bus, capabilities</td></tr>
+<tr><td><a href="/debug/mappings">/debug/mappings</a></td><td><span class="badge">debug:read</span></td><td>Mapping rule decisions — shows which rule matched each raw measurement</td></tr>
+%s</table>
+
+<p style="margin-top:2em;color:#555;font-size:.8em">
+  <span class="badge">open</span> No authentication required &nbsp;|&nbsp;
+  <span class="badge">debug:read</span> Requires Bearer token when auth_mode=bearer_token
+</p>
+</body></html>
+`, s.cfg.Identity.Host, "0.1.0", rawLine)
+}
+
 func (s *Server) HandleDebugState(w http.ResponseWriter, r *http.Request) {
 	devices := s.store.GetDevices()
 	measurements := s.store.GetAllNormalized()
@@ -287,6 +343,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 
 	// Open endpoints
+	mux.HandleFunc("/", s.HandleIndex)
 	mux.HandleFunc("/healthz", s.HandleHealthz)
 	mux.HandleFunc("/readyz", s.HandleReadyz)
 	mux.HandleFunc("/version", s.HandleVersion)
