@@ -1,19 +1,53 @@
+# AUDiot Monitor — Collector Stack
+#
+# Runs on every machine you want to monitor.
+# No config files or repo clone needed — just run:
+#
+#   docker compose up -d
+#
+# Optional: set HWEXP_HOST to label metrics with this machine's name.
+#   HWEXP_HOST=myserver docker compose up -d
+
 services:
 
+  # ── Init: write Prometheus scrape config ──────────────────────────────────
+  prometheus-init:
+    image: busybox
+    command:
+      - sh
+      - -c
+      - |
+        cat > /config/prometheus.yml << 'EOF'
+        global:
+          scrape_interval: 5s
+          evaluation_interval: 5s
+        scrape_configs:
+          - job_name: hwexp
+            static_configs:
+              - targets: ['hwexp:9200']
+          - job_name: node
+            static_configs:
+              - targets: ['node-exporter:9100']
+        EOF
+    volumes:
+      - prometheus-config:/config
+
+  # ── Hardware sensor exporter ───────────────────────────────────────────────
   hwexp:
     image: audumla/audiot-hwexp:latest
     container_name: hwexp
-    privileged: true
+    privileged: true                  # required to read /sys/class/hwmon
     volumes:
       - /sys:/sys:ro
       - /proc:/proc:ro
-      - ./config/hwexp:/etc/hwexp:z
+      - hwexp-state:/var/lib/hwexp    # persists auto-generated mapping rules
     environment:
-      - HWEXP_HOST=${HOSTNAME:-localhost}
+      - HWEXP_HOST=${HWEXP_HOST:-${HOSTNAME:-localhost}}
     ports:
       - "9200:9200"
     restart: unless-stopped
 
+  # ── OS metrics exporter ───────────────────────────────────────────────────
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
@@ -30,11 +64,15 @@ services:
       - "9100:9100"
     restart: unless-stopped
 
+  # ── Metrics database ──────────────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
+    depends_on:
+      prometheus-init:
+        condition: service_completed_successfully
     volumes:
-      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - prometheus-config:/etc/prometheus:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -46,4 +84,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  prometheus-config:
   prometheus-data:
+  hwexp-state:

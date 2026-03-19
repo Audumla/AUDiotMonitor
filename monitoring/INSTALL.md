@@ -1,16 +1,59 @@
 # AUDiot Monitor — Installation Guide
 
 The monitoring system is split into two independent Docker Compose stacks.
-Deploy each one separately depending on your infrastructure:
 
-| Stack | Directory | Purpose | Deploy on |
-| --- | --- | --- | --- |
-| **Collector** | `monitoring/collector/` | Scrapes hardware and OS metrics, stores them in Prometheus | Every machine you want to monitor |
-| **Dashboard** | `monitoring/dashboard/` | Runs Grafana; queries Prometheus to visualise the metrics | Any machine on the same network |
+| Stack | Purpose | Deploy on |
+| --- | --- | --- |
+| **Collector** | Scrapes hardware and OS metrics, stores them in Prometheus | Every machine you want to monitor |
+| **Dashboard** | Runs Grafana; queries Prometheus to visualise the metrics | Any machine on the same network |
 
 Both stacks can run on the same host. Alternatively the dashboard can run on a
 dedicated machine (e.g. a Raspberry Pi kiosk) while the collector runs on each
 machine being monitored.
+
+---
+
+## Quick start — no repo clone needed
+
+Install Docker (if not already installed), then run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/deploy.sh | bash
+```
+
+This downloads the two `docker-compose.yml` files into `~/audiot/` and starts both stacks.
+Grafana opens at **<http://localhost:3000>** (admin / admin).
+
+To deploy only the collector or only the dashboard:
+
+```bash
+# Collector only
+DEPLOY=collector curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/deploy.sh | bash
+
+# Dashboard only (pointing at a collector on another machine)
+DEPLOY=dashboard PROMETHEUS_URL=http://192.168.1.10:9090 \
+  curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/deploy.sh | bash
+```
+
+---
+
+## Manual setup — just the compose files
+
+If you prefer to manage the files yourself, download just what you need:
+
+```bash
+# Collector
+mkdir -p ~/audiot/collector
+curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/collector/docker-compose.yml \
+  -o ~/audiot/collector/docker-compose.yml
+HWEXP_HOST=myserver docker compose -f ~/audiot/collector/docker-compose.yml up -d
+
+# Dashboard
+mkdir -p ~/audiot/dashboard
+curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/dashboard/docker-compose.yml \
+  -o ~/audiot/dashboard/docker-compose.yml
+PROMETHEUS_URL=http://localhost:9090 docker compose -f ~/audiot/dashboard/docker-compose.yml up -d
+```
 
 ---
 

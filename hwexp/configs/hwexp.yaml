@@ -4,7 +4,7 @@ server:
   discovery_interval: 60s
 
 identity:
-  host: "test-host"
+  host: "localhost"   # overridden at runtime by HWEXP_HOST environment variable
   platform: "linux"
 
 adapters:
@@ -12,5 +12,8 @@ adapters:
     enabled: true
 
 mapping:
-  rules_file: "configs/mappings.yaml"
+  rules_file: "/etc/hwexp/mappings.yaml"
   strict_mode: false
+  auto_map:
+    enabled: true
+    generated_file: "/var/lib/hwexp/mappings.auto.yaml"
