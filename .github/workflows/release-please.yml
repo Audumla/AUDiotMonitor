@@ -28,6 +28,8 @@ jobs:
     # Skip the release-please step when doing a forced manual publish
     if: ${{ inputs.publish_version == '' || inputs.publish_version == null }}
     outputs:
+      monitoring_release_created: ${{ steps.release.outputs['monitoring--release_created'] }}
+      monitoring_tag_name: ${{ steps.release.outputs['monitoring--tag_name'] }}
       hwexp_release_created: ${{ steps.release.outputs['hwexp--release_created'] }}
       hwexp_tag_name: ${{ steps.release.outputs['hwexp--tag_name'] }}
     steps:
@@ -46,7 +48,7 @@ jobs:
 
   build-packages:
     name: Build & Upload Release Artifacts
-    # Run when release-please created a release OR when manually publishing a version
+    # Run only for hwexp releases, or when manually publishing an existing hwexp version.
     needs: [release]
     if: |
       always() && (
@@ -97,6 +99,7 @@ jobs:
     name: Publish Docker Image
     # Runs in parallel with build-packages — Docker builds from source directly
     # and does not depend on the binary artifacts uploaded by build-packages.
+    # This remains scoped to hwexp releases only.
     needs: [release]
     if: |
       always() && needs.release.result != 'failure' && (
@@ -147,3 +150,20 @@ jobs:
           # main push, so release builds typically hit a fully-warm cache.
           cache-from: type=registry,ref=audumla/audiot-hwexp:buildcache
           cache-to: type=registry,ref=audumla/audiot-hwexp:buildcache,mode=max
+
+  release-summary:
+    name: Release Summary
+    needs: [release]
+    if: ${{ always() && (inputs.publish_version == '' || inputs.publish_version == null) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize release-please outputs
+        run: |
+          {
+            echo "## Release Please Results"
+            echo
+            echo "- monitoring_release_created: ${{ needs.release.outputs.monitoring_release_created }}"
+            echo "- monitoring_tag_name: ${{ needs.release.outputs.monitoring_tag_name }}"
+            echo "- hwexp_release_created: ${{ needs.release.outputs.hwexp_release_created }}"
+            echo "- hwexp_tag_name: ${{ needs.release.outputs.hwexp_tag_name }}"
+          } >> "$GITHUB_STEP_SUMMARY"

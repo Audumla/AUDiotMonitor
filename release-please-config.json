@@ -1,5 +1,9 @@
 {
   "packages": {
+    "monitoring": {
+      "release-type": "simple",
+      "component": "monitoring"
+    },
     "hwexp": {
       "release-type": "go",
       "component": "hwexp"
