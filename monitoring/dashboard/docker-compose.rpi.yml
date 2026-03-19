@@ -1,0 +1,163 @@
+# AUDiot Monitor — Dashboard Stack (Raspberry Pi / ARM)
+#
+# Tested on: Raspberry Pi 4/5 running Debian bookworm
+# Architecture: linux/arm64 (RPi 4/5), linux/arm/v7 (RPi 3)
+#
+# Usage:
+#   PROMETHEUS_URL=http://192.168.1.x:9090 \
+#   HWEXP_URL=http://192.168.1.x:9200 \
+#   docker compose -f docker-compose.rpi.yml up -d
+#
+# First boot downloads the Infinity plugin (~50 MB) and dashboard JSON files.
+# Allow 2-3 minutes on a Pi with an SD card before the UI is fully responsive.
+# Subsequent restarts are fast — everything is persisted in Docker volumes.
+#
+# Memory guide:
+#   RPi 5 (4 GB+)  — remove the deploy.resources block entirely
+#   RPi 4 (4 GB)   — 512 m limit is comfortable
+#   RPi 4 (2 GB)   — reduce to 384 m; avoid running other heavy services
+#   RPi 3 / Zero 2 — 256 m; expect slow startup; disable unused plugins
+#   RPi 3 (1 GB)   — not recommended; Grafana alone needs ~200 MB resident
+
+services:
+
+  # ── Init: scaffold provisioning and download dashboards ─────────────────────
+  grafana-init:
+    image: busybox
+    environment:
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
+      - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
+      - SKIP_DASHBOARD_DOWNLOAD=${SKIP_DASHBOARD_DOWNLOAD:-false}
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
+
+        mkdir -p /provisioning/datasources /provisioning/dashboards \
+                 /dashboards/profiles/standard \
+                 /dashboards/profiles/wide-screens \
+                 /dashboards/profiles/mobile \
+                 /dashboards/profiles/debug
+
+        # Prometheus datasource
+        if [ ! -f /provisioning/datasources/prometheus.yaml ]; then
+          cat > /provisioning/datasources/prometheus.yaml << EOF
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            access: proxy
+            url: ${PROMETHEUS_URL:-http://localhost:9090}
+            isDefault: true
+            editable: false
+        EOF
+        fi
+
+        # Infinity datasource (for /debug/state and /debug/catalog JSON panels)
+        if [ ! -f /provisioning/datasources/infinity.yaml ]; then
+          cat > /provisioning/datasources/infinity.yaml << EOF
+        apiVersion: 1
+        datasources:
+          - name: Infinity (hwexp)
+            type: yesoreyeram-infinity-datasource
+            uid: infinity-hwexp
+            access: proxy
+            url: ${HWEXP_URL:-http://localhost:9200}
+            isDefault: false
+            editable: false
+            jsonData:
+              tlsSkipVerify: true
+        EOF
+        fi
+
+        # Dashboard provider
+        if [ ! -f /provisioning/dashboards/dashboards.yaml ]; then
+          cat > /provisioning/dashboards/dashboards.yaml << 'EOF'
+        apiVersion: 1
+        providers:
+          - name: 'AUDiot Profiles'
+            orgId: 1
+            folder: ''
+            type: file
+            disableDeletion: false
+            editable: true
+            allowUiUpdates: true
+            options:
+              path: /var/lib/grafana/dashboards
+              foldersFromFilesStructure: true
+        EOF
+        fi
+
+        # Download dashboards (skipped if files already exist — edits are preserved)
+        if [ "$SKIP_DASHBOARD_DOWNLOAD" != "true" ]; then
+          echo "Downloading dashboard profiles..."
+          for d in system-overview panel-1080p; do
+            [ ! -f "/dashboards/profiles/standard/${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/standard/${d}.json" \
+                "${BASE}/monitoring/dashboard/dashboards/profiles/standard/${d}.json" || true
+          done
+          for d in panel-1920x440; do
+            [ ! -f "/dashboards/profiles/wide-screens/${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/wide-screens/${d}.json" \
+                "${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/${d}.json" || true
+          done
+          for d in panel-portrait; do
+            [ ! -f "/dashboards/profiles/mobile/${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/mobile/${d}.json" \
+                "${BASE}/monitoring/dashboard/dashboards/profiles/mobile/${d}.json" || true
+          done
+          for d in discovery-dashboard operations-dashboard panel-dashboard state-dashboard; do
+            [ ! -f "/dashboards/profiles/debug/${d}.json" ] && \
+              wget -q -O "/dashboards/profiles/debug/${d}.json" \
+                "${BASE}/monitoring/dashboard/dashboards/profiles/debug/${d}.json" || true
+          done
+        else
+          echo "Skipping dashboard download as requested"
+        fi
+
+        echo "Grafana init complete"
+    volumes:
+      - grafana-provisioning:/provisioning
+      - grafana-dashboards:/dashboards
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  # grafana/grafana:latest is a multi-arch manifest that includes:
+  #   linux/amd64, linux/arm64, linux/arm/v7
+  # Docker will automatically pull the correct variant for your Pi model.
+  grafana:
+    image: grafana/grafana:latest
+    container_name: audiot-grafana
+    depends_on:
+      grafana-init:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-provisioning:/etc/grafana/provisioning:ro
+      - grafana-dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      # Install the Infinity plugin for JSON datasource (downloaded on first boot)
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+      # Reduce background I/O and memory on RAM-constrained devices
+      - GF_DATABASE_WAL=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+    deploy:
+      resources:
+        limits:
+          memory: 512m       # lower to 384m for RPi 4 2 GB / 256m for RPi 3
+        reservations:
+          memory: 128m
+    restart: unless-stopped
+
+volumes:
+  grafana-provisioning:
+  grafana-dashboards:
+  grafana-data:
