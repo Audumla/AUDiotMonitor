@@ -25,21 +25,38 @@ import (
 	"hwexp/internal/version"
 )
 
+// bannerInner is the number of characters between the two ║ box chars on each line.
+const bannerInner = 56
+
+// bannerRow returns a single banner line with the label left-aligned in a fixed
+// column and the value truncated (with "…") or padded to fill the remaining space
+// exactly — guaranteeing every line is the same total width.
+func bannerRow(label, value string) string {
+	const labelW = 11 // width of the label column (e.g. "Host       ")
+	const sepW = 2    // ": "
+	const prefixW = 2 + labelW + sepW // "  " + label + ": "
+	valueW := bannerInner - prefixW
+	if len(value) > valueW {
+		value = value[:valueW-1] + "…"
+	}
+	return fmt.Sprintf(" ║  %-*s: %-*s║", labelW, label, valueW, value)
+}
+
 func printBanner(cfg *config.Config, configPath string) {
-	var adapters []string
+	var adapterNames []string
 	if cfg.Adapters.LinuxHwmon.Enabled {
-		adapters = append(adapters, "linux_hwmon")
+		adapterNames = append(adapterNames, "linux_hwmon")
 	}
 	if cfg.Adapters.LinuxGpuVendor.Enabled {
-		adapters = append(adapters, "linux_gpu_vendor")
+		adapterNames = append(adapterNames, "linux_gpu_vendor")
 	}
 	if cfg.Adapters.LinuxVendorExec.Enabled {
-		adapters = append(adapters, "linux_vendor_exec")
+		adapterNames = append(adapterNames, "linux_vendor_exec")
 	}
 	if cfg.Adapters.Llamaswap.Enabled {
-		adapters = append(adapters, "llamaswap")
+		adapterNames = append(adapterNames, "llamaswap")
 	}
-	adapterStr := strings.Join(adapters, ", ")
+	adapterStr := strings.Join(adapterNames, ", ")
 	if adapterStr == "" {
 		adapterStr = "(none)"
 	}
@@ -49,32 +66,35 @@ func printBanner(cfg *config.Config, configPath string) {
 		autoMap = "enabled"
 	}
 
-	fmt.Fprintf(os.Stderr, `
- ╔══════════════════════════════════════════════════════╗
- ║          AUDiot Hardware Exporter  %-17s║
- ╠══════════════════════════════════════════════════════╣
- ║  Host       : %-38s║
- ║  Listen     : %-38s║
- ║  Config     : %-38s║
- ║  Refresh    : %-38s║
- ║  Discovery  : %-38s║
- ║  Auto-map   : %-38s║
- ║  Adapters   : %-38s║
- ║  Go version : %-38s║
- ║  Build time : %-38s║
- ╚══════════════════════════════════════════════════════╝
-`,
-		"v"+version.Version,
-		cfg.Identity.Host,
-		cfg.Server.ListenAddress,
-		configPath,
-		cfg.Server.RefreshInterval,
-		cfg.Server.DiscoveryInterval,
-		autoMap,
-		adapterStr,
-		version.GoVersion(),
-		version.BuildTime,
-	)
+	border := " ╔" + strings.Repeat("═", bannerInner) + "╗"
+	divider := " ╠" + strings.Repeat("═", bannerInner) + "╣"
+	footer := " ╚" + strings.Repeat("═", bannerInner) + "╝"
+
+	title := "AUDiot Hardware Exporter  v" + version.Version
+	if len(title) > bannerInner {
+		title = title[:bannerInner]
+	}
+	pad := bannerInner - len(title)
+	header := " ║" + strings.Repeat(" ", pad/2) + title + strings.Repeat(" ", pad-pad/2) + "║"
+
+	lines := []string{
+		"",
+		border,
+		header,
+		divider,
+		bannerRow("Host", cfg.Identity.Host),
+		bannerRow("Listen", cfg.Server.ListenAddress),
+		bannerRow("Config", configPath),
+		bannerRow("Refresh", cfg.Server.RefreshInterval.String()),
+		bannerRow("Discovery", cfg.Server.DiscoveryInterval.String()),
+		bannerRow("Auto-map", autoMap),
+		bannerRow("Adapters", adapterStr),
+		bannerRow("Go version", version.GoVersion()),
+		bannerRow("Build time", version.BuildTime),
+		footer,
+		"",
+	}
+	fmt.Fprintln(os.Stderr, strings.Join(lines, "\n"))
 }
 
 func main() {
