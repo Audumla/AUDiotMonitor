@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.19.2...hwexp-v0.20.0) (2026-03-19)
+
+
+### Features
+
+* **monitoring:** add host-owned Prometheus recording rules ([baae978](https://github.com/Audumla/AUDiotMonitor/commit/baae978227e18e275fbc8d7a24f7c43c0a947cdf))
+
 ## [0.19.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.19.1...hwexp-v0.19.2) (2026-03-19)
 
 

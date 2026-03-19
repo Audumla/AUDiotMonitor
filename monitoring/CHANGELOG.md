@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.3.0...monitoring-v0.4.0) (2026-03-19)
+
+
+### Features
+
+* **monitoring:** add host-owned Prometheus recording rules ([baae978](https://github.com/Audumla/AUDiotMonitor/commit/baae978227e18e275fbc8d7a24f7c43c0a947cdf))
+
 ## [0.3.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.2.0...monitoring-v0.3.0) (2026-03-19)
 
 
