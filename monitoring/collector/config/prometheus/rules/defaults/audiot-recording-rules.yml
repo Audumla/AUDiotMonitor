@@ -1,0 +1,28 @@
+groups:
+  - name: audiot_gpu_derived
+    interval: 15s
+    rules:
+      - record: audiot_gpu_compute_utilization_percent
+        expr: hw_device_utilization_percent{device_class="gpu", component="compute", sensor="utilization"}
+
+      - record: audiot_gpu_memory_utilization_percent
+        expr: hw_device_utilization_percent{device_class="gpu", component="memory", sensor="utilization"}
+
+      - record: audiot_gpu_vram_used_bytes
+        expr: |
+          sum by (host, device_id) (
+            hw_device_capacity_bytes{device_class="gpu", component="memory", logical_name=~".*_vram_used_bytes"}
+          )
+
+      - record: audiot_gpu_vram_capacity_bytes
+        expr: |
+          sum by (host, device_id) (
+            hw_device_capacity_bytes{device_class="gpu", component="memory", logical_name=~".*_vram_capacity_bytes"}
+          )
+
+      - record: audiot_gpu_vram_usage_percent
+        expr: |
+          audiot_gpu_vram_used_bytes
+          /
+          audiot_gpu_vram_capacity_bytes
+          * 100

@@ -27,7 +27,7 @@ sudo usermod -aG docker $USER   # log out and back in after this
 
 Runs on **every machine you want to monitor**.
 
-### Minimal quick-start (no config files needed)
+### Minimal quick-start (ephemeral config)
 
 ```bash
 mkdir -p ~/audiot/collector && cd ~/audiot/collector
@@ -42,6 +42,41 @@ Prometheus is now available at **<http://localhost:9090>** and hwexp at **<http:
 
 Browse to **<http://localhost:9200>** to see a live index of all available API endpoints.
 
+### Recommended host-owned layout
+
+This is the preferred install if you want editable Prometheus rules and
+persistent system-specific config:
+
+```bash
+mkdir -p ~/audiot && cd ~/audiot
+curl -O https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/collector/install-layout.sh
+curl -O https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/collector/docker-compose.yml
+chmod +x install-layout.sh
+INSTALL_DIR=/opt/docker/collector ./install-layout.sh
+cd /opt/docker/collector && docker compose up -d
+```
+
+This creates:
+
+```text
+/opt/docker/collector/
+  config/
+    hwexp/
+      hwexp.yaml
+      mappings.yaml
+    prometheus/
+      prometheus.yml
+      rules/
+        defaults/
+          audiot-recording-rules.yml
+        custom/
+          system.rules.yml
+          system.rules.yml.example
+```
+
+`system.rules.yml` is generated automatically on install only if it does not
+already exist. You can edit it freely afterwards; updates will not overwrite it.
+
 ### Full `docker-compose.yml` reference
 
 See [`collector/docker-compose.yml`](collector/docker-compose.yml) for the complete file. Key environment variables:
@@ -50,9 +85,9 @@ See [`collector/docker-compose.yml`](collector/docker-compose.yml) for the compl
 | -------- | ------- | ----------- |
 | `HWEXP_HOST` | `$HOSTNAME` or `localhost` | Label applied to every metric as the `host` dimension |
 
-### Custom config (optional)
+### Custom config and recording rules
 
-Mount a config directory to override settings without rebuilding the image:
+The collector compose file mounts config directly from the host:
 
 ```bash
 # Directory layout
@@ -60,12 +95,38 @@ collector/
   config/
     hwexp/
       hwexp.yaml         # main config overrides
-      conf.d/
-        llm.yaml         # example: enable llamaswap adapter
       mappings.yaml      # manual metric mapping rules
+    prometheus/
+      prometheus.yml     # scrape + rule_files config
+      rules/
+        defaults/
+          audiot-recording-rules.yml
+        custom/
+          system.rules.yml
 ```
 
-Example `conf.d/llm.yaml` to enable LLM monitoring:
+Default Prometheus recording rules are shipped in `rules/defaults/` and create
+reusable synthetic metrics such as:
+
+- `audiot_gpu_compute_utilization_percent`
+- `audiot_gpu_memory_utilization_percent`
+- `audiot_gpu_vram_used_bytes`
+- `audiot_gpu_vram_capacity_bytes`
+- `audiot_gpu_vram_usage_percent`
+
+Host-specific aliases live in `rules/custom/system.rules.yml`. A generator writes
+that file once from the detected DRM cards so you get stable labels like
+`gpu_index="1"` without hard-coding PCI IDs in dashboards.
+
+Re-generate the custom rules file manually:
+
+```bash
+cd /opt/docker/collector
+python3 ./generate-prometheus-custom-rules.py --force
+docker compose restart prometheus
+```
+
+Example `hwexp.yaml` override to enable LLM monitoring:
 
 ```yaml
 adapters:

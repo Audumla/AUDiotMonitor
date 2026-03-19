@@ -1,0 +1,15 @@
+groups:
+  - name: audiot_system_gpu_aliases
+    interval: 15s
+    rules:
+      - record: audiot_system_gpu_compute_utilization_percent
+        expr: hw_device_utilization_percent{device_class="gpu", component="compute", sensor="utilization", device_id="pci-0000:03:00.0"}
+        labels:
+          gpu_index: "1"
+          gpu_name: "gpu1"
+
+      - record: audiot_system_gpu_vram_usage_percent
+        expr: audiot_gpu_vram_usage_percent{device_id="pci-0000:03:00.0"}
+        labels:
+          gpu_index: "1"
+          gpu_name: "gpu1"

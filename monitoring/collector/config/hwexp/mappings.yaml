@@ -1,5 +1,50 @@
 schema_version: "1.0.0"
 rules:
+  - id: "gpu_compute_utilization"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^gpu_busy_percent$"
+    normalize:
+      metric_family: "hw_device_utilization_percent"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_gpu_busy"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "compute"
+      sensor: "utilization"
+
+  - id: "gpu_memory_utilization"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^mem_busy_percent$"
+    normalize:
+      metric_family: "hw_device_utilization_percent"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_mem_busy"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "memory"
+      sensor: "utilization"
+
+  - id: "gpu_vram_usage_percent"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^vram_usage_percent$"
+    normalize:
+      metric_family: "hw_device_utilization_percent"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_vram_usage"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "memory"
+      sensor: "usage"
+
   - id: "mock_gpu_temp"
     priority: 100
     match:

@@ -1,12 +1,14 @@
 # AUDiot Monitor — Collector Stack
 #
 # Runs on every machine you want to monitor.
-# No config files or repo clone needed — just run:
+# Recommended host-owned layout:
 #
-#   docker compose up -d
+#   chmod +x install-layout.sh
+#   INSTALL_DIR=/opt/docker/collector ./install-layout.sh
+#   cd /opt/docker/collector && docker compose up -d
 #
-# Optional: set HWEXP_HOST to label metrics with this machine's name.
-#   HWEXP_HOST=myserver docker compose up -d
+# The install script writes default Prometheus rules and generates a
+# system.rules.yml only if one does not already exist.
 
 services:
 
@@ -18,6 +20,8 @@ services:
     volumes:
       - /sys:/sys:ro
       - /proc:/proc:ro
+      - ./config/hwexp/hwexp.yaml:/etc/hwexp/hwexp.yaml:ro
+      - ./config/hwexp/mappings.yaml:/etc/hwexp/mappings.yaml:ro
       - ./hwexp:/var/lib/hwexp        # persists auto-generated mapping rules
     environment:
       HWEXP_HOST: ${HWEXP_HOST:-${HOSTNAME:-localhost}}
@@ -80,28 +84,11 @@ services:
     # which runs in host network mode (no container hostname).
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    entrypoint:
-      - sh
-      - -c
-      - |
-        if [ ! -f /prometheus/prometheus.yml ]; then
-          cat > /prometheus/prometheus.yml << 'PROMEOF'
-        global:
-          scrape_interval: 5s
-          evaluation_interval: 5s
-        scrape_configs:
-          - job_name: hwexp
-            static_configs:
-              - targets: ['hwexp:9200']
-          - job_name: node
-            static_configs:
-              - targets: ['host.docker.internal:9100']
-        PROMEOF
-        fi
-        exec /bin/prometheus \
-          --config.file=/prometheus/prometheus.yml \
-          --storage.tsdb.path=/prometheus/data
+    command:
+      - --config.file=/etc/prometheus/audiot/prometheus.yml
+      - --storage.tsdb.path=/prometheus/data
     volumes:
+      - ./config/prometheus:/etc/prometheus/audiot
       - ./prometheus:/prometheus:z
     ports:
       - "9090:9090"
