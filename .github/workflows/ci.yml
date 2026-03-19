@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
     paths:
       - 'hwexp/**'
       - '.github/workflows/ci.yml'
