@@ -1,33 +1,17 @@
-# AUDiot Monitor — Dashboard Stack (Raspberry Pi / ARM)
+# AUDiot Monitor — Dashboard Stack
 #
-# Tested on: Raspberry Pi 4/5 running Debian bookworm (aarch64)
-# Architecture: linux/arm64 (RPi 4/5), linux/arm/v7 (RPi 3)
+# Intended layout:
+#   ./config/grafana/...     -> Grafana provisioning and grafana.ini
+#   ./config/kiosk.env       -> Kiosk selection config
+#   ./dashboards/profiles/   -> Default profiles
+#   ./dashboards/custom/     -> Your own dashboards for this host
 #
-# Prerequisites — copy the dashboard directory to the Pi first:
-#   rsync -a monitoring/dashboard/ pi@<rpi-ip>:/opt/docker/dashboard/
+# Install the layout into /opt/docker/dashboard with:
+#   ./install-layout.sh
 #
-# Then start the stack pointing at your collector machine:
+# Then start Grafana with:
 #   cd /opt/docker/dashboard
-#   PROMETHEUS_URL=http://192.168.1.x:9090 \
-#   HWEXP_URL=http://192.168.1.x:9200 \
-#   docker compose -f docker-compose.rpi.yml up -d
-#
-# Config lives in ./config/grafana/ — edit files there and restart to apply.
-# Dashboards live in ./dashboards/profiles/ — add/edit JSON files there.
-# Both are bind-mounted so changes take effect without rebuilding volumes.
-#
-# Kiosk auto-launch (run once as the display user after starting the stack):
-#   GRAFANA_URL=http://localhost:3000 ./kiosk-install.sh
-#
-# Memory guide:
-#   RPi 5 (4 GB+)  — remove the deploy.resources block
-#   RPi 4 (4 GB)   — 512m is comfortable
-#   RPi 4 (2 GB)   — reduce to 384m
-#   RPi 3 / Zero 2 — 256m; expect slow startup
-#
-# Note: "Your kernel does not support memory limit capabilities" warnings are
-# harmless if cgroup memory is not enabled. Add to /boot/cmdline.txt to fix:
-#   cgroup_enable=memory cgroup_memory=1
+#   docker compose up -d
 
 services:
 
@@ -37,24 +21,17 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Provisioning (datasources + dashboard provider) — edit ./config/grafana/
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
-      # Grafana INI overrides
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-      # Dashboard JSON files — add/edit in ./dashboards/profiles/
       - ./dashboards:/var/lib/grafana/dashboards:ro
-      # Persistent Grafana state (users, starred dashboards, plugins)
       - grafana-data:/var/lib/grafana
     environment:
-      # Passed through to provisioning files via ${PROMETHEUS_URL} / ${HWEXP_URL}
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
       - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
       - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
       - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
-      # Install the Infinity plugin for JSON datasource panels
       - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
-      # Reduce background I/O on SD card
       - GF_DATABASE_WAL=true
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false

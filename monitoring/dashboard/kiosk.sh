@@ -8,9 +8,14 @@
 #   ./kiosk.sh [grafana-url]
 #
 # Environment variables (all optional):
-#   GRAFANA_URL      Base URL of Grafana  (default: http://localhost:3000)
-#   KIOSK_REFRESH    Dashboard auto-refresh interval  (default: 30s)
-#   KIOSK_DASHBOARD  Force a specific dashboard UID — skips auto-detection
+#   KIOSK_CONFIG_FILE        Config file path  (default: ./config/kiosk.env)
+#   GRAFANA_URL              Base URL of Grafana  (default: http://localhost:3000)
+#   KIOSK_REFRESH            Dashboard auto-refresh interval  (default: 30s)
+#   KIOSK_DASHBOARD          Force a specific dashboard UID — skips auto-detection
+#   KIOSK_DASHBOARD_DEFAULT  Default dashboard UID when no screen override is set
+#   KIOSK_DASHBOARD_ULTRAWIDE / _PORTRAIT / _1080P / _LANDSCAPE
+#                           Optional per-screen-class overrides
+#   KIOSK_DASHBOARD_FALLBACKS Comma-separated fallback UIDs checked in order
 #
 # Dashboard selection by resolution:
 #   Width ≥ 1800, height ≤ 500   →  audiot-panel-1920x440  (ticker / ultra-wide strip)
@@ -20,6 +25,14 @@
 #   All other                    →  audiot-system-overview
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KIOSK_CONFIG_FILE="${KIOSK_CONFIG_FILE:-$SCRIPT_DIR/config/kiosk.env}"
+
+if [ -f "$KIOSK_CONFIG_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$KIOSK_CONFIG_FILE"
+fi
 
 GRAFANA_URL="${GRAFANA_URL:-${1:-http://localhost:3000}}"
 REFRESH="${KIOSK_REFRESH:-30s}"
@@ -76,25 +89,103 @@ detect_resolution() {
 
 # ── Select dashboard UID by resolution ───────────────────────────────────────
 
-select_dashboard() {
+screen_class_for_resolution() {
     local res="$1"
     local w h
     w=$(echo "$res" | cut -dx -f1)
     h=$(echo "$res" | cut -dx -f2)
 
-    # Ultra-wide / ticker strip  (e.g. 1920×440, 3440×440)
     if [ "$w" -ge 1800 ] && [ "$h" -le 500 ]; then
-        echo "audiot-panel-1920x440"
-    # Portrait or narrow  (height > width, or width ≤ 800)
+        echo "ultrawide"
     elif [ "$h" -gt "$w" ] || [ "$w" -le 800 ]; then
-        echo "audiot-panel-portrait"
-    # Standard 1080p and up
+        echo "portrait"
     elif [ "$w" -ge 1920 ] && [ "$h" -ge 1000 ]; then
-        echo "audiot-panel-1080p"
-    # Smaller landscape (e.g. 1366×768, 1280×800)
+        echo "1080p"
     else
-        echo "audiot-system-overview"
+        echo "landscape"
     fi
+}
+
+select_dashboard() {
+    local res="$1"
+    local screen_class
+
+    screen_class="$(screen_class_for_resolution "$res")"
+
+    case "$screen_class" in
+        ultrawide)
+            echo "${KIOSK_DASHBOARD_ULTRAWIDE:-${KIOSK_DASHBOARD_DEFAULT:-audiot-panel-display}}"
+            ;;
+        portrait)
+            echo "${KIOSK_DASHBOARD_PORTRAIT:-${KIOSK_DASHBOARD_DEFAULT:-audiot-panel-portrait}}"
+            ;;
+        1080p)
+            echo "${KIOSK_DASHBOARD_1080P:-${KIOSK_DASHBOARD_DEFAULT:-audiot-panel-1080p}}"
+            ;;
+        *)
+            echo "${KIOSK_DASHBOARD_LANDSCAPE:-${KIOSK_DASHBOARD_DEFAULT:-audiot-system-overview}}"
+            ;;
+    esac
+}
+
+# Return success if the dashboard UID is present in Grafana's search index.
+dashboard_exists() {
+    local uid="$1"
+    curl -sf "$GRAFANA_URL/api/search?query=" 2>/dev/null \
+        | grep -F "\"uid\":\"$uid\"" > /dev/null
+}
+
+try_fallback_dashboards() {
+    local fallback uid
+    IFS=',' read -r -a fallback <<< "${KIOSK_DASHBOARD_FALLBACKS:-audiot-panel-display,audiot-system-overview}"
+    for uid in "${fallback[@]}"; do
+        uid="$(echo "$uid" | xargs)"
+        [ -z "$uid" ] && continue
+        if dashboard_exists "$uid"; then
+            echo "$uid"
+            return
+        fi
+    done
+}
+
+copy_example_dashboard_if_missing() {
+    local example_dir="$SCRIPT_DIR/examples/custom"
+    local custom_dir="$SCRIPT_DIR/dashboards/custom"
+
+    [ -d "$example_dir" ] || return
+    mkdir -p "$custom_dir"
+
+    while IFS= read -r src; do
+        local name dst
+        name="$(basename "$src")"
+        dst="$custom_dir/$name"
+        [ -f "$dst" ] || cp "$src" "$dst"
+    done < <(find "$example_dir" -maxdepth 1 -type f -name '*.json' | sort)
+}
+
+ensure_supporting_layout() {
+    copy_example_dashboard_if_missing
+}
+
+# Ensure the chosen UID exists; otherwise fall back to a known-good option.
+resolve_dashboard_uid() {
+    local preferred="$1"
+
+    if dashboard_exists "$preferred"; then
+        echo "$preferred"
+        return
+    fi
+
+    if [ -n "${KIOSK_DASHBOARD_DEFAULT:-}" ] && dashboard_exists "$KIOSK_DASHBOARD_DEFAULT"; then
+        echo "$KIOSK_DASHBOARD_DEFAULT"
+        return
+    fi
+
+    if try_fallback_dashboards; then
+        return
+    fi
+
+    echo "$preferred"
 }
 
 # ── Wait for Grafana to respond ───────────────────────────────────────────────
@@ -117,14 +208,20 @@ if [ -n "${KIOSK_DASHBOARD:-}" ]; then
     echo "[kiosk] Using forced dashboard: $DASHBOARD_UID"
 else
     RES=$(detect_resolution)
-    DASHBOARD_UID=$(select_dashboard "$RES")
+    DASHBOARD_UID="$(select_dashboard "$RES")"
+    echo "[kiosk] Detected resolution: $RES"
+fi
+
+wait_for_grafana
+ensure_supporting_layout
+DASHBOARD_UID="$(resolve_dashboard_uid "$DASHBOARD_UID")"
+
+if [ -z "${KIOSK_DASHBOARD:-}" ]; then
     echo "[kiosk] Detected resolution: $RES  →  dashboard: $DASHBOARD_UID"
 fi
 
 KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID?kiosk&refresh=$REFRESH"
 echo "[kiosk] URL: $KIOSK_URL"
-
-wait_for_grafana
 
 # Disable screen blanking and power management
 xset s off   2>/dev/null || true

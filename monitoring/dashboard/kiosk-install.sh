@@ -9,17 +9,13 @@
 #
 # Options via environment:
 #   GRAFANA_URL      Grafana URL  (default: http://localhost:3000)
-#   KIOSK_REFRESH    Auto-refresh interval  (default: 30s)
-#   KIOSK_DASHBOARD  Force a specific dashboard UID (skips auto-detection)
-#   INSTALL_DIR      Where to copy kiosk.sh  (default: /opt/docker/dashboard)
+#   INSTALL_DIR      Where to copy kiosk assets  (default: /opt/docker/dashboard)
 
 set -euo pipefail
 
-GRAFANA_URL="${GRAFANA_URL:-http://localhost:3000}"
-KIOSK_REFRESH="${KIOSK_REFRESH:-30s}"
-KIOSK_DASHBOARD="${KIOSK_DASHBOARD:-}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/docker/dashboard}"
 KIOSK_SCRIPT="$INSTALL_DIR/kiosk.sh"
+KIOSK_ENV="$INSTALL_DIR/config/kiosk.env"
 AUTOSTART_DIR="$HOME/.config/autostart"
 SERVICE_FILE="$HOME/.config/systemd/user/audiot-kiosk.service"
 
@@ -40,10 +36,15 @@ else
     ok "Chromium already installed"
 fi
 
-# ── Copy kiosk.sh to install directory ───────────────────────────────────────
+# ── Copy kiosk assets to install directory ───────────────────────────────────
 
 if [ "$(realpath "$0")" != "$(realpath "$KIOSK_SCRIPT")" ]; then
     sudo mkdir -p "$INSTALL_DIR"
+    sudo cp "$(dirname "$0")/install-layout.sh" "$INSTALL_DIR/install-layout.sh"
+    sudo cp "$(dirname "$0")/set-dashboard.sh" "$INSTALL_DIR/set-dashboard.sh"
+    sudo chmod +x "$INSTALL_DIR/install-layout.sh"
+    sudo chmod +x "$INSTALL_DIR/set-dashboard.sh"
+    sudo "$INSTALL_DIR/install-layout.sh"
     sudo cp "$(dirname "$0")/kiosk.sh" "$KIOSK_SCRIPT"
     sudo chmod +x "$KIOSK_SCRIPT"
     ok "kiosk.sh installed to $KIOSK_SCRIPT"
@@ -51,9 +52,11 @@ else
     ok "kiosk.sh already in place"
 fi
 
-# Build the env prefix for the launch command
-ENV_VARS="GRAFANA_URL=$GRAFANA_URL KIOSK_REFRESH=$KIOSK_REFRESH"
-[ -n "$KIOSK_DASHBOARD" ] && ENV_VARS="$ENV_VARS KIOSK_DASHBOARD=$KIOSK_DASHBOARD"
+if [ ! -f "$KIOSK_ENV" ] && [ -f "$(dirname "$0")/config/kiosk.env.example" ]; then
+    sudo mkdir -p "$INSTALL_DIR/config"
+    sudo cp "$(dirname "$0")/config/kiosk.env.example" "$KIOSK_ENV"
+    ok "Installed kiosk config: $KIOSK_ENV"
+fi
 
 # ── Method 1: systemd user service (preferred on Debian bookworm) ─────────────
 
@@ -69,9 +72,6 @@ Wants=graphical-session.target
 Type=simple
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=%h/.Xauthority
-Environment=GRAFANA_URL=$GRAFANA_URL
-Environment=KIOSK_REFRESH=$KIOSK_REFRESH
-$([ -n "$KIOSK_DASHBOARD" ] && echo "Environment=KIOSK_DASHBOARD=$KIOSK_DASHBOARD" || true)
 ExecStart=$KIOSK_SCRIPT
 Restart=always
 RestartSec=10
@@ -95,7 +95,7 @@ else
 Type=Application
 Name=AUDiot Kiosk
 Comment=Launch AUDiot Grafana dashboard in kiosk mode
-Exec=env $ENV_VARS $KIOSK_SCRIPT
+Exec=$KIOSK_SCRIPT
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -110,13 +110,12 @@ echo ""
 echo "════════════════════════════════════════"
 echo " AUDiot Kiosk installed"
 echo "════════════════════════════════════════"
-echo " Grafana URL : $GRAFANA_URL"
-echo " Refresh     : $KIOSK_REFRESH"
-[ -n "$KIOSK_DASHBOARD" ] && echo " Dashboard   : $KIOSK_DASHBOARD (forced)" \
-                           || echo " Dashboard   : auto (by screen resolution)"
+echo " Config file : $KIOSK_ENV"
+echo " Grafana URL : edit in $KIOSK_ENV"
+echo " Dashboard   : edit in $KIOSK_ENV"
 echo ""
 echo " To start now without rebooting:"
-echo "   $ENV_VARS $KIOSK_SCRIPT &"
+echo "   $KIOSK_SCRIPT &"
 echo ""
 echo " To uninstall:"
 echo "   systemctl --user disable --now audiot-kiosk.service 2>/dev/null"

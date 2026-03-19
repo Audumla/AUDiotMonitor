@@ -130,155 +130,42 @@ Dashboard JSON files are downloaded from GitHub into four profile folders:
 
 A Raspberry Pi 4 or 5 running Debian (bookworm/bullseye) makes an ideal always-on dashboard host. All images used support `linux/arm64` and `linux/arm/v7`.
 
-### RPi-specific `docker-compose.yml`
+### RPi / bind-mounted layout
 
-Save this as `docker-compose.yml` in a working directory on the Pi, then run `docker compose up -d`:
+Use the dashboard installer to scaffold a simple host-owned layout:
 
-```yaml
-# AUDiot Monitor — Dashboard Stack (Raspberry Pi / ARM)
-#
-# Point at the collector running on your main machine:
-#   PROMETHEUS_URL=http://192.168.1.x:9090
-#   HWEXP_URL=http://192.168.1.x:9200
-#   docker compose up -d
-#
-# First boot downloads plugins and dashboards — allow 2–3 minutes.
+```bash
+rsync -a monitoring/dashboard/ pi@<rpi-ip>:/opt/docker/dashboard/
 
-services:
+ssh pi@<rpi-ip> '
+  cd /opt/docker/dashboard && \
+  chmod +x install-layout.sh kiosk-install.sh kiosk.sh && \
+  INSTALL_DIR=/opt/docker/dashboard ./install-layout.sh
+'
+```
 
-  grafana-init:
-    image: busybox
-    environment:
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
-      - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
-      - SKIP_DASHBOARD_DOWNLOAD=${SKIP_DASHBOARD_DOWNLOAD:-false}
-    command:
-      - sh
-      - -c
-      - |
-        set -e
-        BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
+That creates:
 
-        mkdir -p /provisioning/datasources /provisioning/dashboards \
-                 /dashboards/profiles/standard \
-                 /dashboards/profiles/wide-screens \
-                 /dashboards/profiles/mobile \
-                 /dashboards/profiles/debug
+```text
+/opt/docker/dashboard/
+  docker-compose.yml
+  config/
+    grafana/
+      grafana.ini
+      provisioning/
+    kiosk.env
+  dashboards/
+    profiles/    # shipped defaults
+    custom/      # your host-local dashboards
+```
 
-        if [ ! -f /provisioning/datasources/prometheus.yaml ]; then
-          cat > /provisioning/datasources/prometheus.yaml << EOF
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            access: proxy
-            url: ${PROMETHEUS_URL:-http://localhost:9090}
-            isDefault: true
-            editable: false
-        EOF
-        fi
+Then set the collector endpoints in `/opt/docker/dashboard/.env` or export them at launch:
 
-        if [ ! -f /provisioning/datasources/infinity.yaml ]; then
-          cat > /provisioning/datasources/infinity.yaml << EOF
-        apiVersion: 1
-        datasources:
-          - name: Infinity (hwexp)
-            type: yesoreyeram-infinity-datasource
-            uid: infinity-hwexp
-            access: proxy
-            url: ${HWEXP_URL:-http://localhost:9200}
-            isDefault: false
-            editable: false
-            jsonData:
-              tlsSkipVerify: true
-        EOF
-        fi
-
-        if [ ! -f /provisioning/dashboards/dashboards.yaml ]; then
-          cat > /provisioning/dashboards/dashboards.yaml << 'EOF'
-        apiVersion: 1
-        providers:
-          - name: 'AUDiot Profiles'
-            orgId: 1
-            folder: ''
-            type: file
-            disableDeletion: false
-            editable: true
-            allowUiUpdates: true
-            options:
-              path: /var/lib/grafana/dashboards
-              foldersFromFilesStructure: true
-        EOF
-        fi
-
-        if [ "$SKIP_DASHBOARD_DOWNLOAD" != "true" ]; then
-          echo "Downloading dashboard profiles..."
-          for d in system-overview panel-1080p; do
-            [ ! -f "/dashboards/profiles/standard/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/standard/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/standard/${d}.json" || true
-          done
-          for d in panel-1920x440; do
-            [ ! -f "/dashboards/profiles/wide-screens/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/wide-screens/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/${d}.json" || true
-          done
-          for d in panel-portrait; do
-            [ ! -f "/dashboards/profiles/mobile/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/mobile/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/mobile/${d}.json" || true
-          done
-          for d in discovery-dashboard operations-dashboard panel-dashboard state-dashboard; do
-            [ ! -f "/dashboards/profiles/debug/${d}.json" ] && \
-              wget -q -O "/dashboards/profiles/debug/${d}.json" \
-                "${BASE}/monitoring/dashboard/dashboards/profiles/debug/${d}.json" || true
-          done
-        fi
-
-        echo "Grafana init complete"
-    volumes:
-      - grafana-provisioning:/provisioning
-      - grafana-dashboards:/dashboards
-
-  grafana:
-    image: grafana/grafana:latest   # multi-arch: supports arm64 and arm/v7
-    container_name: audiot-grafana
-    depends_on:
-      grafana-init:
-        condition: service_completed_successfully
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana-provisioning:/etc/grafana/provisioning:ro
-      - grafana-dashboards:/var/lib/grafana/dashboards:ro
-      - grafana-data:/var/lib/grafana
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
-      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
-      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
-      # Reduce memory usage on RAM-constrained devices
-      - GF_DATABASE_WAL=true
-      - GF_ANALYTICS_REPORTING_ENABLED=false
-      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
-      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
-    # Resource limits — tune for your Pi model:
-    #   RPi 5 (4 GB+): remove limits entirely
-    #   RPi 4 (4 GB):  mem_limit 512m is comfortable
-    #   RPi 4 (2 GB):  mem_limit 384m; close other services
-    #   RPi 3 / Zero:  not recommended for Grafana
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-        reservations:
-          memory: 128m
-    restart: unless-stopped
-
-volumes:
-  grafana-provisioning:
-  grafana-dashboards:
-  grafana-data:
+```bash
+cd /opt/docker/dashboard
+PROMETHEUS_URL=http://192.168.1.x:9090 \
+HWEXP_URL=http://192.168.1.x:9200 \
+docker compose up -d
 ```
 
 ### Notes for Raspberry Pi
@@ -295,14 +182,14 @@ Prometheus write-ahead logs generate significant I/O. Run the **collector** stac
 
 ### Kiosk mode — auto resolution
 
-`kiosk.sh` detects the connected screen resolution and automatically opens the best-matching dashboard profile in Chromium fullscreen mode, then restarts Chromium if it exits.
+`kiosk.sh` detects the connected screen resolution and picks a dashboard using `config/kiosk.env`, then restarts Chromium if it exits.
 
-| Resolution | Dashboard |
-| ---------- | --------- |
-| Width ≥ 1800, height ≤ 500 | Panel [1920×440] — ultra-wide ticker strip |
-| Portrait (height > width) or width ≤ 800 | Panel [Portrait] |
-| Width ≥ 1920, height ≥ 1000 | Dashboard [1080p] |
-| Everything else | System Overview |
+Edit `/opt/docker/dashboard/config/kiosk.env` to control:
+
+- one forced dashboard for all screens
+- a default dashboard UID
+- per-screen-class overrides (`ULTRAWIDE`, `PORTRAIT`, `1080P`, `LANDSCAPE`)
+- fallback UIDs if the selected dashboard is missing
 
 **One-shot installer** — run as the display user (not root):
 
@@ -319,7 +206,7 @@ The installer:
 2. Registers `kiosk.sh` as a **systemd user service** (Debian bookworm) or **XDG autostart entry** (LXDE / other desktops)
 3. Starts the kiosk immediately
 
-Override the auto-selected dashboard with `KIOSK_DASHBOARD=audiot-system-overview` if you want a fixed layout regardless of screen size.
+To add your own dashboards, drop JSON files into `/opt/docker/dashboard/dashboards/custom/` and set the desired UID in `/opt/docker/dashboard/config/kiosk.env`.
 
 **Manual launch** (without installing):
 
@@ -378,14 +265,8 @@ Scripts are executed every poll cycle. They must write a JSON array of `RawMeasu
 
 ## Persisting Dashboard Edits
 
-By default dashboards are stored in a Docker volume (`grafana-dashboards`). To manage them as plain files on the host:
-
-```yaml
-volumes:
-  - ./my-dashboards:/var/lib/grafana/dashboards   # replace the named volume
-```
-
-Set `SKIP_DASHBOARD_DOWNLOAD=true` after the first run to stop the bootstrapper from overwriting local edits with the defaults.
+Dashboards are plain files on the host in `/opt/docker/dashboard/dashboards/`.
+Default shipped profiles live under `profiles/`; your machine-specific dashboards should go under `custom/`.
 
 ---
 
