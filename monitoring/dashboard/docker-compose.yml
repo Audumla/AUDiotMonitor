@@ -25,8 +25,9 @@ services:
 
         mkdir -p /provisioning/datasources /provisioning/dashboards /dashboards
 
-        # Datasource — points at Prometheus
-        cat > /provisioning/datasources/prometheus.yaml << EOF
+        # Datasource — only write if not already present (preserves manual edits)
+        if [ ! -f /provisioning/datasources/prometheus.yaml ]; then
+          cat > /provisioning/datasources/prometheus.yaml << EOF
         apiVersion: 1
         datasources:
           - name: Prometheus
@@ -36,9 +37,11 @@ services:
             isDefault: true
             editable: false
         EOF
+        fi
 
-        # Dashboard provider — tells Grafana where to find the JSON files
-        cat > /provisioning/dashboards/dashboards.yaml << 'EOF'
+        # Dashboard provider — only write if not already present
+        if [ ! -f /provisioning/dashboards/dashboards.yaml ]; then
+          cat > /provisioning/dashboards/dashboards.yaml << 'EOF'
         apiVersion: 1
         providers:
           - name: AUDiot Dashboards
@@ -51,12 +54,15 @@ services:
             options:
               path: /var/lib/grafana/dashboards
         EOF
+        fi
 
-        # Download dashboard JSON files from GitHub
-        wget -q -O /dashboards/system-overview.json      "$BASE/monitoring/dashboard/dashboards/system-overview.json"
-        wget -q -O /dashboards/panel-dashboard.json      "$BASE/monitoring/dashboard/dashboards/panel-dashboard.json"
-        wget -q -O /dashboards/discovery-dashboard.json  "$BASE/monitoring/dashboard/dashboards/discovery-dashboard.json"
-        wget -q -O /dashboards/operations-dashboard.json "$BASE/monitoring/dashboard/dashboards/operations-dashboard.json"
+        # Download dashboard JSON files from GitHub (skip if already present)
+        for dash in system-overview panel-dashboard discovery-dashboard operations-dashboard; do
+          if [ ! -f "/dashboards/${dash}.json" ]; then
+            echo "Downloading ${dash}.json..."
+            wget -q -O "/dashboards/${dash}.json" "$BASE/monitoring/dashboard/dashboards/${dash}.json"
+          fi
+        done
 
         echo "Grafana init complete"
     volumes:
