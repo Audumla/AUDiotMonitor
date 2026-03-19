@@ -150,6 +150,11 @@ services:
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+    # Note: if your Pi kernel lacks cgroup memory support you will see:
+    #   "Your kernel does not support memory limit capabilities"
+    # The container still runs — limits are just not enforced.
+    # To enable: add "cgroup_enable=memory cgroup_memory=1" to /boot/cmdline.txt
+    # and reboot.  Not required for Grafana to work correctly.
     deploy:
       resources:
         limits:
