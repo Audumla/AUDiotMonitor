@@ -2,9 +2,6 @@ services:
 
   hwexp:
     image: audumla/audiot-hwexp:latest
-    build:
-      context: ../../hwexp
-      dockerfile: Dockerfile
     container_name: hwexp
     privileged: true
     volumes:
