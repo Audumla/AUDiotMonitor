@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.16.0...hwexp-v0.17.0) (2026-03-19)
+
+
+### Features
+
+* **hwexp:** add pcidb enrichment, CPU cache, DIMM discovery, GPU metrics ([1ee9d7d](https://github.com/Audumla/AUDiotMonitor/commit/1ee9d7d73222d4b631b077e038f1a8fe01306155))
+
+
+### Bug Fixes
+
+* **hwexp:** wireless device classification, DMI placeholder filtering, NVMe vendors ([62f4493](https://github.com/Audumla/AUDiotMonitor/commit/62f4493201be5c23d07a64103aa4cf09aab6c406))
+
 ## [0.16.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.15.0...hwexp-v0.16.0) (2026-03-19)
 
 
