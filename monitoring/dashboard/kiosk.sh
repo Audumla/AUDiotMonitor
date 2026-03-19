@@ -139,6 +139,7 @@ while true; do
         --disable-pinch \
         --overscroll-history-navigation=0 \
         --check-for-update-interval=604800 \
+        --password-store=basic \
         --app="$KIOSK_URL" \
         2>/dev/null || true
 

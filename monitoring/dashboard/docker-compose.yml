@@ -80,7 +80,7 @@ services:
             [ ! -f "/dashboards/profiles/standard/$${d}.json" ] && wget -q -O "/dashboards/profiles/standard/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/standard/$${d}.json" || true
           done
           # wide-screens
-          for d in panel-1920x440; do
+          for d in panel-1920x440 panel-1920x440-dials; do
             [ ! -f "/dashboards/profiles/wide-screens/$${d}.json" ] && wget -q -O "/dashboards/profiles/wide-screens/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/$${d}.json" || true
           done
           # mobile
