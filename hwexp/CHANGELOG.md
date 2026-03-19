@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.14.0...hwexp-v0.14.1) (2026-03-19)
+
+
+### Performance Improvements
+
+* **ci:** cross-compile in Docker builder, parallelize docker-publish job ([af84fd8](https://github.com/Audumla/AUDiotMonitor/commit/af84fd888c8d1ad006d587ee65452539db29afef))
+
 ## [0.14.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.13.2...hwexp-v0.14.0) (2026-03-19)
 
 
