@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.13.0...hwexp-v0.13.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* remove configs/ from .dockerignore so Dockerfile can COPY default config ([53ab113](https://github.com/Audumla/AUDiotMonitor/commit/53ab113ffcbd985a4b66db1d881ac789ad0663c0))
+
 ## [0.13.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.12.0...hwexp-v0.13.0) (2026-03-19)
 
 
