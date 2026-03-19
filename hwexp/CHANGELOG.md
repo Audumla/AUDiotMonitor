@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.18.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.17.2...hwexp-v0.18.0) (2026-03-19)
+
+
+### Features
+
+* **hwexp:** add /debug/state consolidated JSON endpoint ([e91c095](https://github.com/Audumla/AUDiotMonitor/commit/e91c0951683ee9d1005274fcfd0039f67a5d4dc6))
+
+
+### Bug Fixes
+
+* **hwexp:** show linux_static in startup banner adapter list ([888e59b](https://github.com/Audumla/AUDiotMonitor/commit/888e59b3f77e19d97c4243b6742f837f4beaa66b))
+
 ## [0.17.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.17.1...hwexp-v0.17.2) (2026-03-19)
 
 
