@@ -15,4 +15,11 @@
 - Developed cross-stack integration test in Python to verify end-to-end data flow from hwexp to Prometheus to Grafana.
 - Verified and highlighted firewall requirements in INSTALL.md.
 
+### Added GPU utilization tracking and expanded dashboard with OS/GPU telemetry. (New Feature, UI Improvement)
+- Implemented linux_gpu adapter to collect utilization metrics from AMD (sysfs) and NVIDIA (nvidia-smi) GPUs.
+- Enhanced automapper to handle percentage-based utilization metrics.
+- Updated System Overview dashboard to include GPU Performance section (utilization and memory usage).
+- Verified that OS metrics (CPU/RAM) are provided by node-exporter and already integrated into dashboards.
+- Enabled linux_gpu_vendor adapter in default and collector configurations.
+
 ---

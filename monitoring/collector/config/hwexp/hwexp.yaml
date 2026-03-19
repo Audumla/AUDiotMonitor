@@ -10,6 +10,8 @@ identity:
 adapters:
   linux_hwmon:
     enabled: true
+  linux_gpu_vendor:
+    enabled: true
 
 mapping:
   rules_file: "/etc/hwexp/mappings.yaml"

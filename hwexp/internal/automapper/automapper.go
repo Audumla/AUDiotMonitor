@@ -7,6 +7,7 @@ package automapper
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"hwexp/internal/model"
 )
@@ -70,11 +71,17 @@ var unitToMapping = map[string]sensorMapping{
 		component:    "power",
 		sensor:       "energy",
 	},
+	"percent": {
+		metricFamily: "hw_device_utilization_percent",
+		scale:        1.0,
+		component:    "compute",
+		sensor:       "utilization",
+	},
 }
 
 // inputRE extracts the sensor prefix (e.g. "temp") from a raw hwmon filename
 // like "temp1_input".
-var inputRE = regexp.MustCompile(`^([a-z]+)\d+_input$`)
+var inputRE = regexp.MustCompile(`^([a-z_]+)\d*_input$`)
 
 // InferRule creates a best-guess MappingRule for an unmapped measurement.
 // The rule is scoped to the device's (vendor, device_class) and matches all
@@ -87,11 +94,13 @@ func InferRule(device model.DiscoveredDevice, raw model.RawMeasurement) *model.M
 	}
 
 	// Extract sensor prefix from raw name ("temp1_input" → "temp")
+	prefix := raw.RawName
 	m := inputRE.FindStringSubmatch(raw.RawName)
-	if m == nil {
-		return nil
+	if m != nil {
+		prefix = m[1]
+	} else if strings.HasSuffix(raw.RawName, "_percent") {
+		prefix = strings.TrimSuffix(raw.RawName, "_percent")
 	}
-	prefix := m[1]
 
 	// Rule ID is deterministic: same (vendor, class, prefix) → same rule ID,
 	// so duplicates are naturally deduplicated when AddRules checks by ID.
@@ -107,6 +116,13 @@ func InferRule(device model.DiscoveredDevice, raw model.RawMeasurement) *model.M
 		sensor = sm.sensor
 	}
 
+	var matchRegex string
+	if m != nil {
+		matchRegex = fmt.Sprintf(`^%s([0-9]+)_input$`, regexp.QuoteMeta(prefix))
+	} else {
+		matchRegex = fmt.Sprintf(`^%s$`, regexp.QuoteMeta(raw.RawName))
+	}
+
 	return &model.MappingRule{
 		ID:       ruleID,
 		Priority: 1, // lowest priority — manual rules always win
@@ -115,12 +131,12 @@ func InferRule(device model.DiscoveredDevice, raw model.RawMeasurement) *model.M
 			Source:      device.Source,
 			Vendor:      device.Vendor,
 			DeviceClass: device.DeviceClass,
-			RawNameRegex: fmt.Sprintf(`^%s([0-9]+)_input$`, regexp.QuoteMeta(prefix)),
+			RawNameRegex: matchRegex,
 		},
 		Normalize: model.NormalizeConfig{
 			MetricFamily:        sm.metricFamily,
 			MetricType:          "gauge",
-			LogicalNameTemplate: fmt.Sprintf("${logical_device_name}_%s_${1}", prefix),
+			LogicalNameTemplate: fmt.Sprintf("${logical_device_name}_%s", prefix),
 			UnitScale:           sm.scale,
 			DeviceClass:         device.DeviceClass,
 			Component:           component,

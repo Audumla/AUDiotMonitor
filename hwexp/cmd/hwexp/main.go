@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"hwexp/internal/adapters/hwmon"
+	"hwexp/internal/adapters/linux_gpu"
 	"hwexp/internal/adapters/mock"
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
@@ -86,7 +87,14 @@ func main() {
 		}
 		l.Info("startup", "Using linux_hwmon adapter", map[string]interface{}{"path": hwmonPath})
 		adapters = append(adapters, hwmon.NewAdapter(hwmonPath))
-	} else {
+	}
+
+	if cfg.Adapters.LinuxGpuVendor.Enabled && *fixturePath == "" {
+		l.Info("startup", "Using linux_gpu adapter", nil)
+		adapters = append(adapters, linux_gpu.NewAdapter(""))
+	}
+
+	if len(adapters) == 0 {
 		l.Fatal("startup", "No adapters enabled in config and no --fixture provided", "CFG_LOAD_FAILED", nil)
 	}
 

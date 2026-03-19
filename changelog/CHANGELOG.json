@@ -36,5 +36,25 @@
       "Developed cross-stack integration test in Python to verify end-to-end data flow from hwexp to Prometheus to Grafana.",
       "Verified and highlighted firewall requirements in INSTALL.md."
     ]
+  },
+  {
+    "id": "CHG-dbd0dc0e",
+    "agent": "gemini",
+    "change_group": "audiotmonitor",
+    "plugin_version": "unreleased",
+    "date": "2026-03-19",
+    "recorded_at": "2026-03-19T05:18:50.261039Z",
+    "summary_tags": [
+      "New Feature",
+      "UI Improvement"
+    ],
+    "summary": "Added GPU utilization tracking and expanded dashboard with OS/GPU telemetry.",
+    "details": [
+      "Implemented linux_gpu adapter to collect utilization metrics from AMD (sysfs) and NVIDIA (nvidia-smi) GPUs.",
+      "Enhanced automapper to handle percentage-based utilization metrics.",
+      "Updated System Overview dashboard to include GPU Performance section (utilization and memory usage).",
+      "Verified that OS metrics (CPU/RAM) are provided by node-exporter and already integrated into dashboards.",
+      "Enabled linux_gpu_vendor adapter in default and collector configurations."
+    ]
   }
 ]

@@ -1,11 +1,17 @@
 {
   "uid": "audiot-system-overview",
   "title": "AUDiot System Overview",
-  "tags": ["audiot", "overview"],
+  "tags": [
+    "audiot",
+    "overview"
+  ],
   "timezone": "browser",
   "schemaVersion": 38,
   "refresh": "5s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
@@ -21,213 +27,903 @@
     ]
   },
   "panels": [
-
-    { "id": 1, "type": "row", "title": "System Status", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
-
-    { "id": 2, "type": "stat", "title": "CPU Usage",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
-      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "legendFormat": "CPU" }],
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 90 }
-        ]}, "color": { "mode": "thresholds" }
-      }}
+    {
+      "id": 1,
+      "type": "row",
+      "title": "System Status",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
     },
-
-    { "id": 3, "type": "stat", "title": "Memory Usage",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
-      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "RAM" }],
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 80 }, { "color": "red", "value": 92 }
-        ]}, "color": { "mode": "thresholds" }
-      }}
-    },
-
-    { "id": 4, "type": "stat", "title": "Root Disk Usage",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
-      "targets": [{ "expr": "(1 - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) * 100", "legendFormat": "Disk /" }],
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 75 }, { "color": "red", "value": 90 }
-        ]}, "color": { "mode": "thresholds" }
-      }}
-    },
-
-    { "id": 5, "type": "stat", "title": "Load Average (1m)",
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
-      "targets": [{ "expr": "node_load1", "legendFormat": "1m" }],
-      "fieldConfig": { "defaults": { "unit": "short",
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 4 }, { "color": "red", "value": 8 }
-        ]}, "color": { "mode": "thresholds" }
-      }}
-    },
-
-    { "id": 6, "type": "stat", "title": "Load Average (15m)",
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
-      "targets": [{ "expr": "node_load15", "legendFormat": "15m" }],
-      "fieldConfig": { "defaults": { "unit": "short",
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 4 }, { "color": "red", "value": 8 }
-        ]}, "color": { "mode": "thresholds" }
-      }}
-    },
-
-    { "id": 7, "type": "stat", "title": "Uptime",
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
-      "targets": [{ "expr": "time() - node_boot_time_seconds", "legendFormat": "" }],
-      "fieldConfig": { "defaults": { "unit": "s",
-        "color": { "mode": "fixed", "fixedColor": "blue" }
-      }}
-    },
-
-    { "id": 8, "type": "row", "title": "OS Performance", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 } },
-
-    { "id": 9, "type": "timeseries", "title": "CPU Usage %",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "CPU Usage",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
       "targets": [
-        { "expr": "100 - (avg by(cpu)(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "legendFormat": "cpu{{cpu}}" },
-        { "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "legendFormat": "avg" }
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+          "legendFormat": "CPU"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100,
-        "color": { "mode": "palette-classic" }
-      }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      }
     },
-
-    { "id": 10, "type": "timeseries", "title": "Memory",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Memory Usage",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
       "targets": [
-        { "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", "legendFormat": "Used" },
-        { "expr": "node_memory_MemAvailable_bytes", "legendFormat": "Available" },
-        { "expr": "node_memory_Buffers_bytes", "legendFormat": "Buffers" },
-        { "expr": "node_memory_Cached_bytes", "legendFormat": "Cached" }
+        {
+          "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
+          "legendFormat": "RAM"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 92
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      }
     },
-
-    { "id": 11, "type": "row", "title": "Network", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 } },
-
-    { "id": 12, "type": "timeseries", "title": "Network I/O",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Root Disk Usage",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
       "targets": [
-        { "expr": "rate(node_network_receive_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m])", "legendFormat": "rx {{device}}" },
-        { "expr": "-rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m])", "legendFormat": "tx {{device}}" }
+        {
+          "expr": "(1 - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) * 100",
+          "legendFormat": "Disk /"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "Bps", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      }
     },
-
-    { "id": 13, "type": "row", "title": "Temperatures", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 } },
-
-    { "id": 14, "type": "timeseries", "title": "All Temperatures",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Load Average (1m)",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
       "targets": [
-        { "expr": "hw_device_temperature_celsius{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }
+        {
+          "expr": "node_load1",
+          "legendFormat": "1m"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "celsius", "color": { "mode": "palette-classic" },
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 85 }
-        ]}
-      }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 8
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      }
     },
-
-    { "id": 15, "type": "stat", "title": "Temperature Summary",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 32 },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Load Average (15m)",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
       "targets": [
-        { "expr": "hw_device_temperature_celsius{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}", "instant": true }
+        {
+          "expr": "node_load15",
+          "legendFormat": "15m"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "celsius",
-        "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 85 }
-        ]}, "color": { "mode": "thresholds" }
-      }},
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 8
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      }
     },
-
-    { "id": 16, "type": "row", "title": "Fan Speeds", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 } },
-
-    { "id": 17, "type": "timeseries", "title": "Fan RPM",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 39 },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
       "targets": [
-        { "expr": "hw_device_fan_rpm{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }
+        {
+          "expr": "time() - node_boot_time_seconds",
+          "legendFormat": ""
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "rotrpm", "min": 0, "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        }
+      }
     },
-
-    { "id": 18, "type": "row", "title": "Power & Electrical", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 } },
-
-    { "id": 19, "type": "timeseries", "title": "Power (Watts)",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 48 },
-      "targets": [
-        { "expr": "hw_device_power_watts{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }
-      ],
-      "fieldConfig": { "defaults": { "unit": "watt", "min": 0, "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+    {
+      "id": 8,
+      "type": "row",
+      "title": "OS Performance",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      }
     },
-
-    { "id": 20, "type": "timeseries", "title": "Voltage (Volts)",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 48 },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "CPU Usage %",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
       "targets": [
-        { "expr": "hw_device_voltage_volts{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }
+        {
+          "expr": "100 - (avg by(cpu)(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+          "legendFormat": "cpu{{cpu}}"
+        },
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+          "legendFormat": "avg"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "volt", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
-
-    { "id": 21, "type": "timeseries", "title": "Current (Amps)",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 48 },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Memory",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
       "targets": [
-        { "expr": "hw_device_current_amps{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }
+        {
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "legendFormat": "Used"
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "Available"
+        },
+        {
+          "expr": "node_memory_Buffers_bytes",
+          "legendFormat": "Buffers"
+        },
+        {
+          "expr": "node_memory_Cached_bytes",
+          "legendFormat": "Cached"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "amp", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
-
-    { "id": 22, "type": "row", "title": "Frequencies", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 } },
-
-    { "id": 23, "type": "timeseries", "title": "Frequencies",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 57 },
-      "targets": [
-        { "expr": "hw_device_frequency_hz{host=~\"$host\"}", "legendFormat": "{{device_class}} {{logical_name}}" }
-      ],
-      "fieldConfig": { "defaults": { "unit": "hz", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Network",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      }
     },
-
-    { "id": 24, "type": "row", "title": "Disk", "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 65 } },
-
-    { "id": 25, "type": "timeseries", "title": "Disk I/O",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 66 },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Network I/O",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
       "targets": [
-        { "expr": "rate(node_disk_read_bytes_total[2m])", "legendFormat": "read {{device}}" },
-        { "expr": "-rate(node_disk_written_bytes_total[2m])", "legendFormat": "write {{device}}" }
+        {
+          "expr": "rate(node_network_receive_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m])",
+          "legendFormat": "rx {{device}}"
+        },
+        {
+          "expr": "-rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|veth.*\"}[2m])",
+          "legendFormat": "tx {{device}}"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "Bps", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
-
-    { "id": 26, "type": "timeseries", "title": "Filesystem Usage",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 66 },
+    {
+      "id": 100,
+      "type": "row",
+      "title": "GPU Performance",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      }
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "GPU Utilization",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
       "targets": [
-        { "expr": "node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}", "legendFormat": "used {{mountpoint}}" },
-        { "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}", "legendFormat": "free {{mountpoint}}" }
+        {
+          "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"compute\"}",
+          "legendFormat": "{{logical_name}} usage"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }},
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "timeseries",
+      "title": "GPU Memory Utilization",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"memory\"}",
+          "legendFormat": "{{logical_name}} mem"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Temperatures",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "All Temperatures",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "targets": [
+        {
+          "expr": "hw_device_temperature_celsius{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Temperature Summary",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "targets": [
+        {
+          "expr": "hw_device_temperature_celsius{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Fan Speeds",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Fan RPM",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "targets": [
+        {
+          "expr": "hw_device_fan_rpm{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rotrpm",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Power & Electrical",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Power (Watts)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 57
+      },
+      "targets": [
+        {
+          "expr": "hw_device_power_watts{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Voltage (Volts)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 57
+      },
+      "targets": [
+        {
+          "expr": "hw_device_voltage_volts{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "volt",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Current (Amps)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "targets": [
+        {
+          "expr": "hw_device_current_amps{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "amp",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "row",
+      "title": "Frequencies",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Frequencies",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "targets": [
+        {
+          "expr": "hw_device_frequency_hz{host=~\"$host\"}",
+          "legendFormat": "{{device_class}} {{logical_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "hz",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "row",
+      "title": "Disk",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 74
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Disk I/O",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "targets": [
+        {
+          "expr": "rate(node_disk_read_bytes_total[2m])",
+          "legendFormat": "read {{device}}"
+        },
+        {
+          "expr": "-rate(node_disk_written_bytes_total[2m])",
+          "legendFormat": "write {{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Filesystem Usage",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 75
+      },
+      "targets": [
+        {
+          "expr": "node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}",
+          "legendFormat": "used {{mountpoint}}"
+        },
+        {
+          "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}",
+          "legendFormat": "free {{mountpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     }
-
   ]
 }
