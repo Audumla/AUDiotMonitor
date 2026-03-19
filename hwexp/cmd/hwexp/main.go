@@ -43,7 +43,8 @@ func bannerRow(label, value string) string {
 }
 
 func printBanner(cfg *config.Config, configPath string) {
-	var adapterNames []string
+	// linux_static is always active (not config-gated)
+	adapterNames := []string{"linux_static"}
 	if cfg.Adapters.LinuxHwmon.Enabled {
 		adapterNames = append(adapterNames, "linux_hwmon")
 	}
@@ -57,9 +58,6 @@ func printBanner(cfg *config.Config, configPath string) {
 		adapterNames = append(adapterNames, "llamaswap")
 	}
 	adapterStr := strings.Join(adapterNames, ", ")
-	if adapterStr == "" {
-		adapterStr = "(none)"
-	}
 
 	autoMap := "disabled"
 	if cfg.Mapping.AutoMap.Enabled {
