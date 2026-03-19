@@ -138,6 +138,12 @@ func (a *Adapter) pollOne(hwmonDir string) ([]model.RawMeasurement, error) {
 		}
 
 		meta := sensorTypes[m[1]]
+		// Read the kernel-provided label alongside the input value.
+		// e.g. temp1_input → temp1_label gives "Core 0", "Package id 0", etc.
+		var metadata map[string]string
+		if label := readSysFile(filepath.Join(hwmonDir, m[1]+m[2]+"_label")); label != "" {
+			metadata = map[string]string{"label": label}
+		}
 		measurements = append(measurements, model.RawMeasurement{
 			MeasurementID:  fmt.Sprintf("linux_hwmon:%s:%s", stableID, e.Name()),
 			StableDeviceID: stableID,
@@ -149,6 +155,7 @@ func (a *Adapter) pollOne(hwmonDir string) ([]model.RawMeasurement, error) {
 			Quality:        "good",
 			ComponentHint:  meta.component,
 			SensorHint:     meta.sensor,
+			Metadata:       metadata,
 		})
 	}
 	return measurements, nil

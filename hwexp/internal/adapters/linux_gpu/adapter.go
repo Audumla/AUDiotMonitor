@@ -62,11 +62,24 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 		}
 
 		now := time.Now().UTC()
-		vramBytes := 0.0
 		gpuModel := ""
+		meta := map[string]interface{}{
+			"sysfs_path": devicePath,
+		}
+
 		if vendorName == "amd" {
 			if vramRaw := readSysFile(filepath.Join(devicePath, "mem_info_vram_total")); vramRaw != "" {
-				vramBytes, _ = strconv.ParseFloat(vramRaw, 64)
+				if v, err := strconv.ParseFloat(vramRaw, 64); err == nil {
+					meta["capacity_bytes"] = v
+				}
+			}
+			if gttSize := readSysFile(filepath.Join(devicePath, "mem_info_gtt_size")); gttSize != "" {
+				if v, err := strconv.ParseFloat(gttSize, 64); err == nil && v > 0 {
+					meta["gtt_size_bytes"] = v
+				}
+			}
+			if vramVendor := readSysFile(filepath.Join(devicePath, "mem_info_vram_vendor")); vramVendor != "" {
+				meta["vram_vendor"] = vramVendor
 			}
 			// Try to read a human-readable model name from sysfs.
 			// "label" is the most common source; "product_name" is a fallback.
@@ -94,10 +107,7 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			FirstSeen:         now,
 			LastSeen:          now,
 			Present:           true,
-			AdapterMetadata: map[string]interface{}{
-				"sysfs_path":     devicePath,
-				"capacity_bytes": vramBytes,
-			},
+			AdapterMetadata:   meta,
 		})
 	}
 
@@ -156,36 +166,29 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 
 		if dev.Vendor == "amd" {
 			if sysfsPath, ok := dev.AdapterMetadata["sysfs_path"].(string); ok {
-				if busy := readSysFile(filepath.Join(sysfsPath, "gpu_busy_percent")); busy != "" {
-					if val, err := strconv.ParseFloat(busy, 64); err == nil {
-						all = append(all, model.RawMeasurement{
-							MeasurementID:  fmt.Sprintf("linux_gpu:%s:gpu_busy", dev.StableID),
-							StableDeviceID: dev.StableID,
-							Source:         "linux_gpu",
-							RawName:        "gpu_busy_percent",
-							RawValue:       val,
-							RawUnit:        "percent",
-							Timestamp:      now,
-							Quality:        "good",
-							ComponentHint:  "compute",
-							SensorHint:     "utilization",
-						})
-					}
-				}
-				if memBusy := readSysFile(filepath.Join(sysfsPath, "mem_busy_percent")); memBusy != "" {
-					if val, err := strconv.ParseFloat(memBusy, 64); err == nil {
-						all = append(all, model.RawMeasurement{
-							MeasurementID:  fmt.Sprintf("linux_gpu:%s:mem_busy", dev.StableID),
-							StableDeviceID: dev.StableID,
-							Source:         "linux_gpu",
-							RawName:        "mem_busy_percent",
-							RawValue:       val,
-							RawUnit:        "percent",
-							Timestamp:      now,
-							Quality:        "good",
-							ComponentHint:  "memory",
-							SensorHint:     "utilization",
-						})
+				for _, m := range []struct {
+					file, name, unit, comp, sensor string
+				}{
+					{"gpu_busy_percent", "gpu_busy_percent", "percent", "compute", "utilization"},
+					{"mem_busy_percent", "mem_busy_percent", "percent", "memory", "utilization"},
+					{"mem_info_vram_used", "vram_used_bytes", "bytes", "memory", "used"},
+					{"mem_info_gtt_used", "gtt_used_bytes", "bytes", "memory", "used"},
+				} {
+					if raw := readSysFile(filepath.Join(sysfsPath, m.file)); raw != "" {
+						if val, err := strconv.ParseFloat(raw, 64); err == nil {
+							all = append(all, model.RawMeasurement{
+								MeasurementID:  fmt.Sprintf("linux_gpu:%s:%s", dev.StableID, m.file),
+								StableDeviceID: dev.StableID,
+								Source:         "linux_gpu",
+								RawName:        m.name,
+								RawValue:       val,
+								RawUnit:        m.unit,
+								Timestamp:      now,
+								Quality:        "good",
+								ComponentHint:  m.comp,
+								SensorHint:     m.sensor,
+							})
+						}
 					}
 				}
 			}
