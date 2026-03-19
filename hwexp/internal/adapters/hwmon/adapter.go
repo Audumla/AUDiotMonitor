@@ -247,6 +247,14 @@ func classifyDriver(driver string) (vendor, class, subclass string) {
 	case "spd5118", "ee1004":
 		return "", "memory", "spd"
 	default:
+		// Driver name prefix patterns for devices that register thermal zones
+		// rather than exposing a direct sysfs net/ or ieee80211/ link.
+		switch {
+		case strings.HasPrefix(driver, "iwlwifi"):
+			return "intel", "network", "wifi"
+		case strings.HasPrefix(driver, "ath") || strings.HasPrefix(driver, "mt76") || strings.HasPrefix(driver, "rtw"):
+			return "", "network", "wifi"
+		}
 		return "", "sensor", ""
 	}
 }
