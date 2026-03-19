@@ -63,10 +63,22 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 
 		now := time.Now().UTC()
 		vramBytes := 0.0
+		gpuModel := ""
 		if vendorName == "amd" {
 			if vramRaw := readSysFile(filepath.Join(devicePath, "mem_info_vram_total")); vramRaw != "" {
 				vramBytes, _ = strconv.ParseFloat(vramRaw, 64)
 			}
+			// Try to read a human-readable model name from sysfs.
+			// "label" is the most common source; "product_name" is a fallback.
+			gpuModel = readSysFile(filepath.Join(devicePath, "label"))
+			if gpuModel == "" {
+				gpuModel = readSysFile(filepath.Join(devicePath, "product_name"))
+			}
+		}
+
+		displayName := fmt.Sprintf("GPU %s (%s)", vendorName, filepath.Base(card))
+		if gpuModel != "" {
+			displayName = gpuModel
 		}
 
 		devices = append(devices, model.DiscoveredDevice{
@@ -75,7 +87,8 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 			Source:            "linux_gpu",
 			DeviceClass:       "gpu",
 			Vendor:            vendorName,
-			DisplayName:       fmt.Sprintf("GPU %s (%s)", vendorName, filepath.Base(card)),
+			Model:             gpuModel,
+			DisplayName:       displayName,
 			LogicalDeviceName: filepath.Base(card),
 			Capabilities:      []string{"utilization", "inventory"},
 			FirstSeen:         now,

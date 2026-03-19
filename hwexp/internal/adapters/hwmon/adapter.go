@@ -70,6 +70,11 @@ func (a *Adapter) discoverOne(hwmonDir string) (model.DiscoveredDevice, error) {
 
 	stableID, pciAddr := stableIDFor(hwmonDir, driver)
 	vendor, class, subclass := classifyDriver(driver)
+	// Network adapters expose hwmon with the interface name as the driver string.
+	// Override the default "sensor" class when a net/ subdirectory is present.
+	if class == "sensor" && isNetDevice(hwmonDir) {
+		class = "network"
+	}
 	caps := detectCapabilities(hwmonDir)
 
 	now := time.Now().UTC()
@@ -184,9 +189,23 @@ func classifyDriver(driver string) (vendor, class, subclass string) {
 		return "", "motherboard", "sensor"
 	case "nvme":
 		return "", "storage", "nvme"
+	case "corsairpsu", "corsair-cpro", "corsaircpro":
+		return "corsair", "psu", ""
+	case "spd5118", "ee1004":
+		return "", "memory", "spd"
 	default:
 		return "", "sensor", ""
 	}
+}
+
+// isNetDevice returns true when the hwmon device is backed by a network interface.
+// Network adapters expose a hwmon whose name is the interface name (e.g. "enp9s0",
+// "iwlwifi_1") rather than a kernel driver name. The reliable indicator is the
+// presence of a "net" subdirectory under the hwmon's device symlink.
+func isNetDevice(hwmonDir string) bool {
+	netDir := filepath.Join(hwmonDir, "device", "net")
+	fi, err := os.Stat(netDir)
+	return err == nil && fi.IsDir()
 }
 
 // detectCapabilities returns a deduplicated list of capability strings

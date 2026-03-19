@@ -96,7 +96,73 @@ func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error
 		})
 	}
 
+	// 4. NVMe drives — model/serial/firmware from /sys/class/nvme/
+	devices = append(devices, getNVMeDevices(now)...)
+
 	return devices, nil
+}
+
+func getNVMeDevices(now time.Time) []model.DiscoveredDevice {
+	dirs, _ := filepath.Glob("/sys/class/nvme/nvme*")
+	var devices []model.DiscoveredDevice
+	for i, d := range dirs {
+		modelStr := strings.TrimSpace(readSysFile(filepath.Join(d, "model")))
+		if modelStr == "" {
+			continue
+		}
+		serial := strings.TrimSpace(readSysFile(filepath.Join(d, "serial")))
+		firmware := strings.TrimSpace(readSysFile(filepath.Join(d, "firmware_rev")))
+		addr := strings.TrimSpace(readSysFile(filepath.Join(d, "address")))
+
+		stableID := fmt.Sprintf("system-nvme-%d", i)
+		if addr != "" {
+			stableID = "pci-" + addr
+		}
+
+		// Best-effort vendor from model string
+		vendor := ""
+		ml := strings.ToLower(modelStr)
+		switch {
+		case strings.Contains(ml, "samsung"):
+			vendor = "samsung"
+		case strings.Contains(ml, "western digital") || strings.HasPrefix(ml, "wd"):
+			vendor = "western_digital"
+		case strings.Contains(ml, "seagate"):
+			vendor = "seagate"
+		case strings.Contains(ml, "kingston"):
+			vendor = "kingston"
+		case strings.Contains(ml, "crucial"):
+			vendor = "crucial"
+		case strings.Contains(ml, "sk hynix") || strings.Contains(ml, "skhynix"):
+			vendor = "sk_hynix"
+		case strings.Contains(ml, "micron"):
+			vendor = "micron"
+		case strings.Contains(ml, "intel"):
+			vendor = "intel"
+		case strings.Contains(ml, "sandisk"):
+			vendor = "sandisk"
+		}
+
+		devices = append(devices, model.DiscoveredDevice{
+			StableID:       stableID,
+			Platform:       "linux",
+			Source:         "linux_static",
+			DeviceClass:    "storage",
+			DeviceSubclass: "nvme",
+			Vendor:         vendor,
+			Model:          modelStr,
+			DisplayName:    modelStr,
+			Capabilities:   []string{"inventory"},
+			Present:        true,
+			FirstSeen:      now,
+			LastSeen:       now,
+			AdapterMetadata: map[string]interface{}{
+				"serial":       serial,
+				"firmware_rev": firmware,
+			},
+		})
+	}
+	return devices
 }
 
 func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
