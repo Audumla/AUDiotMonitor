@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.17.0...hwexp-v0.17.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* **hwexp:** WiFi hwmon classification, SPD slot labeling, NIC vendor enrichment ([b86befe](https://github.com/Audumla/AUDiotMonitor/commit/b86befe8d7dbf3486b0e25f0cc7cad08d9ec56c6))
+
 ## [0.17.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.16.0...hwexp-v0.17.0) (2026-03-19)
 
 
