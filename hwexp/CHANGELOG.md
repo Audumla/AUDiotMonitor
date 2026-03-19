@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.17.1...hwexp-v0.17.2) (2026-03-19)
+
+
+### Bug Fixes
+
+* **hwexp:** classify iwlwifi/ath/mt76/rtw hwmon devices as network/wifi ([dbe1826](https://github.com/Audumla/AUDiotMonitor/commit/dbe18268fccde9de8c25efdf922b76dc7847c4cb))
+
 ## [0.17.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.17.0...hwexp-v0.17.1) (2026-03-19)
 
 
