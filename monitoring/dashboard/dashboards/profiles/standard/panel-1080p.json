@@ -42,7 +42,7 @@
     },
     { "id": 5, "type": "stat", "title": "VRAM Load",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-      "targets": [{ "expr": "max(hw_device_utilization_percent{component=\"memory\"})", "legendFormat": "" }],
+      "targets": [{ "expr": "max(hw_device_utilization_percent{component=\"memory\", sensor=\"usage\"})", "legendFormat": "" }],
       "options": { "colorMode": "background", "graphMode": "area" },
       "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}}}
     },

@@ -254,14 +254,19 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 				}
 
 				// VRAM / GTT used — always from sysfs text files (not in gpu_metrics)
+				vramUsed := 0.0
+				vramTotal := 0.0
 				for _, m := range []struct {
 					file, name, unit, comp, sensor string
 				}{
 					{"mem_info_vram_used", "vram_used_bytes", "bytes", "memory", "used"},
 					{"mem_info_gtt_used", "gtt_used_bytes", "bytes", "memory", "used"},
+					{"mem_info_vram_total", "vram_total_bytes", "bytes", "memory", "capacity"},
 				} {
 					if raw := readSysFile(filepath.Join(sysfsPath, m.file)); raw != "" {
 						if val, err := strconv.ParseFloat(raw, 64); err == nil {
+							if m.file == "mem_info_vram_used" { vramUsed = val }
+							if m.file == "mem_info_vram_total" { vramTotal = val }
 							all = append(all, model.RawMeasurement{
 								MeasurementID:  fmt.Sprintf("linux_gpu:%s:%s", dev.StableID, m.file),
 								StableDeviceID: dev.StableID,
@@ -276,6 +281,21 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 							})
 						}
 					}
+				}
+
+				if vramTotal > 0 {
+					all = append(all, model.RawMeasurement{
+						MeasurementID:  fmt.Sprintf("linux_gpu:%s:vram_usage_percent", dev.StableID),
+						StableDeviceID: dev.StableID,
+						Source:         "linux_gpu",
+						RawName:        "vram_usage_percent",
+						RawValue:       (vramUsed / vramTotal) * 100.0,
+						RawUnit:        "percent",
+						Timestamp:      now,
+						Quality:        "good",
+						ComponentHint:  "memory",
+						SensorHint:     "usage",
+					})
 				}
 			}
 		} else if dev.Vendor == "nvidia" {
@@ -325,7 +345,7 @@ func discoverNvidia(ctx context.Context) ([]model.DiscoveredDevice, error) {
 func pollNvidia(ctx context.Context, stableID string) ([]model.RawMeasurement, error) {
 	// StableID is pci-0000:0b:00.0, nvidia-smi wants the 0000:0b:00.0 part
 	pciAddr := strings.TrimPrefix(stableID, "pci-")
-	out, err := exec.CommandContext(ctx, "nvidia-smi", "--id="+pciAddr, "--query-gpu=utilization.gpu,utilization.memory", "--format=csv,noheader,nounits").Output()
+	out, err := exec.CommandContext(ctx, "nvidia-smi", "--id="+pciAddr, "--query-gpu=utilization.gpu,utilization.memory,memory.used,memory.total", "--format=csv,noheader,nounits").Output()
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +353,7 @@ func pollNvidia(ctx context.Context, stableID string) ([]model.RawMeasurement, e
 	var ms []model.RawMeasurement
 	now := time.Now().UTC()
 	parts := strings.Split(strings.TrimSpace(string(out)), ",")
-	if len(parts) >= 2 {
+	if len(parts) >= 4 {
 		if gpuBusy, err := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64); err == nil {
 			ms = append(ms, model.RawMeasurement{
 				MeasurementID:  fmt.Sprintf("nvidia_smi:%s:gpu_busy", stableID),
@@ -360,6 +380,34 @@ func pollNvidia(ctx context.Context, stableID string) ([]model.RawMeasurement, e
 				Quality:        "good",
 				ComponentHint:  "memory",
 				SensorHint:     "utilization",
+			})
+		}
+		memUsed, err1 := strconv.ParseFloat(strings.TrimSpace(parts[2]), 64)
+		memTotal, err2 := strconv.ParseFloat(strings.TrimSpace(parts[3]), 64)
+		if err1 == nil && err2 == nil && memTotal > 0 {
+			ms = append(ms, model.RawMeasurement{
+				MeasurementID:  fmt.Sprintf("nvidia_smi:%s:vram_usage", stableID),
+				StableDeviceID: stableID,
+				Source:         "nvidia_smi",
+				RawName:        "vram_usage_percent",
+				RawValue:       (memUsed / memTotal) * 100.0,
+				RawUnit:        "percent",
+				Timestamp:      now,
+				Quality:        "good",
+				ComponentHint:  "memory",
+				SensorHint:     "usage",
+			})
+			ms = append(ms, model.RawMeasurement{
+				MeasurementID:  fmt.Sprintf("nvidia_smi:%s:vram_used_bytes", stableID),
+				StableDeviceID: stableID,
+				Source:         "nvidia_smi",
+				RawName:        "vram_used_bytes",
+				RawValue:       memUsed * 1024 * 1024, // nvidia-smi returns MiB
+				RawUnit:        "bytes",
+				Timestamp:      now,
+				Quality:        "good",
+				ComponentHint:  "memory",
+				SensorHint:     "used",
 			})
 		}
 	}

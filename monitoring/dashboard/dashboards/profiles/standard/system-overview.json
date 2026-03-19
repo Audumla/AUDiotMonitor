@@ -496,7 +496,7 @@
       },
       "targets": [
         {
-          "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"memory\"}",
+          "expr": "hw_device_utilization_percent{host=~\"$host\", component=\"memory\", sensor=\"usage\"}",
           "legendFormat": "{{logical_name}} mem"
         }
       ],
