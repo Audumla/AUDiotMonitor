@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  - name: Infinity (hwexp)
+    type: yesoreyeram-infinity-datasource
+    uid: infinity-hwexp
+    access: proxy
+    url: ${HWEXP_URL}
+    isDefault: false
+    editable: false
+    jsonData:
+      tlsSkipVerify: true
