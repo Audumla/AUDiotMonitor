@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.4.1...monitoring-v0.5.0) (2026-03-20)
+
+
+### Features
+
+* **monitoring:** add reproducible management scripts ([0c7d6db](https://github.com/Audumla/AUDiotMonitor/commit/0c7d6db260d01ff21aacb8ce7fda2fa1f2d31af0))
+* **monitoring:** unify deployment, harden test coverage and improve dashboard operability ([73e0425](https://github.com/Audumla/AUDiotMonitor/commit/73e0425f58cd8ab5a09db25964c277934b6996a4))
+
 ## [0.4.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.4.0...monitoring-v0.4.1) (2026-03-19)
 
 
