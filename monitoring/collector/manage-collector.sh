@@ -17,6 +17,17 @@ run_in_install_dir() {
 }
 
 validate_yaml_tree() {
+    if ! python3 - <<'PY' "$INSTALL_DIR"; then
+import sys
+try:
+    import yaml  # noqa: F401
+except ModuleNotFoundError:
+    raise SystemExit(99)
+PY
+        info "WARNING: PyYAML is not installed; skipping YAML syntax validation"
+        return 0
+    fi
+
     python3 - <<'PY' "$INSTALL_DIR"
 import sys, yaml
 from pathlib import Path

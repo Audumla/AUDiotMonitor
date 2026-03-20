@@ -16,6 +16,19 @@ cd monitoring
 ./deploy-remote.sh <host> <collector|dashboard> [target_dir]
 ```
 
+Default install targets:
+
+- collector: `/opt/docker/services/monitoring`
+- dashboard: `/opt/docker/services/dashboard`
+
+Typical example:
+
+```bash
+cd monitoring
+./deploy-remote.sh buri collector
+./deploy-remote.sh brutusview dashboard
+```
+
 | Stack | Purpose | Deploy on |
 | ----- | ------- | --------- |
 | **Collector** | Scrapes hardware, OS, and AI metrics; stores them in Prometheus | Every machine you want to monitor |
@@ -66,6 +79,23 @@ remote deployment tool from your local repo:
 # From your local checkout of the AUDiot repo:
 cd monitoring
 ./deploy-remote.sh <collector-host> collector
+```
+
+This installs the collector under:
+
+```text
+/opt/docker/services/monitoring/
+  docker-compose.yml
+  .env
+  config/
+    hwexp/
+      hwexp.yaml
+      mappings.yaml
+    prometheus/
+      prometheus.yml
+      rules/
+  hwexp/
+  prometheus/
 ```
 
 Common collector operations:
@@ -214,6 +244,7 @@ The host-owned layout structure:
 ```text
 /opt/docker/services/dashboard/
   docker-compose.yml
+  .env
   config/
     grafana/
       grafana.ini
