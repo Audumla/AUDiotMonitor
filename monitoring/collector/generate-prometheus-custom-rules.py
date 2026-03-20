@@ -47,7 +47,7 @@ def discover_gpu_ids() -> list[str]:
 def build_rules(gpu_ids: list[str]) -> str:
     lines = [
         "groups:",
-        "  - name: audiot_system_gpu_aliases",
+        "  - name: audiot_gpu_metrics",
         "    interval: 15s",
         "    rules:",
     ]
@@ -60,7 +60,8 @@ def build_rules(gpu_ids: list[str]) -> str:
         )
         return "\n".join(lines) + "\n"
 
-    for idx, gpu_id in enumerate(gpu_ids, start=1):
+    # Original metrics for backward compatibility with existing dashboards
+    for gpu_id in gpu_ids:
         for record, expr in [
             (
                 "audiot_gpu_compute_utilization_percent",
@@ -70,23 +71,39 @@ def build_rules(gpu_ids: list[str]) -> str:
                 "audiot_gpu_memory_utilization_percent",
                 f'hw_device_utilization_percent{{device_class="gpu", component="memory", sensor="utilization", device_id="{gpu_id}"}}',
             ),
+        ]:
+            lines.extend(
+                [
+                    f"      - record: {record}",
+                    f"        expr: {expr}",
+                ]
+            )
+
+    # New, indexed metrics for future dashboards
+    for idx, gpu_id in enumerate(gpu_ids, start=1):
+        gpu_name = f"gpu{idx}"
+        for record, expr in [
             (
-                "audiot_gpu_vram_usage_percent",
-                f'audiot_gpu_vram_usage_percent{{device_id="{gpu_id}"}}',
+                "audiot_system_gpu_compute_utilization_percent",
+                f'hw_device_utilization_percent{{device_class="gpu", component="compute", sensor="utilization", device_id="{gpu_id}"}}',
             ),
             (
-                "audiot_gpu_vram_used_bytes",
-                f'audiot_gpu_vram_used_bytes{{device_id="{gpu_id}"}}',
+                "audiot_system_gpu_memory_utilization_percent",
+                f'hw_device_utilization_percent{{device_class="gpu", component="memory", sensor="utilization", device_id="{gpu_id}"}}',
             ),
             (
-                "audiot_gpu_vram_capacity_bytes",
-                f'audiot_gpu_vram_capacity_bytes{{device_id="{gpu_id}"}}',
+                "audiot_system_gpu_vram_usage_percent",
+                f'sum(hw_device_capacity_bytes{{device_class="gpu", component="memory", device_id="{gpu_id}", logical_name=~".*_vram_used_bytes"}}) / sum(hw_device_capacity_bytes{{device_class="gpu", component="memory", device_id="{gpu_id}", logical_name=~".*_vram_capacity_bytes"}}) * 100',
             ),
         ]:
             lines.extend(
                 [
                     f"      - record: {record}",
                     f"        expr: {expr}",
+                    "        labels:",
+                    f'          gpu_index: "{idx}"',
+                    f'          gpu_name: "{gpu_name}"',
+                    f'          source_device_id: "{gpu_id}"',
                 ]
             )
     return "\n".join(lines) + "\n"
