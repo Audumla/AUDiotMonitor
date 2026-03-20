@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.5.1...monitoring-v0.5.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* **metrics:** restore original GPU metric names for dashboard compatibility ([d4ffcf6](https://github.com/Audumla/AUDiotMonitor/commit/d4ffcf6f71a9c3fd407f2894ed6387309ae81abe))
+
 ## [0.5.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.5.0...monitoring-v0.5.1) (2026-03-20)
 
 
