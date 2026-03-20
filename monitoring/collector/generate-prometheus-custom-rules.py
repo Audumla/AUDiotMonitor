@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate host-specific Prometheus recording rules for detected GPUs.
 
-This script creates a rules file that adds stable, indexed aliases for GPUs
-(e.g., gpu_index="1") based on their detected PCI slot. This allows dashboards
-to be built without hard-coding PCI device IDs.
+Writes a custom rules file only when one does not already exist unless --force
+is supplied. The generated rules add stable gpu_index / gpu_name labels for the
+locally detected DRM cards so dashboards can avoid hard-coded PCI IDs.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ DRM_PATH = Path("/sys/class/drm")
 
 
 def pci_slot_for(card_device: Path) -> str | None:
-    uevent = card_device / "device" / "uevent"
+    uevent = card_device / "uevent"
     if not uevent.exists():
         return None
     for line in uevent.read_text().splitlines():
@@ -35,9 +35,10 @@ def pci_slot_for(card_device: Path) -> str | None:
 def discover_gpu_ids() -> list[str]:
     gpu_ids: list[str] = []
     for card in sorted(DRM_PATH.glob("card[0-9]*")):
-        if not (card / "device").exists():
+        device = card / "device"
+        if not device.exists():
             continue
-        slot = pci_slot_for(card)
+        slot = pci_slot_for(device)
         if slot and slot not in gpu_ids:
             gpu_ids.append(slot)
     return gpu_ids
@@ -57,31 +58,43 @@ def build_rules(gpu_ids: list[str]) -> str:
                 "        expr: vector(0)",
             ]
         )
-        return "
-".join(lines) + "
-"
+        return "\n".join(lines) + "\n"
 
-    # This group adds a stable 'gpu_index' label to existing raw metrics.
-    # It allows dashboards to query, for example, 'audiot_system_gpu_utilization{gpu_index="1"}'
-    # without needing to know the underlying PCI device_id.
     for idx, gpu_id in enumerate(gpu_ids, start=1):
         gpu_name = f"gpu{idx}"
-        for record, source_metric in [
-            ("audiot_system_gpu_compute_utilization_percent", "hw_device_utilization_percent"),
-            ("audiot_system_gpu_memory_utilization_percent", "hw_device_utilization_percent"),
+        for record, expr in [
+            (
+                "audiot_system_gpu_compute_utilization_percent",
+                f'hw_device_utilization_percent{{device_class="gpu", component="compute", sensor="utilization", device_id="{gpu_id}"}}',
+            ),
+            (
+                "audiot_system_gpu_memory_utilization_percent",
+                f'hw_device_utilization_percent{{device_class="gpu", component="memory", sensor="utilization", device_id="{gpu_id}"}}',
+            ),
+            (
+                "audiot_system_gpu_vram_usage_percent",
+                f'audiot_gpu_vram_usage_percent{{device_id="{gpu_id}"}}',
+            ),
+            (
+                "audiot_system_gpu_vram_used_bytes",
+                f'audiot_gpu_vram_used_bytes{{device_id="{gpu_id}"}}',
+            ),
+            (
+                "audiot_system_gpu_vram_capacity_bytes",
+                f'audiot_gpu_vram_capacity_bytes{{device_id="{gpu_id}"}}',
+            ),
         ]:
             lines.extend(
                 [
                     f"      - record: {record}",
-                    f"        expr: {source_metric}{{device_id='{gpu_id}'}}",
+                    f"        expr: {expr}",
                     "        labels:",
                     f'          gpu_index: "{idx}"',
                     f'          gpu_name: "{gpu_name}"',
+                    f'          source_device_id: "{gpu_id}"',
                 ]
             )
-    return "
-".join(lines) + "
-"
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
@@ -104,4 +117,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

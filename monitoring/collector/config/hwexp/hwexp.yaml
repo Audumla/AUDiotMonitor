@@ -22,4 +22,4 @@ mapping:
   strict_mode: false
   auto_map:
     enabled: true
-    generated_file: "/etc/hwexp/mappings.auto.yaml"
+    generated_file: "/var/lib/hwexp/mappings.auto.yaml"
