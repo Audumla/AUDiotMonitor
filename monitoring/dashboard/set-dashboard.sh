@@ -24,16 +24,13 @@ die() { echo "[dashboard] ERROR: $*" >&2; exit 1; }
 restart_kiosk() {
     if systemctl --user is-active audiot-kiosk >/dev/null 2>&1; then
         systemctl --user restart audiot-kiosk
-        info "Kiosk service restarted via systemd"
+        info "Kiosk service restarted via systemd."
     else
-        # Fallback to manual pkill/nohup if no service exists
+        info "No systemd user service found."
         pkill -f "kiosk.sh" || true
         pkill -f 'chromium.*audiot-' || true
-        # If we are in the install dir, try to restart
-        if [ -f "$SCRIPT_DIR/kiosk.sh" ]; then
-            nohup "$SCRIPT_DIR/kiosk.sh" >/tmp/audiot-kiosk.log 2>&1 </dev/null &
-            info "Kiosk restart requested via background process"
-        fi
+        info "Kiosk process stopped."
+        info "To restart it, please run './kiosk-install.sh' on the host machine."
     fi
 }
 
