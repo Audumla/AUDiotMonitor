@@ -45,14 +45,13 @@ fetch_from_repo() {
 # Creates the necessary directory structure for a host-owned layout.
 create_layout() {
     info "Creating installation layout in $INSTALL_DIR..."
-    sudo mkdir -p 
-        "$INSTALL_DIR/config/grafana/provisioning/datasources" 
-        "$INSTALL_DIR/config/grafana/provisioning/dashboards" 
-        "$INSTALL_DIR/dashboards/profiles/standard" 
-        "$INSTALL_DIR/dashboards/profiles/wide-screens" 
-        "$INSTALL_DIR/dashboards/profiles/mobile" 
-        "$INSTALL_DIR/dashboards/profiles/debug" 
-        "$INSTALL_DIR/dashboards/custom"
+    sudo mkdir -p "$INSTALL_DIR/config/grafana/provisioning/datasources"
+    sudo mkdir -p "$INSTALL_DIR/config/grafana/provisioning/dashboards"
+    sudo mkdir -p "$INSTALL_DIR/dashboards/profiles/standard"
+    sudo mkdir -p "$INSTALL_DIR/dashboards/profiles/wide-screens"
+    sudo mkdir -p "$INSTALL_DIR/dashboards/profiles/mobile"
+    sudo mkdir -p "$INSTALL_DIR/dashboards/profiles/debug"
+    sudo mkdir -p "$INSTALL_DIR/dashboards/custom"
     sudo chown -R "$USER":"$USER" "$INSTALL_DIR"
     info "Layout created."
 }
