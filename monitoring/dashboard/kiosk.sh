@@ -229,11 +229,15 @@ echo "[kiosk] URL: $KIOSK_URL"
 
 # Configure screen blanking and power management
 if [ -n "${KIOSK_IDLE_TIMEOUT:-}" ] && [ "${KIOSK_IDLE_TIMEOUT}" -gt 0 ] 2>/dev/null; then
-    echo "[kiosk] Enabling screen blanking (timeout: ${KIOSK_IDLE_TIMEOUT}s)"
+    standby="${KIOSK_DPMS_STANDBY:-$KIOSK_IDLE_TIMEOUT}"
+    suspend="${KIOSK_DPMS_SUSPEND:-$KIOSK_IDLE_TIMEOUT}"
+    off="${KIOSK_DPMS_OFF:-$KIOSK_IDLE_TIMEOUT}"
+    
+    echo "[kiosk] Enabling screen blanking (DPMS: standby=${standby}s, suspend=${suspend}s, off=${off}s)"
     xset s on 2>/dev/null || true
     xset +dpms 2>/dev/null || true
     xset s blank 2>/dev/null || true
-    xset dpms "${KIOSK_IDLE_TIMEOUT}" "${KIOSK_IDLE_TIMEOUT}" "${KIOSK_IDLE_TIMEOUT}" 2>/dev/null || true
+    xset dpms "$standby" "$suspend" "$off" 2>/dev/null || true
 else
     echo "[kiosk] Disabling screen blanking (always on)"
     xset s off   2>/dev/null || true
