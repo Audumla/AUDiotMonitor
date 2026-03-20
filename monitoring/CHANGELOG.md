@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.2](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.1...monitoring-v0.7.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* **kiosk:** implement user-provided URL for true header-less mode ([e8d061f](https://github.com/Audumla/AUDiotMonitor/commit/e8d061fc142177caeb42e591c9f8d79b769f957a))
+* **kiosk:** make kiosk restart logic more robust ([81da0f9](https://github.com/Audumla/AUDiotMonitor/commit/81da0f9fba179867e65bce60a3b99cd7c0e92920))
+* **kiosk:** simplify kiosk-install.sh to only manage autostart ([86630d3](https://github.com/Audumla/AUDiotMonitor/commit/86630d3a62e20c9bfdd67f3319b54eab578957d2))
+* **kiosk:** use kiosk=tv parameter for true header-less mode per official docs ([2905fd6](https://github.com/Audumla/AUDiotMonitor/commit/2905fd6636392022f7c2e884298f11ab20b17f00))
+
 ## [0.7.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.0...monitoring-v0.7.1) (2026-03-20)
 
 
