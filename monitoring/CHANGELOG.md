@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.0...monitoring-v0.7.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* **collector:** restore docker GPU metric config ([0808110](https://github.com/Audumla/AUDiotMonitor/commit/08081109a9b8d70932c8e09257ab0cd63cca5164))
+* enforce relative config paths ([ba18b11](https://github.com/Audumla/AUDiotMonitor/commit/ba18b1137930198cbc3a6c504ea987b92dfb6925))
+
 ## [0.7.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.6.0...monitoring-v0.7.0) (2026-03-20)
 
 
