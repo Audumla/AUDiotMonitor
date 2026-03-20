@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.5.2...monitoring-v0.6.0) (2026-03-20)
+
+
+### Features
+
+* **metrics:** generate side-by-side GPU metrics for compatibility and future use ([82e5881](https://github.com/Audumla/AUDiotMonitor/commit/82e5881c7ef4667d0e253b19f9b834b672bc469e))
+
 ## [0.5.2](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.5.1...monitoring-v0.5.2) (2026-03-20)
 
 
