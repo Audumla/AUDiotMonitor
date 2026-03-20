@@ -227,10 +227,19 @@ fi
 KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID/$DASHBOARD_UID?orgId=1&kiosk&_dash.hideTimePicker=true&from=now-5m&to=now"
 echo "[kiosk] URL: $KIOSK_URL"
 
-# Disable screen blanking and power management
-xset s off   2>/dev/null || true
-xset -dpms   2>/dev/null || true
-xset s noblank 2>/dev/null || true
+# Configure screen blanking and power management
+if [ -n "${KIOSK_IDLE_TIMEOUT:-}" ] && [ "${KIOSK_IDLE_TIMEOUT}" -gt 0 ] 2>/dev/null; then
+    echo "[kiosk] Enabling screen blanking (timeout: ${KIOSK_IDLE_TIMEOUT}s)"
+    xset s on 2>/dev/null || true
+    xset +dpms 2>/dev/null || true
+    xset s blank 2>/dev/null || true
+    xset dpms "${KIOSK_IDLE_TIMEOUT}" "${KIOSK_IDLE_TIMEOUT}" "${KIOSK_IDLE_TIMEOUT}" 2>/dev/null || true
+else
+    echo "[kiosk] Disabling screen blanking (always on)"
+    xset s off   2>/dev/null || true
+    xset -dpms   2>/dev/null || true
+    xset s noblank 2>/dev/null || true
+fi
 
 # Find Chromium binary (Debian names it chromium or chromium-browser)
 CHROMIUM=""
