@@ -116,3 +116,27 @@ jobs:
         run: |
           DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
           bash hwexp/tests/integration/test-network-smoke.sh "$DEB"
+
+  monitoring-integration-test:
+    name: Monitoring Integration Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: ./AUDiotMonitor
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest requests pyyaml
+
+      - name: Run Monitoring Integration Tests
+        run: |
+          python -m pytest monitoring/tests/integration/test_monitoring_stack.py

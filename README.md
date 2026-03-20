@@ -28,14 +28,36 @@ Hardware, OS, and AI telemetry stack for Linux machines. Collects sensor data, s
 
 Full instructions: [`monitoring/INSTALL.md`](monitoring/INSTALL.md)
 
+### 1. Remote Deployment (Recommended)
+
+From a local repo checkout, you can deploy both stacks to remote hosts:
+
+```bash
+cd monitoring
+./deploy-remote.sh <collector-ip> collector
+./deploy-remote.sh <dashboard-ip> dashboard
+```
+
+### 2. Local Manual Install
+
 ```bash
 # On every machine you want to monitor (collector stack):
-cd monitoring/collector && docker compose up -d
+cd monitoring/collector
+INSTALL_DIR=/opt/docker/collector ./install-layout.sh
+cd /opt/docker/collector && ./manage-collector.sh up
 
-# On the machine running Grafana (can be a different machine, e.g. a Raspberry Pi):
+# On the machine running Grafana (dashboard stack):
+cd monitoring/dashboard
+INSTALL_DIR=/opt/docker/dashboard ./install-layout.sh
+cd /opt/docker/dashboard && ./manage-dashboard.sh up
+```
+
+### 3. Standalone Image (No Repo)
+
+```bash
+# Start the pre-baked self-sufficient dashboard image:
 PROMETHEUS_URL=http://<collector-ip>:9090 \
-HWEXP_URL=http://<collector-ip>:9200 \
-docker compose -f monitoring/dashboard/docker-compose.yml up -d
+docker compose -f monitoring/dashboard/docker-compose.image.yml up -d
 ```
 
 Grafana opens at **<http://localhost:3000>** (default login: admin / admin).

@@ -1,0 +1,27 @@
+# AUDiot Monitor — Dashboard Stack (Standalone Image)
+#
+# Runs the official pre-baked AUDiot Grafana image.
+# No config files or repo clone needed — just run:
+#
+#   PROMETHEUS_URL=http://<collector-ip>:9090 docker compose up -d
+
+services:
+
+  grafana:
+    image: audumla/audiot-dashboard:latest
+    container_name: audiot-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent storage for dashboards and Grafana database
+      - grafana-dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    environment:
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
+      - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+    restart: unless-stopped
+
+volumes:
+  grafana-dashboards:
+  grafana-data:

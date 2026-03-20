@@ -1,126 +1,48 @@
 # AUDiot Monitor — Dashboard Stack
 #
-# Runs Grafana with pre-loaded AUDiot dashboards.
-# No config files or repo clone needed — just run:
+# Intended layout:
+#   ./config/grafana/...     -> Grafana provisioning and grafana.ini
+#   ./config/kiosk.env       -> Kiosk selection config
+#   ./dashboards/profiles/   -> Default profiles
+#   ./dashboards/custom/     -> Your own dashboards for this host
 #
-#   PROMETHEUS_URL=http://<collector-ip>:9090 docker compose up -d
+# Install the layout into /opt/docker/dashboard with:
+#   ./install-layout.sh
+#
+# Then start Grafana with:
+#   cd /opt/docker/dashboard
+#   docker compose up -d
 
 services:
 
-  # ── Init: scaffold dashboard profiles and write Grafana provisioning ────────
-  grafana-init:
-    image: busybox
-    environment:
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
-      - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
-      - SKIP_DASHBOARD_DOWNLOAD=${SKIP_DASHBOARD_DOWNLOAD:-false}
-    command:
-      - sh
-      - -c
-      - |
-        set -e
-        BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
-
-        mkdir -p /provisioning/datasources /provisioning/dashboards /dashboards/profiles/standard /dashboards/profiles/wide-screens /dashboards/profiles/mobile /dashboards/profiles/debug
-
-        # Prometheus datasource — only write if not already present
-        if [ ! -f /provisioning/datasources/prometheus.yaml ]; then
-          cat > /provisioning/datasources/prometheus.yaml << EOF
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            access: proxy
-            url: ${PROMETHEUS_URL:-http://localhost:9090}
-            isDefault: true
-            editable: false
-        EOF
-        fi
-
-        # Infinity datasource — only write if not already present
-        if [ ! -f /provisioning/datasources/infinity.yaml ]; then
-          cat > /provisioning/datasources/infinity.yaml << EOF
-        apiVersion: 1
-        datasources:
-          - name: Infinity (hwexp)
-            type: yesoreyeram-infinity-datasource
-            uid: infinity-hwexp
-            access: proxy
-            url: ${HWEXP_URL:-http://localhost:9200}
-            isDefault: false
-            editable: false
-            jsonData:
-              tlsSkipVerify: true
-        EOF
-        fi
-
-        # Dashboard provider — recursive structure enabled
-        if [ ! -f /provisioning/dashboards/dashboards.yaml ]; then
-          cat > /provisioning/dashboards/dashboards.yaml << 'EOF'
-        apiVersion: 1
-        providers:
-          - name: 'AUDiot Profiles'
-            orgId: 1
-            folder: ''
-            type: file
-            disableDeletion: false
-            editable: true
-            allowUiUpdates: true
-            options:
-              path: /var/lib/grafana/dashboards
-              foldersFromFilesStructure: true
-        EOF
-        fi
-
-        # Download profiles if missing (allows persistence of user edits)
-        if [ "$SKIP_DASHBOARD_DOWNLOAD" != "true" ]; then
-          echo "Downloading dashboard profiles..."
-          # standard
-          for d in system-overview panel-1080p; do
-            [ ! -f "/dashboards/profiles/standard/$${d}.json" ] && wget -q -O "/dashboards/profiles/standard/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/standard/$${d}.json" || true
-          done
-          # wide-screens
-          for d in panel-1920x440 panel-1920x440-dials; do
-            [ ! -f "/dashboards/profiles/wide-screens/$${d}.json" ] && wget -q -O "/dashboards/profiles/wide-screens/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/wide-screens/$${d}.json" || true
-          done
-          # mobile
-          for d in panel-portrait; do
-            [ ! -f "/dashboards/profiles/mobile/$${d}.json" ] && wget -q -O "/dashboards/profiles/mobile/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/mobile/$${d}.json" || true
-          done
-          # debug
-          for d in discovery-dashboard operations-dashboard panel-dashboard state-dashboard; do
-            [ ! -f "/dashboards/profiles/debug/$${d}.json" ] && wget -q -O "/dashboards/profiles/debug/$${d}.json" "$${BASE}/monitoring/dashboard/dashboards/profiles/debug/$${d}.json" || true
-          done
-        else
-          echo "Skipping dashboard download as requested"
-        fi
-
-        echo "Grafana init complete"
-    volumes:
-      - grafana-provisioning:/provisioning
-      - grafana-dashboards:/dashboards
-
-  # ── Grafana ───────────────────────────────────────────────────────────────
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:latest   # multi-arch manifest: arm64, arm/v7, amd64
     container_name: audiot-grafana
-    depends_on:
-      grafana-init:
-        condition: service_completed_successfully
     ports:
       - "3000:3000"
     volumes:
-      - grafana-provisioning:/etc/grafana/provisioning:ro
-      - grafana-dashboards:/var/lib/grafana/dashboards:ro
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     environment:
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://host.docker.internal:9090}
+      - HWEXP_URL=${HWEXP_URL:-http://host.docker.internal:9200}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
       - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
       - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
-      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
       - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+      - GF_DATABASE_WAL=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 128m
     restart: unless-stopped
 
 volumes:
-  grafana-provisioning:
-  grafana-dashboards:
   grafana-data:

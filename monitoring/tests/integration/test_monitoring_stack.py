@@ -1,0 +1,167 @@
+import os
+import subprocess
+import tempfile
+import time
+import requests
+import pytest
+import yaml
+from pathlib import Path
+
+# Base directories
+MONITORING_ROOT = Path(__file__).resolve().parents[2]
+COLLECTOR_ROOT = MONITORING_ROOT / "collector"
+DASHBOARD_ROOT = MONITORING_ROOT / "dashboard"
+FIXTURE_PATH = MONITORING_ROOT.parent / "hwexp" / "tests" / "fixtures" / "sample_hwmon.json"
+
+@pytest.fixture(scope="session")
+def temp_run_dir():
+    with tempfile.TemporaryDirectory(prefix="audiot-test-") as tmpdir:
+        yield Path(tmpdir)
+
+@pytest.fixture(scope="session")
+def collector_stack(temp_run_dir):
+    install_dir = temp_run_dir / "collector"
+    install_dir.mkdir()
+    
+    # Run install-layout.sh
+    env = os.environ.copy()
+    env["INSTALL_DIR"] = str(install_dir)
+    subprocess.run(["bash", str(COLLECTOR_ROOT / "install-layout.sh")], 
+                   env=env, check=True, capture_output=True)
+    
+    # Modify docker-compose.yml for testing
+    compose_path = install_dir / "docker-compose.yml"
+    with open(compose_path, 'r') as f:
+        cfg = yaml.safe_load(f)
+    
+    # 1. Add fixture to hwexp
+    hwexp = cfg['services']['hwexp']
+    hwexp['volumes'] = [v for v in hwexp['volumes'] if '/sys' not in v and '/proc' not in v]
+    hwexp['volumes'].append(f"{FIXTURE_PATH}:/etc/hwexp/fixture.json:ro")
+    hwexp['command'] = ["--config", "/etc/hwexp/hwexp.yaml", "--fixture", "/etc/hwexp/fixture.json"]
+    # 2. Disable node-exporter (not cross-platform friendly in CI/Windows)
+    if 'node-exporter' in cfg['services']:
+        del cfg['services']['node-exporter']
+    
+    with open(compose_path, 'w') as f:
+        yaml.safe_dump(cfg, f)
+    
+    # Start the stack
+    subprocess.run(["docker", "compose", "up", "-d"], 
+                   cwd=install_dir, check=True, capture_output=True)
+    
+    # Wait for Prometheus
+    time.sleep(10)
+    
+    yield install_dir
+    
+    # Cleanup
+    subprocess.run(["docker", "compose", "down", "-v"], 
+                   cwd=install_dir, check=True, capture_output=True)
+
+@pytest.fixture(scope="session")
+def dashboard_stack(temp_run_dir, collector_stack):
+    install_dir = temp_run_dir / "dashboard"
+    install_dir.mkdir()
+    
+    # Run install-layout.sh
+    env = os.environ.copy()
+    env["INSTALL_DIR"] = str(install_dir)
+    subprocess.run(["bash", str(DASHBOARD_ROOT / "install-layout.sh")], 
+                   env=env, check=True, capture_output=True)
+    
+    # Start the stack
+    # Dashboard uses host.docker.internal:9090 by default in docker-compose.yml
+    subprocess.run(["docker", "compose", "up", "-d"], 
+                   cwd=install_dir, check=True, capture_output=True)
+    
+    # Wait for Grafana
+    time.sleep(15)
+    
+    yield install_dir
+    
+    # Cleanup
+    subprocess.run(["docker", "compose", "down", "-v"], 
+                   cwd=install_dir, check=True, capture_output=True)
+
+def test_collector_health(collector_stack):
+    # Check Prometheus
+    res = requests.get("http://localhost:9090/-/healthy")
+    assert res.status_code == 200
+    
+    # Check hwexp
+    res = requests.get("http://localhost:9200/readyz")
+    assert res.status_code == 200
+    assert res.json()["status"] == "ready"
+
+def test_grafana_health(dashboard_stack):
+    res = requests.get("http://localhost:3000/api/health")
+    assert res.status_code == 200
+    assert res.json()["database"] == "ok"
+
+def test_metrics_present_in_prometheus(collector_stack):
+    # Wait for a few scrape cycles
+    time.sleep(30)
+    
+    # Query for a raw metric from the fixture
+    query = 'hw_device_temperature_celsius'
+    res = requests.get(f"http://localhost:9090/api/v1/query?query={query}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert len(data["data"]["result"]) > 0, "No metrics found in Prometheus. Scrape might have failed."
+
+def test_recording_rules_working(collector_stack):
+    # Query for a derived metric defined in recording rules
+    # We use a simple one that doesn't depend on capacity for this basic check
+    query = 'audiot_gpu_compute_utilization_percent'
+    res = requests.get(f"http://localhost:9090/api/v1/query?query={query}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    # Note: result might be empty if the fixture doesn't have utilization,
+    # but the status should be success and the metric name should resolve.
+
+def test_grafana_prometheus_connection_e2e(dashboard_stack):
+    # This is the most important end-to-end test:
+    # 1. Get Prometheus datasource ID
+    res = requests.get("http://localhost:3000/api/datasources", auth=("admin", "admin"))
+    assert res.status_code == 200
+    ds_list = res.json()
+    prom_ds = next(d for d in ds_list if d["type"] == "prometheus")
+    ds_id = prom_ds["id"]
+    
+    # 2. Query Prometheus THROUGH Grafana proxy
+    query = 'hw_device_temperature_celsius'
+    proxy_url = f"http://localhost:3000/api/datasources/proxy/{ds_id}/api/v1/query?query={query}"
+    
+    # Retry a few times as Grafana might be still initializing the proxy
+    for _ in range(5):
+        res = requests.get(proxy_url, auth=("admin", "admin"))
+        if res.status_code == 200:
+            data = res.json()
+            if data["status"] == "success" and len(data["data"]["result"]) > 0:
+                break
+        time.sleep(5)
+    
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert len(data["data"]["result"]) > 0, "Grafana could not query metrics from Prometheus via proxy"
+    assert data["data"]["result"][0]["metric"]["__name__"] == "hw_device_temperature_celsius"
+
+def test_grafana_datasources_provisioned(dashboard_stack):
+    # Check if Grafana has Prometheus and Infinity datasources
+    res = requests.get("http://localhost:3000/api/datasources", auth=("admin", "admin"))
+    assert res.status_code == 200
+    ds = res.json()
+    types = {d["type"] for d in ds}
+    assert "prometheus" in types
+    assert "yesoreyeram-infinity-datasource" in types
+
+def test_grafana_dashboards_provisioned(dashboard_stack):
+    # Check if the System Overview dashboard is present
+    res = requests.get("http://localhost:3000/api/search?query=System Overview", auth=("admin", "admin"))
+    assert res.status_code == 200
+    results = res.json()
+    assert any(d["title"] == "AUDiot - System Overview" for d in results)

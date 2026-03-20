@@ -38,6 +38,25 @@ validate_collector_layout() {
     info "Validation passed"
 }
 
+verify_metrics() {
+    local prom_url="${PROMETHEUS_URL:-http://localhost:9090}"
+    info "Verifying derived metrics at $prom_url ..."
+    
+    # Check for a representative derived metric
+    local query="audiot_gpu_vram_usage_percent"
+    local res
+    if ! res=$(curl -sf "$prom_url/api/v1/query?query=$query" 2>/dev/null); then
+        info "WARNING: Could not query Prometheus at $prom_url (is it running?)"
+        return 0
+    fi
+
+    if echo "$res" | grep -F '"status":"success"' >/dev/null && echo "$res" | grep -v '"result":\[\]' >/dev/null; then
+        info "SUCCESS: Derived metrics ($query) are live"
+    else
+        info "INFO: Derived metrics ($query) are not yet available. This is normal if the stack just started."
+    fi
+}
+
 case "${1:-}" in
     install)
         INSTALL_DIR="$INSTALL_DIR" "$SCRIPT_DIR/install-layout.sh"
@@ -48,6 +67,9 @@ case "${1:-}" in
         ;;
     validate)
         validate_collector_layout
+        ;;
+    verify-metrics)
+        verify_metrics
         ;;
     generate-rules)
         run_in_install_dir env INSTALL_DIR="$INSTALL_DIR" python3 ./generate-prometheus-custom-rules.py "${@:2}"
@@ -74,6 +96,7 @@ Usage:
   ./manage-collector.sh install
   ./manage-collector.sh update
   ./manage-collector.sh validate
+  ./manage-collector.sh verify-metrics
   ./manage-collector.sh generate-rules [--force]
   ./manage-collector.sh up
   ./manage-collector.sh restart-prometheus

@@ -24,7 +24,27 @@ LLM monitoring is now a built-in capability of the core exporter via the `llamas
 
 ---
 
-# 17. File and Directory Layout
+# 18. Operational Lifecycle
+
+The monitoring stack follows a **Research -> Strategy -> Execution** lifecycle for updates, mediated by a set of management scripts.
+
+## 18.1 Host-Owned Layout
+The primary deployment model is the **host-owned layout**.
+- **Installation**: Handled by `install-layout.sh`.
+- **Customization**: All user-specific config (hwexp.yaml, prometheus.yml, custom dashboards) is stored on the host and bind-mounted into containers.
+- **Persistence**: Updates (via `manage-*.sh update`) preserve all user-edited files and directories.
+
+## 18.2 Remote Deployment (`deploy-remote.sh`)
+Deployments to remote hosts (e.g., Raspberry Pi dashboard host or multiple collector nodes) are orchestrated via `deploy-remote.sh`.
+- **Mechanism**: SSH and rsync are used to push the monitoring subdirectory to the target.
+- **Execution**: Triggers a remote `manage-*.sh update` to apply changes.
+
+## 18.3 Management Interface
+- **Collector**: `manage-collector.sh` (install, update, validate, verify-metrics, status, logs).
+- **Dashboard**: `manage-dashboard.sh` (install, update, validate, list-dashboards, set-dashboard, restart-kiosk).
+- **Kiosk**: `kiosk.sh` (auto-resolution detection, browser lifecycle management).
+
+# 19. File and Directory Layout
 
 Standard installation paths for Linux / Docker:
 
@@ -36,3 +56,5 @@ Standard installation paths for Linux / Docker:
 | `/etc/hwexp/mappings.yaml` | Manual metric mapping rules. |
 | `/var/lib/hwexp/mappings.auto.yaml` | Auto-generated mapping rules. |
 | `/usr/bin/hwexp` | Exporter binary. |
+| `/opt/docker/collector/` | **Collector Layout**: Prometheus rules, hwexp config, and compose file. |
+| `/opt/docker/dashboard/` | **Dashboard Layout**: Grafana provisioning, profiles, and custom dashboards. |

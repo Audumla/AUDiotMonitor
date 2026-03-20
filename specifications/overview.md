@@ -24,11 +24,18 @@ Dashboards are organized into **Profiles** based on display hardware and use-cas
 - **Mobile**: Vertical/Portrait layouts for side-screens and mobile devices.
 - **Debug**: Operational views for troubleshooting and hardware bring-up.
 
-#### 10.2.1 Scaffolding (`grafana-init`)
-A dedicated initialization service (`grafana-init`) handles the first-run setup:
-- **Automatic Deployment**: Populates the local dashboard volume with the default profile library.
-- **Non-Destructive**: Checks for file existence before writing, ensuring user edits and custom dashboards are never overwritten.
-- **Persistence**: Supports mapping local host directories to the Grafana dashboard volume for external file-based management.
+#### 10.2.1 Initialization (`entrypoint.sh`)
+The `audumla/audiot-dashboard` image includes an entrypoint that handles first-run setup:
+- **Automatic Scaffolding**: Populates the local dashboard volume with the default profile library (standard, wide-screen, mobile, debug).
+- **Non-Destructive**: Uses `cp -rn` to ensure that existing user edits and custom dashboards are never overwritten during container updates.
+- **Control Scripts**: Copies `set-dashboard.sh` and `kiosk.sh` into the dashboards volume, making them easily accessible on the host machine.
+- **Persistence**: Supports mapping local host directories to `/var/lib/grafana/dashboards` for external file-based management.
+
+#### 10.2.2 Management Scripts
+A set of bash scripts provides a unified interface for stack operations:
+- `manage-collector.sh` / `manage-dashboard.sh`: Entry points for install, update, and status.
+- `set-dashboard.sh`: Command-line tool for switching active dashboards and restarting the kiosk.
+- `deploy-remote.sh`: Repo-level tool for syncing and updating remote hosts via SSH/rsync.
 
 ---
 

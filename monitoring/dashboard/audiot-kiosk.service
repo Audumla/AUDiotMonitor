@@ -1,0 +1,18 @@
+[Unit]
+Description=AUDiot Dashboard Kiosk
+After=network.target grafana.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+# Point to the host-owned layout install path
+WorkingDirectory=/opt/docker/dashboard
+ExecStart=/opt/docker/dashboard/kiosk.sh
+Restart=always
+RestartSec=10
+# Allow kiosk.sh to handle its own restart loop but restart the whole service
+# if it dies unexpectedly.
+
+[Install]
+WantedBy=default.target

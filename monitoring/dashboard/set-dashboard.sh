@@ -21,6 +21,22 @@ GRAFANA_URL="${GRAFANA_URL:-http://localhost:3000}"
 info() { echo "[dashboard] $*"; }
 die() { echo "[dashboard] ERROR: $*" >&2; exit 1; }
 
+restart_kiosk() {
+    if systemctl --user is-active audiot-kiosk >/dev/null 2>&1; then
+        systemctl --user restart audiot-kiosk
+        info "Kiosk service restarted via systemd"
+    else
+        # Fallback to manual pkill/nohup if no service exists
+        pkill -f "kiosk.sh" || true
+        pkill -f 'chromium.*audiot-' || true
+        # If we are in the install dir, try to restart
+        if [ -f "$SCRIPT_DIR/kiosk.sh" ]; then
+            nohup "$SCRIPT_DIR/kiosk.sh" >/tmp/audiot-kiosk.log 2>&1 </dev/null &
+            info "Kiosk restart requested via background process"
+        fi
+    fi
+}
+
 [ -f "$CONFIG_FILE" ] || die "Missing config file: $CONFIG_FILE"
 
 list_dashboards() {
@@ -56,19 +72,21 @@ case "${1:-}" in
         ;;
     force)
         uid="${2:-}"
-        [ -n "$uid" ] || die "Usage: ./set-dashboard.sh force <uid>"
+        [ -n "$uid" ] || die "Usage: ./set-dashboard.sh force <uid> [--restart]"
         dashboard_exists "$uid" || die "Dashboard UID not found in Grafana: $uid"
         set_key "KIOSK_DASHBOARD" "$uid"
         info "Forced dashboard set to $uid"
+        [[ " $* " == *" --restart "* ]] && restart_kiosk
         ;;
     clear-force)
         set_key "KIOSK_DASHBOARD" ""
         info "Forced dashboard cleared"
+        [[ " $* " == *" --restart "* ]] && restart_kiosk
         ;;
     set)
         class="${2:-}"
         uid="${3:-}"
-        [ -n "$class" ] && [ -n "$uid" ] || die "Usage: ./set-dashboard.sh set <ultrawide|portrait|1080p|landscape> <uid>"
+        [ -n "$class" ] && [ -n "$uid" ] || die "Usage: ./set-dashboard.sh set <ultrawide|portrait|1080p|landscape> <uid> [--restart]"
         dashboard_exists "$uid" || die "Dashboard UID not found in Grafana: $uid"
         case "$class" in
             ultrawide) key="KIOSK_DASHBOARD_ULTRAWIDE" ;;
@@ -79,17 +97,15 @@ case "${1:-}" in
         esac
         set_key "$key" "$uid"
         info "$key set to $uid"
+        [[ " $* " == *" --restart "* ]] && restart_kiosk
         ;;
     *)
         cat <<'EOF'
 Usage:
   ./set-dashboard.sh list
-  ./set-dashboard.sh force <uid>
-  ./set-dashboard.sh clear-force
-  ./set-dashboard.sh set ultrawide <uid>
-  ./set-dashboard.sh set portrait <uid>
-  ./set-dashboard.sh set 1080p <uid>
-  ./set-dashboard.sh set landscape <uid>
+  ./set-dashboard.sh force <uid> [--restart]
+  ./set-dashboard.sh clear-force [--restart]
+  ./set-dashboard.sh set <class> <uid> [--restart]
 EOF
         exit 1
         ;;

@@ -1,6 +1,20 @@
-# AUDiot Monitor — Installation Guide
-
 The monitoring system is split into two independent Docker Compose stacks that can run on the same machine or on different machines.
+
+---
+
+## Remote Deployment
+
+The recommended way to manage the stacks is from a local repo checkout using the `deploy-remote.sh` tool.
+
+**Requirements:**
+- Linux or macOS local machine (or Windows with Git Bash / WSL)
+- `ssh` and `rsync` installed locally
+- SSH access to the target host (e.g., `ssh pi@<rpi-ip>` works)
+
+```bash
+cd monitoring
+./deploy-remote.sh <host> <collector|dashboard> [target_dir]
+```
 
 | Stack | Purpose | Deploy on |
 | ----- | ------- | --------- |
@@ -45,43 +59,21 @@ Browse to **<http://localhost:9200>** to see a live index of all available API e
 ### Recommended host-owned layout
 
 This is the preferred install if you want editable Prometheus rules and
-persistent system-specific config. Run it from a repo checkout so the installer
-has the companion files it copies into the host-owned layout:
+persistent system-specific config. The recommended way to deploy is using the
+remote deployment tool from your local repo:
 
 ```bash
-git clone --depth=1 https://github.com/Audumla/AUDiotMonitor.git
-cd AUDiotMonitor/monitoring/collector
-chmod +x install-layout.sh manage-collector.sh
-INSTALL_DIR=/opt/docker/collector ./install-layout.sh
-cd /opt/docker/collector && ./manage-collector.sh up
+# From your local checkout of the AUDiot repo:
+cd monitoring
+./deploy-remote.sh <collector-host> collector
 ```
-
-This creates:
-
-```text
-/opt/docker/collector/
-  config/
-    hwexp/
-      hwexp.yaml
-      mappings.yaml
-    prometheus/
-      prometheus.yml
-      rules/
-        defaults/
-          audiot-recording-rules.yml
-        custom/
-          system.rules.yml
-          system.rules.yml.example
-```
-
-`system.rules.yml` is generated automatically on install only if it does not
-already exist. You can edit it freely afterwards; updates will not overwrite it.
 
 Common collector operations:
 
 ```bash
 cd /opt/docker/collector
 ./manage-collector.sh validate
+./manage-collector.sh verify-metrics
 ./manage-collector.sh generate-rules --force
 ./manage-collector.sh restart-prometheus
 ./manage-collector.sh restart-hwexp
@@ -204,21 +196,20 @@ A Raspberry Pi 4 or 5 running Debian (bookworm/bullseye) makes an ideal always-o
 
 ### RPi / bind-mounted layout
 
-Use the dashboard installer to scaffold a simple host-owned layout. Copy the
-repo subtree so the installer has the dashboards, provisioning, and helper
-scripts it needs:
+Use the dashboard installer to scaffold a simple host-owned layout. The recommended
+way to deploy is using the remote deployment tool from your local repo:
 
 ```bash
-rsync -a monitoring/dashboard/ pi@<rpi-ip>:/opt/docker/dashboard/
-
-ssh pi@<rpi-ip> '
-  cd /opt/docker/dashboard && \
-  chmod +x install-layout.sh kiosk-install.sh kiosk.sh manage-dashboard.sh && \
-  INSTALL_DIR=/opt/docker/dashboard ./install-layout.sh
-'
+# From your local checkout of the AUDiot repo:
+cd monitoring
+./deploy-remote.sh <rpi-ip> dashboard
 ```
 
-That creates:
+This tool:
+1. Syncs the `monitoring/dashboard/` directory to `/opt/docker/dashboard` on the RPi.
+2. Runs `./manage-dashboard.sh update` to install/update the layout.
+
+The host-owned layout structure:
 
 ```text
 /opt/docker/dashboard/
@@ -251,8 +242,8 @@ cd /opt/docker/dashboard
 ./manage-dashboard.sh status
 ./manage-dashboard.sh restart-grafana
 ./manage-dashboard.sh restart-kiosk
-./manage-dashboard.sh set-dashboard list
-./manage-dashboard.sh set-dashboard set ultrawide audiot-triple-gpu-wide
+./manage-dashboard.sh list-dashboards
+./manage-dashboard.sh set-dashboard <uid> --restart
 ```
 
 ### Notes for Raspberry Pi
