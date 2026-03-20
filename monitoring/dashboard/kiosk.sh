@@ -220,7 +220,7 @@ if [ -z "${KIOSK_DASHBOARD:-}" ]; then
     echo "[kiosk] Detected resolution: $RES  →  dashboard: $DASHBOARD_UID"
 fi
 
-KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID?kiosk&refresh=$REFRESH"
+KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID?kiosk=tv"
 echo "[kiosk] URL: $KIOSK_URL"
 
 # Disable screen blanking and power management
