@@ -41,8 +41,8 @@ Deployments to remote hosts (e.g., Raspberry Pi dashboard host or multiple colle
 
 ## 18.3 Management Interface
 - **Collector**: `manage-collector.sh` (install, update, validate, verify-metrics, status, logs).
-- **Dashboard**: `manage-dashboard.sh` (install, update, validate, list-dashboards, set-dashboard, restart-kiosk).
-- **Kiosk**: `kiosk.sh` (auto-resolution detection, browser lifecycle management).
+- **Dashboard**: `audiot-dashboard` (install, update, status, restart, logs, set).
+- **Kiosk**: `kiosk.sh` (auto-resolution detection, browser lifecycle management, DPMS screen blanking).
 
 # 19. File and Directory Layout
 

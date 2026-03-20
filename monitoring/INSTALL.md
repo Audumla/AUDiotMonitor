@@ -237,7 +237,7 @@ cd monitoring
 
 This tool:
 1. Syncs the `monitoring/dashboard/` directory to `/opt/docker/services/dashboard` on the RPi.
-2. Runs `./manage-dashboard.sh update` to install/update the layout.
+2. Runs the local installer to set up the layout.
 
 The host-owned layout structure:
 
@@ -256,72 +256,49 @@ The host-owned layout structure:
 ```
 
 Then set the collector endpoints in `/opt/docker/services/dashboard/.env` or export them
-at launch:
+at launch.
 
-```bash
-cd /opt/docker/services/dashboard
-PROMETHEUS_URL=http://192.168.1.x:9090 \
-HWEXP_URL=http://192.168.1.x:9200 \
-./manage-dashboard.sh up
-```
+### Managing the Dashboard
+
+The dashboard is now managed by a single, powerful script installed globally as `audiot-dashboard`.
 
 Common dashboard operations:
 
 ```bash
-cd /opt/docker/services/dashboard
-./manage-dashboard.sh validate
-./manage-dashboard.sh status
-./manage-dashboard.sh restart-grafana
-./manage-dashboard.sh restart-kiosk
-./manage-dashboard.sh set-dashboard list
-./manage-dashboard.sh set-dashboard set ultrawide audiot-triple-gpu-wide
+audiot-dashboard status
+audiot-dashboard restart
+audiot-dashboard logs
+audiot-dashboard set <uid>
+audiot-dashboard update
 ```
 
 ### Notes for Raspberry Pi
 
 #### First-boot plugin install
 
-`GF_INSTALL_PLUGINS` causes Grafana to download and install the Infinity plugin on first start.
-On a Pi with a slow SD card this may take 2–3 minutes before the UI is responsive.
-Subsequent restarts are fast because the plugin is persisted in the `grafana-data` volume.
+If Grafana fails to load Infinity plugins on a fresh Pi install (common if networking isn't fully up yet), just restart the stack:
 
-### SD card longevity
+```bash
+audiot-dashboard restart
+```
 
-Prometheus write-ahead logs generate significant I/O. Run the **collector** stack on the machine you're monitoring (typically x86), not on the Pi. The Pi only needs Grafana.
+#### Wayland vs X11
+
+Raspberry Pi OS Bookworm uses **Wayland** (`wayfire` / `labwc`) by default.
+X11 utilities like `xrandr` and `xset` do not work directly.
+
+The `audiot-dashboard` installer and kiosk launcher automatically handle the differences between X11 and Wayland for resolution detection and autostart.
 
 ### Kiosk mode — auto resolution
 
-`kiosk.sh` detects the connected screen resolution and picks a dashboard using `config/kiosk.env`, then restarts Chromium if it exits.
+The kiosk launcher detects the connected screen resolution and picks a dashboard using `config/kiosk.env`, then restarts Chromium if it exits.
 
 Edit `/opt/docker/services/dashboard/config/kiosk.env` to control:
+* `KIOSK_DASHBOARD=` (Force one UID for all screens)
+* `KIOSK_IDLE_TIMEOUT=` (Idle timeout in seconds before screen blanks. Useful for touchscreens. Default: always on)
+* `KIOSK_DPMS_STANDBY=`, `KIOSK_DPMS_SUSPEND=`, `KIOSK_DPMS_OFF=` (Advanced staggered dimming/sleep states)
 
-- one forced dashboard for all screens
-- a default dashboard UID
-- per-screen-class overrides (`ULTRAWIDE`, `PORTRAIT`, `1080P`, `LANDSCAPE`)
-- fallback UIDs if the selected dashboard is missing
-
-**One-shot installer** — run as the display user (not root):
-
-```bash
-cd /opt/docker/services/dashboard
-
-# Point at Grafana (default: http://localhost:3000)
-GRAFANA_URL=http://localhost:3000 ./kiosk-install.sh
-```
-
-The installer:
-
-1. Installs `chromium-browser` if missing
-2. Registers `kiosk.sh` as a **systemd user service** (Debian bookworm) or **XDG autostart entry** (LXDE / other desktops)
-3. Starts the kiosk immediately
-
-To add your own dashboards, drop JSON files into `/opt/docker/services/dashboard/dashboards/custom/` and set the desired UID in `/opt/docker/services/dashboard/config/kiosk.env`.
-
-**Manual launch** (without installing):
-
-```bash
-GRAFANA_URL=http://localhost:3000 ./kiosk.sh
-```
+To add your own dashboards, drop JSON files into `/opt/docker/services/dashboard/dashboards/custom/` and set the desired UID in `/opt/docker/services/dashboard/config/kiosk.env` using `audiot-dashboard set <uid>`.
 
 ---
 

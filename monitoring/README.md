@@ -12,7 +12,7 @@ The collector runs on every machine you want to monitor. It handles sensor data 
 ### 2. Dashboard Stack (`/monitoring/dashboard`)
 The dashboard stack runs once (per display or per network) and provides the Grafana visualization layer.
 - **Key Features:** Pre-baked dashboard profiles, self-sufficient Docker image, integrated kiosk mode controller.
-- **Management:** `manage-dashboard.sh`, `set-dashboard.sh`, `kiosk-install.sh`.
+- **Management:** `audiot-dashboard` (install, update, status, restart, logs, set).
 
 ## Deployment
 
