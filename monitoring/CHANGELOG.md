@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.3](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.2...monitoring-v0.7.3) (2026-03-20)
+
+
+### Bug Fixes
+
+* remove footer ([97da90e](https://github.com/Audumla/AUDiotMonitor/commit/97da90e9e759e61da627f5badf03897536ac302c))
+* **script:** correct non-portable mkdir command in installer ([8155bf9](https://github.com/Audumla/AUDiotMonitor/commit/8155bf9733bc6cbf37f26fe2e434c4d52e39dcec))
+* **script:** harden sudo environment passing with env command ([8e1e5cf](https://github.com/Audumla/AUDiotMonitor/commit/8e1e5cfa763746d7aee381bc76333077610283e9))
+* **script:** improve sudo handling for systemd user service installation ([15937a7](https://github.com/Audumla/AUDiotMonitor/commit/15937a753b6efde5eb86fec46003072e91711f28))
+
 ## [0.7.2](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.1...monitoring-v0.7.2) (2026-03-20)
 
 
