@@ -23,8 +23,13 @@ services:
     volumes:
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./config/grafana/custom-grafana.css:/opt/grafana-patch/custom-grafana.css:ro
+      - ./config/grafana/post-start-patch.sh:/opt/grafana-patch/post-start-patch.sh:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
+    post_start:
+      - command: /bin/sh /opt/grafana-patch/post-start-patch.sh
+        user: root
     environment:
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://host.docker.internal:9090}
       - HWEXP_URL=${HWEXP_URL:-http://host.docker.internal:9200}

@@ -68,6 +68,8 @@ do_install_or_update() {
     fetch_from_repo "$DOCKER_COMPOSE_URL" "$INSTALL_DIR/docker-compose.yml"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/kiosk.sh" "$KIOSK_SCRIPT"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/grafana.ini" "$INSTALL_DIR/config/grafana/grafana.ini"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/custom-grafana.css" "$INSTALL_DIR/config/grafana/custom-grafana.css"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/post-start-patch.sh" "$INSTALL_DIR/config/grafana/post-start-patch.sh"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/provisioning/datasources/prometheus.yaml" "$INSTALL_DIR/config/grafana/provisioning/datasources/prometheus.yaml"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/provisioning/dashboards/dashboards.yaml" "$INSTALL_DIR/config/grafana/provisioning/dashboards/dashboards.yaml"
     

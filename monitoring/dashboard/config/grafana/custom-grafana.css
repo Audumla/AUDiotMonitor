@@ -1,0 +1,20 @@
+/* Custom CSS to hide Grafana OSS branding in Kiosk mode */
+
+/* Hide the main footer container */
+footer,
+[data-testid="data-testid-page-footer"],
+[data-testid="footer"] {
+    display: none !important;
+}
+
+/* Hide the help icon in the header */
+a[aria-label="Help"],
+[data-testid="help-button"] {
+    display: none !important;
+}
+
+/* Hide the "Powered by Grafana" text container if it has a specific class */
+.footer-text,
+.footer-link {
+    display: none !important;
+}

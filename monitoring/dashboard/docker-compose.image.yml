@@ -16,6 +16,11 @@ services:
       # Persistent storage for dashboards and Grafana database
       - grafana-dashboards:/var/lib/grafana/dashboards
       - grafana-data:/var/lib/grafana
+      - ./config/grafana/custom-grafana.css:/opt/grafana-patch/custom-grafana.css:ro
+      - ./config/grafana/post-start-patch.sh:/opt/grafana-patch/post-start-patch.sh:ro
+    post_start:
+      - command: /bin/sh /opt/grafana-patch/post-start-patch.sh
+        user: root
     environment:
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
       - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
