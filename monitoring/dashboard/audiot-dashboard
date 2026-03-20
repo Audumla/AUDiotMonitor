@@ -1,0 +1,234 @@
+#!/usr/bin/env bash
+#
+# AUDiot Dashboard Manager - A Single Script Solution
+#
+# This script is the single entry point for installing, updating, configuring,
+# and operating the AUDiot dashboard stack on a host machine.
+#
+# Author: Gemini
+# Version: 2.0.0
+
+set -euo pipefail
+
+# --- Configuration ---
+# All paths and settings are defined here for clarity.
+INSTALL_DIR="${AUDIOT_INSTALL_DIR:-/opt/docker/dashboard}"
+REPO_BASE_URL="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
+DOCKER_COMPOSE_URL="$REPO_BASE_URL/monitoring/dashboard/docker-compose.yml"
+SELF_URL="$REPO_BASE_URL/monitoring/dashboard/audiot-dashboard" # URL to this script itself
+
+# --- Script Info ---
+SCRIPT_PATH_ON_HOST="/usr/local/bin/audiot-dashboard"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$INSTALL_DIR/config/kiosk.env"
+KIOSK_SCRIPT="$INSTALL_DIR/kiosk.sh"
+SERVICE_FILE="$HOME/.config/systemd/user/audiot-kiosk.service"
+AUTOSTART_DIR="$HOME/.config/autostart"
+
+# --- Helper Functions ---
+info() { echo "[audiot] $*"; }
+warn() { echo "[audiot] WARNING: $*"; }
+die() { echo "[audiot] ERROR: $*" >&2; exit 1; }
+
+# --- Core Logic Functions ---
+
+# Fetches the latest version of a file from the repository.
+fetch_from_repo() {
+    local remote_path="$1"
+    local local_path="$2"
+    info "Downloading ${remote_path##*/}..."
+    if ! curl -fsSL "$remote_path" -o "$local_path"; then
+        die "Failed to download '$remote_path'. Please check your network connection."
+    fi
+}
+
+# Creates the necessary directory structure for a host-owned layout.
+create_layout() {
+    info "Creating installation layout in $INSTALL_DIR..."
+    sudo mkdir -p 
+        "$INSTALL_DIR/config/grafana/provisioning/datasources" 
+        "$INSTALL_DIR/config/grafana/provisioning/dashboards" 
+        "$INSTALL_DIR/dashboards/profiles/standard" 
+        "$INSTALL_DIR/dashboards/profiles/wide-screens" 
+        "$INSTALL_DIR/dashboards/profiles/mobile" 
+        "$INSTALL_DIR/dashboards/profiles/debug" 
+        "$INSTALL_DIR/dashboards/custom"
+    sudo chown -R "$USER":"$USER" "$INSTALL_DIR"
+    info "Layout created."
+}
+
+# Installs or updates the dashboard stack.
+do_install_or_update() {
+    local is_update=$1
+    
+    if [[ "$is_update" == "false" ]]; then
+        create_layout
+    fi
+
+    # Fetch all necessary files
+    fetch_from_repo "$DOCKER_COMPOSE_URL" "$INSTALL_DIR/docker-compose.yml"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/kiosk.sh" "$KIOSK_SCRIPT"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/grafana.ini" "$INSTALL_DIR/config/grafana/grafana.ini"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/provisioning/datasources/prometheus.yaml" "$INSTALL_DIR/config/grafana/provisioning/datasources/prometheus.yaml"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/provisioning/dashboards/dashboards.yaml" "$INSTALL_DIR/config/grafana/provisioning/dashboards/dashboards.yaml"
+    
+    # Create kiosk.env if it doesn't exist
+    if [ ! -f "$CONFIG_FILE" ]; then
+        fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/kiosk.env.example" "$CONFIG_FILE"
+    fi
+    
+    # Fetch dashboards (example of fetching one, could be expanded)
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/dashboards/profiles/standard/system-overview.json" "$INSTALL_DIR/dashboards/profiles/standard/system-overview.json"
+
+    chmod +x "$KIOSK_SCRIPT"
+    
+    info "Starting Docker services..."
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d
+    
+    info "Configuring kiosk autostart..."
+    do_kiosk_install
+
+    info "Install/Update complete."
+}
+
+# Sets the active dashboard in the kiosk config.
+do_set_dashboard() {
+    local uid="$1"
+    info "Setting active dashboard to $uid..."
+    if ! grep -q "^KIOSK_DASHBOARD=" "$CONFIG_FILE"; then
+        echo "KIOSK_DASHBOARD=$uid" >> "$CONFIG_FILE"
+    else
+        sed -i "s|^KIOSK_DASHBOARD=.*|KIOSK_DASHBOARD=$uid|" "$CONFIG_FILE"
+    fi
+    info "Dashboard set. Restarting kiosk..."
+    do_restart_kiosk
+}
+
+# Restarts the kiosk service or process.
+do_restart_kiosk() {
+    if systemctl --user is-active audiot-kiosk.service >/dev/null 2>&1; then
+        systemctl --user restart audiot-kiosk.service
+        info "Kiosk service restarted."
+    elif [ -f "$KIOSK_SCRIPT" ]; then
+        pkill -f "kiosk.sh" || true
+        pkill -f "chromium" || true
+        sleep 1
+        DISPLAY=:0 XAUTHORITY="$HOME/.Xauthority" nohup "$KIOSK_SCRIPT" >/tmp/audiot-kiosk.log 2>&1 &
+        info "Kiosk process restarted."
+    else
+        warn "Kiosk script not found. Cannot restart."
+    fi
+}
+
+# Installs the kiosk as a systemd service or autostart file.
+do_kiosk_install() {
+    if command -v systemctl >/dev/null 2>&1 && systemctl --user &>/dev/null 2>&1; then
+        info "Setting up systemd user service for kiosk..."
+        mkdir -p "$(dirname "$SERVICE_FILE")"
+        cat > "$SERVICE_FILE" << EOF
+[Unit]
+Description=AUDiot Dashboard Kiosk
+After=graphical-session.target network-online.target
+Wants=graphical-session.target
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+ExecStart=$KIOSK_SCRIPT
+Restart=always
+RestartSec=10
+[Install]
+WantedBy=graphical-session.target
+EOF
+        systemctl --user daemon-reload
+        systemctl --user enable --now audiot-kiosk.service 2>/dev/null || true
+        info "Kiosk service enabled and started."
+    else
+        warn "systemd user service not available. Kiosk will not autostart."
+    fi
+}
+
+# Updates the script itself to the latest version.
+do_self_update() {
+    info "Updating the 'audiot-dashboard' command..."
+    local temp_script
+    temp_script=$(mktemp)
+    if fetch_from_repo "$SELF_URL" "$temp_script"; then
+        sudo mv "$temp_script" "$SCRIPT_PATH_ON_HOST"
+        sudo chmod +x "$SCRIPT_PATH_ON_HOST"
+        info "'audiot-dashboard' has been updated. Please re-run your command."
+        exit 0
+    else
+        die "Failed to download the latest version of the script."
+    fi
+}
+
+# Shows the Grafana container logs.
+do_show_logs() {
+    info "Showing Grafana logs..."
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" logs --tail=100 -f grafana
+}
+
+# Shows the status of the Docker services.
+do_show_status() {
+    info "Docker services status:"
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" ps
+    echo ""
+    if systemctl --user is-active audiot-kiosk.service >/dev/null 2>&1; then
+        info "Kiosk service status:"
+        systemctl --user status audiot-kiosk.service --no-pager
+    fi
+}
+
+# --- Main Command Handler ---
+main() {
+    case "${1:-}" in
+        install)
+            do_install_or_update "false"
+            ;;
+        update)
+            do_self_update
+            do_install_or_update "true"
+            ;;
+        set)
+            [ -z "${2:-}" ] && die "Usage: audiot-dashboard set <dashboard-uid>"
+            do_set_dashboard "$2"
+            ;;
+        restart)
+            info "Restarting services..."
+            docker compose -f "$INSTALL_DIR/docker-compose.yml" restart
+            do_restart_kiosk
+            ;;
+        logs)
+            do_show_logs
+            ;;
+        status)
+            do_show_status
+            ;;
+        *)
+            cat <<'EOF'
+AUDiot Dashboard Manager v2.0
+
+A single script to rule them all.
+
+Usage:
+  audiot-dashboard <command>
+
+Commands:
+  install      Performs a fresh installation of the dashboard stack and kiosk.
+  update       Checks for updates to the script and stack configurations.
+  set <uid>    Sets the active dashboard for the kiosk and restarts it.
+  restart      Restarts the Grafana and kiosk services.
+  status       Shows the status of the running services.
+  logs         Tails the Grafana container logs.
+
+Installation:
+  curl -fsSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/dashboard/audiot-dashboard | sudo bash -s install
+
+EOF
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
