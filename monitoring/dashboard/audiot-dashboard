@@ -138,7 +138,7 @@ do_kiosk_install() {
     # Wrapper to run commands as the target user with the correct D-Bus environment
     run_as_user() {
         if [ "$EUID" -eq 0 ]; then
-            sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$TARGET_UID" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$TARGET_UID/bus" bash -c "$1"
+            sudo -u "$TARGET_USER" env XDG_RUNTIME_DIR="/run/user/$TARGET_UID" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$TARGET_UID/bus" bash -c "$1"
         else
             bash -c "$1"
         fi
