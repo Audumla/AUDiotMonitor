@@ -12,7 +12,7 @@ COPY --chmod=0755 kiosk.sh /opt/audiot-dashboard/kiosk.sh
 COPY --chmod=0755 kiosk-install.sh /opt/audiot-dashboard/kiosk-install.sh
 
 USER root
-RUN chown -R grafana:grafana /etc/grafana/provisioning /etc/grafana/grafana.ini /opt/audiot-dashboard
+RUN chown -R 472:472 /etc/grafana/provisioning /etc/grafana/grafana.ini /opt/audiot-dashboard
 USER grafana
 
 ENV GF_AUTH_ANONYMOUS_ENABLED=true \
