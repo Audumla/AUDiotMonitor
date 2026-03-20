@@ -54,33 +54,32 @@ def build_rules(gpu_ids: list[str]) -> str:
     if not gpu_ids:
         lines.extend(
             [
-                "      - record: audiot_system_gpu_count",
+                "      - record: audiot_gpu_count",
                 "        expr: vector(0)",
             ]
         )
         return "\n".join(lines) + "\n"
 
     for idx, gpu_id in enumerate(gpu_ids, start=1):
-        gpu_name = f"gpu{idx}"
         for record, expr in [
             (
-                "audiot_system_gpu_compute_utilization_percent",
+                "audiot_gpu_compute_utilization_percent",
                 f'hw_device_utilization_percent{{device_class="gpu", component="compute", sensor="utilization", device_id="{gpu_id}"}}',
             ),
             (
-                "audiot_system_gpu_memory_utilization_percent",
+                "audiot_gpu_memory_utilization_percent",
                 f'hw_device_utilization_percent{{device_class="gpu", component="memory", sensor="utilization", device_id="{gpu_id}"}}',
             ),
             (
-                "audiot_system_gpu_vram_usage_percent",
+                "audiot_gpu_vram_usage_percent",
                 f'audiot_gpu_vram_usage_percent{{device_id="{gpu_id}"}}',
             ),
             (
-                "audiot_system_gpu_vram_used_bytes",
+                "audiot_gpu_vram_used_bytes",
                 f'audiot_gpu_vram_used_bytes{{device_id="{gpu_id}"}}',
             ),
             (
-                "audiot_system_gpu_vram_capacity_bytes",
+                "audiot_gpu_vram_capacity_bytes",
                 f'audiot_gpu_vram_capacity_bytes{{device_id="{gpu_id}"}}',
             ),
         ]:
@@ -88,10 +87,6 @@ def build_rules(gpu_ids: list[str]) -> str:
                 [
                     f"      - record: {record}",
                     f"        expr: {expr}",
-                    "        labels:",
-                    f'          gpu_index: "{idx}"',
-                    f'          gpu_name: "{gpu_name}"',
-                    f'          source_device_id: "{gpu_id}"',
                 ]
             )
     return "\n".join(lines) + "\n"
