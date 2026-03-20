@@ -16,7 +16,7 @@ from pathlib import Path
 DEFAULT_OUTPUT = Path(
     os.environ.get(
         "INSTALL_DIR",
-        "/opt/docker/collector",
+        "/opt/docker/services/monitoring",
     )
 ) / "config/prometheus/rules/custom/system.rules.yml"
 DRM_PATH = Path("/sys/class/drm")

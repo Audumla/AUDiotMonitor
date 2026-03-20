@@ -4,8 +4,8 @@
 # Recommended host-owned layout:
 #
 #   chmod +x install-layout.sh
-#   INSTALL_DIR=/opt/docker/collector ./install-layout.sh
-#   cd /opt/docker/collector && docker compose up -d
+#   INSTALL_DIR=/opt/docker/services/monitoring ./install-layout.sh
+#   cd /opt/docker/services/monitoring && docker compose up -d
 #
 # The install script writes default Prometheus rules and generates a
 # system.rules.yml only if one does not already exist.

@@ -8,13 +8,19 @@
 #   ./deploy-remote.sh <host> <component: collector|dashboard> [target_dir]
 #
 # Example:
-#   ./deploy-remote.sh brutusview dashboard /opt/docker/dashboard
+#   ./deploy-remote.sh brutusview dashboard /opt/docker/services/dashboard
 
 set -euo pipefail
 
 HOST="${1:-}"
 COMPONENT="${2:-}"
-INSTALL_DIR="${3:-/opt/docker/$COMPONENT}"
+case "$COMPONENT" in
+    collector) DEFAULT_INSTALL_DIR="/opt/docker/services/monitoring" ;;
+    dashboard) DEFAULT_INSTALL_DIR="/opt/docker/services/dashboard" ;;
+    *) DEFAULT_INSTALL_DIR="/opt/docker/services/$COMPONENT" ;;
+esac
+
+INSTALL_DIR="${3:-$DEFAULT_INSTALL_DIR}"
 
 if [[ -z "$HOST" || -z "$COMPONENT" ]]; then
     echo "Usage: $0 <host> <component> [target_dir]"

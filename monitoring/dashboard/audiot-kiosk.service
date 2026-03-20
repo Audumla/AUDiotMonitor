@@ -7,8 +7,8 @@ StartLimitIntervalSec=0
 Type=simple
 Environment=DISPLAY=:0
 # Point to the host-owned layout install path
-WorkingDirectory=/opt/docker/dashboard
-ExecStart=/opt/docker/dashboard/kiosk.sh
+WorkingDirectory=/opt/docker/services/dashboard
+ExecStart=/opt/docker/services/dashboard/kiosk.sh
 Restart=always
 RestartSec=10
 # Allow kiosk.sh to handle its own restart loop but restart the whole service

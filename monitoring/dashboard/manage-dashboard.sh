@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTALL_DIR="${INSTALL_DIR:-/opt/docker/dashboard}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/docker/services/dashboard}"
 
 info() { echo "[dashboard-manage] $*"; }
 die() { echo "[dashboard-manage] ERROR: $*" >&2; exit 1; }

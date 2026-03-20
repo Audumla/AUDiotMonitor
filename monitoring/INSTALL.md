@@ -71,7 +71,7 @@ cd monitoring
 Common collector operations:
 
 ```bash
-cd /opt/docker/collector
+cd /opt/docker/services/monitoring
 ./manage-collector.sh validate
 ./manage-collector.sh verify-metrics
 ./manage-collector.sh generate-rules --force
@@ -124,7 +124,7 @@ that file once from the detected DRM cards so you get stable labels like
 Re-generate the custom rules file manually:
 
 ```bash
-cd /opt/docker/collector
+cd /opt/docker/services/monitoring
 ./manage-collector.sh generate-rules --force
 ./manage-collector.sh restart-prometheus
 ```
@@ -206,13 +206,13 @@ cd monitoring
 ```
 
 This tool:
-1. Syncs the `monitoring/dashboard/` directory to `/opt/docker/dashboard` on the RPi.
+1. Syncs the `monitoring/dashboard/` directory to `/opt/docker/services/dashboard` on the RPi.
 2. Runs `./manage-dashboard.sh update` to install/update the layout.
 
 The host-owned layout structure:
 
 ```text
-/opt/docker/dashboard/
+/opt/docker/services/dashboard/
   docker-compose.yml
   config/
     grafana/
@@ -224,11 +224,11 @@ The host-owned layout structure:
     custom/      # your host-local dashboards
 ```
 
-Then set the collector endpoints in `/opt/docker/dashboard/.env` or export them
+Then set the collector endpoints in `/opt/docker/services/dashboard/.env` or export them
 at launch:
 
 ```bash
-cd /opt/docker/dashboard
+cd /opt/docker/services/dashboard
 PROMETHEUS_URL=http://192.168.1.x:9090 \
 HWEXP_URL=http://192.168.1.x:9200 \
 ./manage-dashboard.sh up
@@ -237,13 +237,13 @@ HWEXP_URL=http://192.168.1.x:9200 \
 Common dashboard operations:
 
 ```bash
-cd /opt/docker/dashboard
+cd /opt/docker/services/dashboard
 ./manage-dashboard.sh validate
 ./manage-dashboard.sh status
 ./manage-dashboard.sh restart-grafana
 ./manage-dashboard.sh restart-kiosk
-./manage-dashboard.sh list-dashboards
-./manage-dashboard.sh set-dashboard <uid> --restart
+./manage-dashboard.sh set-dashboard list
+./manage-dashboard.sh set-dashboard set ultrawide audiot-triple-gpu-wide
 ```
 
 ### Notes for Raspberry Pi
@@ -262,7 +262,7 @@ Prometheus write-ahead logs generate significant I/O. Run the **collector** stac
 
 `kiosk.sh` detects the connected screen resolution and picks a dashboard using `config/kiosk.env`, then restarts Chromium if it exits.
 
-Edit `/opt/docker/dashboard/config/kiosk.env` to control:
+Edit `/opt/docker/services/dashboard/config/kiosk.env` to control:
 
 - one forced dashboard for all screens
 - a default dashboard UID
@@ -272,7 +272,7 @@ Edit `/opt/docker/dashboard/config/kiosk.env` to control:
 **One-shot installer** — run as the display user (not root):
 
 ```bash
-cd /opt/docker/dashboard
+cd /opt/docker/services/dashboard
 
 # Point at Grafana (default: http://localhost:3000)
 GRAFANA_URL=http://localhost:3000 ./kiosk-install.sh
@@ -284,7 +284,7 @@ The installer:
 2. Registers `kiosk.sh` as a **systemd user service** (Debian bookworm) or **XDG autostart entry** (LXDE / other desktops)
 3. Starts the kiosk immediately
 
-To add your own dashboards, drop JSON files into `/opt/docker/dashboard/dashboards/custom/` and set the desired UID in `/opt/docker/dashboard/config/kiosk.env`.
+To add your own dashboards, drop JSON files into `/opt/docker/services/dashboard/dashboards/custom/` and set the desired UID in `/opt/docker/services/dashboard/config/kiosk.env`.
 
 **Manual launch** (without installing):
 
@@ -343,7 +343,7 @@ Scripts are executed every poll cycle. They must write a JSON array of `RawMeasu
 
 ## Persisting Dashboard Edits
 
-Dashboards are plain files on the host in `/opt/docker/dashboard/dashboards/`.
+Dashboards are plain files on the host in `/opt/docker/services/dashboard/dashboards/`.
 Default shipped profiles live under `profiles/`; your machine-specific dashboards should go under `custom/`.
 
 ---

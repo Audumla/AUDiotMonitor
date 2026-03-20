@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-INSTALL_DIR="${INSTALL_DIR:-/opt/docker/dashboard}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/docker/services/dashboard}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 info() { echo "[layout] $*"; }

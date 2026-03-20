@@ -6,11 +6,11 @@
 #   ./dashboards/profiles/   -> Default profiles
 #   ./dashboards/custom/     -> Your own dashboards for this host
 #
-# Install the layout into /opt/docker/dashboard with:
+# Install the layout into /opt/docker/services/dashboard with:
 #   ./install-layout.sh
 #
 # Then start Grafana with:
-#   cd /opt/docker/dashboard
+#   cd /opt/docker/services/dashboard
 #   docker compose up -d
 
 services:

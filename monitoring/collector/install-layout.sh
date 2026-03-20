@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-INSTALL_DIR="${INSTALL_DIR:-/opt/docker/collector}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/docker/services/monitoring}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 info() { echo "[collector-layout] $*"; }

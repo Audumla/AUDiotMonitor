@@ -9,11 +9,11 @@
 #
 # Options via environment:
 #   GRAFANA_URL      Grafana URL  (default: http://localhost:3000)
-#   INSTALL_DIR      Where to copy kiosk assets  (default: /opt/docker/dashboard)
+#   INSTALL_DIR      Where to copy kiosk assets  (default: /opt/docker/services/dashboard)
 
 set -euo pipefail
 
-INSTALL_DIR="${INSTALL_DIR:-/opt/docker/dashboard}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/docker/services/dashboard}"
 KIOSK_SCRIPT="$INSTALL_DIR/kiosk.sh"
 KIOSK_ENV="$INSTALL_DIR/config/kiosk.env"
 AUTOSTART_DIR="$HOME/.config/autostart"
