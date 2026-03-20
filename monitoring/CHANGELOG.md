@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.5.0...monitoring-v0.5.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* **docker:** use numeric UID for chown in dashboard Dockerfile ([3cabe6a](https://github.com/Audumla/AUDiotMonitor/commit/3cabe6a3eb5abd7ccb62554829126f49a6f61d6f))
+
 ## [0.5.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.4.1...monitoring-v0.5.0) (2026-03-20)
 
 
