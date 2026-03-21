@@ -1,20 +1,35 @@
 /* Custom CSS to hide Grafana OSS branding in Kiosk mode */
 
-/* Hide the main footer container */
+/* Hide the main footer container - multiple possible selectors */
 footer,
 [data-testid="data-testid-page-footer"],
-[data-testid="footer"] {
+[data-testid="footer"],
+.css-1vnc8yk, /* Common generated class for footer */
+.page-footer {
     display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    visibility: hidden !important;
 }
 
-/* Hide the help icon in the header */
-a[aria-label="Help"],
-[data-testid="help-button"] {
-    display: none !important;
-}
-
-/* Hide the "Powered by Grafana" text container if it has a specific class */
+/* Hide the "Powered by Grafana" text and links explicitly */
 .footer-text,
-.footer-link {
+.footer-link,
+[href*="grafana.com"] {
     display: none !important;
+}
+
+/* Hide the help icon and other header clutter */
+a[aria-label="Help"],
+[data-testid="help-button"],
+[data-testid="nav-help"],
+.sidemenu-item[aria-label="Help"] {
+    display: none !important;
+}
+
+/* Force the main content to take up the full height if the footer left a gap */
+.main-view,
+.page-container {
+    min-height: 100vh !important;
 }
