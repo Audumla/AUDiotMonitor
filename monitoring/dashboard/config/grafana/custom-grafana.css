@@ -1,35 +1,65 @@
-/* Custom CSS to hide Grafana OSS branding in Kiosk mode */
+/* Custom CSS for AUDiot kiosk displays
+ * Goals:
+ *   1. Hide Grafana OSS branding / footer
+ *   2. Prevent scrollbars so the dashboard fills the screen exactly
+ *      (works dynamically at any resolution — 1920x440, 1080p, portrait, etc.)
+ */
 
-/* Hide the main footer container - multiple possible selectors */
+/* ── 1. Hide branding ─────────────────────────────────────────────────────── */
+
 footer,
 [data-testid="data-testid-page-footer"],
 [data-testid="footer"],
-.css-1vnc8yk, /* Common generated class for footer */
 .page-footer {
     display: none !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    visibility: hidden !important;
 }
 
-/* Hide the "Powered by Grafana" text and links explicitly */
 .footer-text,
 .footer-link,
 [href*="grafana.com"] {
     display: none !important;
 }
 
-/* Hide the help icon and other header clutter */
 a[aria-label="Help"],
 [data-testid="help-button"],
-[data-testid="nav-help"],
-.sidemenu-item[aria-label="Help"] {
+[data-testid="nav-help"] {
     display: none !important;
 }
 
-/* Force the main content to take up the full height if the footer left a gap */
-.main-view,
-.page-container {
-    min-height: 100vh !important;
+/* ── 2. Prevent scrollbars / force exact viewport fit ─────────────────────── */
+
+/* Suppress outer-page scrollbar at any resolution.
+ * The panels fit the screen; any overflow is just Grafana's padding. */
+html,
+body {
+    overflow: hidden !important;
+    height: 100% !important;
+}
+
+/* Grafana's inner scroll container — lock to full viewport height */
+#reactRoot,
+[data-testid="app-container"] {
+    height: 100vh !important;
+    overflow: hidden !important;
+}
+
+/* The dashboard scrollable area */
+.scrollbar-view,
+[class*="scrollbar-view"] {
+    overflow: hidden !important;
+    max-height: 100vh !important;
+}
+
+/* react-grid-layout adds a bottom margin after the last panel row.
+ * Remove it so the grid height matches the panel height exactly. */
+.react-grid-layout {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Dashboard canvas wrapper padding */
+[class*="canvas-size"],
+[class*="dashboard-canvas"],
+.dashboard-grid {
+    padding-bottom: 0 !important;
 }
