@@ -23,7 +23,7 @@ cp "$CSS_SRC_FILE" "$CSS_DEST_FILE"
 
 # 2. Inject CSS link into index.html just before </head>
 if ! grep -q "custom-grafana.css" "$INDEX_HTML"; then
-    sed -i 's|</head>|<link rel="stylesheet" href="public/custom/custom-grafana.css">\n</head>|' "$INDEX_HTML"
+    sed -i 's|</head>|<link rel="stylesheet" href="/public/custom/custom-grafana.css">\n</head>|' "$INDEX_HTML"
 fi
 
 # 3. Strip "Powered by Grafana" literal from compiled JS bundles

@@ -56,6 +56,14 @@ create_layout() {
     info "Layout created."
 }
 
+# Applies the UI patch to the running Grafana container
+do_apply_patch() {
+    info "Applying UI patch to Grafana container..."
+    # Sleep briefly to ensure the container is ready to accept exec commands
+    sleep 3
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" exec -u root grafana /bin/sh /opt/grafana-patch/post-start-patch.sh || warn "Failed to apply UI patch."
+}
+
 # Installs or updates the dashboard stack.
 do_install_or_update() {
     local is_update=$1
@@ -86,6 +94,8 @@ do_install_or_update() {
     info "Starting Docker services..."
     docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d
     
+    do_apply_patch
+
     info "Configuring kiosk autostart..."
     do_kiosk_install
 
