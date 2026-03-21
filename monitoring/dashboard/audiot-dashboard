@@ -231,13 +231,17 @@ do_self_update() {
         local local_hash=""
         local remote_hash=""
         
-        # Calculate hashes to see if they are different
+        # Calculate hashes agnostic of line endings (strip \r)
+        get_hash() {
+            sed 's/\r$//' "$1" | sha256sum | cut -d' ' -f1
+        }
+
         if [ -f "$SCRIPT_PATH_ON_HOST" ]; then
-            local_hash=$(sha256sum "$SCRIPT_PATH_ON_HOST" | cut -d' ' -f1)
+            local_hash=$(get_hash "$SCRIPT_PATH_ON_HOST")
         elif [ -f "$0" ]; then
-            local_hash=$(sha256sum "$0" | cut -d' ' -f1)
+            local_hash=$(get_hash "$0")
         fi
-        remote_hash=$(sha256sum "$temp_script" | cut -d' ' -f1)
+        remote_hash=$(get_hash "$temp_script")
         
         if [[ "$local_hash" == "$remote_hash" ]]; then
             info "'audiot-dashboard' is already at the latest version."
@@ -248,8 +252,10 @@ do_self_update() {
         info "Installing new version of 'audiot-dashboard'..."
         sudo mv "$temp_script" "$SCRIPT_PATH_ON_HOST"
         sudo chmod +x "$SCRIPT_PATH_ON_HOST"
-        info "'audiot-dashboard' has been updated. Please re-run your command."
-        exit 0
+        info "'audiot-dashboard' updated. Resuming operation..."
+        
+        # Re-execute the new version of the script with the same arguments
+        exec "$SCRIPT_PATH_ON_HOST" "$@"
     else
         die "Failed to download the latest version of the script."
     fi
