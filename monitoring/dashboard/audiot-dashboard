@@ -117,6 +117,13 @@ do_set_dashboard() {
 
 # Restarts the kiosk service or process.
 do_restart_kiosk() {
+    local TARGET_USER="$USER"
+    local TARGET_HOME="$HOME"
+    if [ "$EUID" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+        TARGET_USER="$SUDO_USER"
+        TARGET_HOME="$(eval echo ~$SUDO_USER)"
+    fi
+
     if systemctl --user is-active audiot-kiosk.service >/dev/null 2>&1; then
         systemctl --user restart audiot-kiosk.service
         info "Kiosk service restarted."
@@ -124,9 +131,9 @@ do_restart_kiosk() {
         pkill -f "kiosk.sh" || true
         pkill -f "chromium" || true
         sleep 1
-        local KIOSK_LOG="/tmp/audiot-kiosk-${TARGET_USER:-$USER}.log"
+        local KIOSK_LOG="/tmp/audiot-kiosk-${TARGET_USER}.log"
         rm -f "$KIOSK_LOG"
-        DISPLAY=:0 XAUTHORITY="${TARGET_HOME:-$HOME}/.Xauthority" nohup "$KIOSK_SCRIPT" >"$KIOSK_LOG" 2>&1 &
+        DISPLAY=:0 XAUTHORITY="${TARGET_HOME}/.Xauthority" nohup "$KIOSK_SCRIPT" >"$KIOSK_LOG" 2>&1 &
         info "Kiosk process restarted. Logs: $KIOSK_LOG"
     else
         warn "Kiosk script not found. Cannot restart."
