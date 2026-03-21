@@ -28,38 +28,26 @@ a[aria-label="Help"],
 
 /* ── 2. Prevent scrollbars / force exact viewport fit ─────────────────────── */
 
-/* Suppress outer-page scrollbar at any resolution.
- * The panels fit the screen; any overflow is just Grafana's padding. */
+/* Hide ALL scrollbars in Chromium at the browser-engine level.
+ * This is the most reliable approach for a Chromium kiosk — it works
+ * regardless of Grafana's dynamically generated class names or React DOM
+ * structure. Dynamic: applies at any screen resolution. */
+::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Suppress outer-page overflow as a belt-and-suspenders measure */
 html,
 body {
     overflow: hidden !important;
     height: 100% !important;
 }
 
-/* Grafana's inner scroll container — lock to full viewport height */
-#reactRoot,
-[data-testid="app-container"] {
-    height: 100vh !important;
-    overflow: hidden !important;
-}
-
-/* The dashboard scrollable area */
-.scrollbar-view,
-[class*="scrollbar-view"] {
-    overflow: hidden !important;
-    max-height: 100vh !important;
-}
-
 /* react-grid-layout adds a bottom margin after the last panel row.
  * Remove it so the grid height matches the panel height exactly. */
 .react-grid-layout {
     margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-
-/* Dashboard canvas wrapper padding */
-[class*="canvas-size"],
-[class*="dashboard-canvas"],
-.dashboard-grid {
     padding-bottom: 0 !important;
 }
