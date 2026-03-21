@@ -209,7 +209,9 @@ do_self_update() {
     info "Updating the 'audiot-dashboard' command..."
     local temp_script
     temp_script=$(mktemp)
-    if fetch_from_repo "$SELF_URL" "$temp_script"; then
+    # Add a timestamp to the URL to bypass GitHub's raw file cache (usually 5 mins)
+    local cache_buster="?v=$(date +%s)"
+    if fetch_from_repo "${SELF_URL}${cache_buster}" "$temp_script"; then
         sudo mv "$temp_script" "$SCRIPT_PATH_ON_HOST"
         sudo chmod +x "$SCRIPT_PATH_ON_HOST"
         info "'audiot-dashboard' has been updated. Please re-run your command."
