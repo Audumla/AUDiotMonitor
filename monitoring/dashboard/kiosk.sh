@@ -38,6 +38,12 @@ export XDG_RUNTIME_DIR
 [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] && export DBUS_SESSION_BUS_ADDRESS
 [ -n "${XAUTHORITY:-}" ] && export XAUTHORITY
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [kiosk] $*"
+}
+
 # ── Resolution Detection ──────────────────────────────────────────────────────
 
 detect_resolution() {
@@ -110,30 +116,30 @@ resolve_dashboard_uid() {
 
 if [ -n "${KIOSK_DASHBOARD:-}" ]; then
     DASHBOARD_UID="$KIOSK_DASHBOARD"
-    echo "[kiosk] Using forced dashboard: $DASHBOARD_UID"
+    log "Using forced dashboard: $DASHBOARD_UID"
 else
     RES=$(detect_resolution)
     DASHBOARD_UID=$(select_dashboard "$RES")
     DASHBOARD_UID=$(resolve_dashboard_uid "$DASHBOARD_UID")
-    echo "[kiosk] Detected resolution: $RES  →  dashboard: $DASHBOARD_UID"
+    log "Detected resolution: $RES  →  dashboard: $DASHBOARD_UID"
 fi
 
 # Exact URL format confirmed by user for true header-less mode
 KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID/$DASHBOARD_UID?orgId=1&kiosk&_dash.hideTimePicker=true&from=now-5m&to=now&timezone=browser&refresh=5s"
-echo "[kiosk] URL: $KIOSK_URL"
+log "URL: $KIOSK_URL"
 
 # Configure screen blanking and power management (DPMS)
 if [ -n "${KIOSK_IDLE_TIMEOUT:-}" ] && [ "${KIOSK_IDLE_TIMEOUT}" -gt 0 ] 2>/dev/null; then
     standby="${KIOSK_DPMS_STANDBY:-$KIOSK_IDLE_TIMEOUT}"
     suspend="${KIOSK_DPMS_SUSPEND:-$KIOSK_IDLE_TIMEOUT}"
     off="${KIOSK_DPMS_OFF:-$KIOSK_IDLE_TIMEOUT}"
-    echo "[kiosk] Enabling screen blanking (DPMS: standby=${standby}s, suspend=${suspend}s, off=${off}s)"
+    log "Enabling screen blanking (DPMS: standby=${standby}s, suspend=${suspend}s, off=${off}s)"
     xset s on 2>/dev/null || true
     xset +dpms 2>/dev/null || true
     xset s blank 2>/dev/null || true
     xset dpms "$standby" "$suspend" "$off" 2>/dev/null || true
 else
-    echo "[kiosk] Disabling screen blanking (always on)"
+    log "Disabling screen blanking (always on)"
     xset s off 2>/dev/null || true
     xset -dpms 2>/dev/null || true
     xset s noblank 2>/dev/null || true
@@ -144,7 +150,7 @@ CHROMIUM=""
 for bin in chromium-browser chromium google-chrome; do
     command -v "$bin" &>/dev/null && CHROMIUM="$bin" && break
 done
-[ -z "$CHROMIUM" ] && { echo "[kiosk] ERROR: chromium not found"; exit 1; }
+[ -z "$CHROMIUM" ] && { log "ERROR: chromium not found"; exit 1; }
 
 # Profile and lock management
 KIOSK_PROFILE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/chromium-kiosk"
@@ -152,7 +158,7 @@ mkdir -p "$KIOSK_PROFILE_DIR"
 rm -f "$KIOSK_PROFILE_DIR/SingletonLock" 2>/dev/null || true
 rm -f "$KIOSK_PROFILE_DIR/Default/Preferences" 2>/dev/null || true
 
-echo "[kiosk] Launching $CHROMIUM in kiosk mode"
+log "Launching $CHROMIUM in kiosk mode"
 
 while true; do
     "$CHROMIUM" \
@@ -170,6 +176,6 @@ while true; do
         --user-data-dir="$KIOSK_PROFILE_DIR" \
         --app="$KIOSK_URL" \
         2>/dev/null || true
-    echo "[kiosk] Chromium exited — restarting in 5s"
+    log "Chromium exited — restarting in 5s"
     sleep 5
 done

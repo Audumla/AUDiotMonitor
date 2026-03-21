@@ -26,9 +26,10 @@ SERVICE_FILE="$HOME/.config/systemd/user/audiot-kiosk.service"
 AUTOSTART_DIR="$HOME/.config/autostart"
 
 # --- Helper Functions ---
-info() { echo "[audiot] $*"; }
-warn() { echo "[audiot] WARNING: $*"; }
-die() { echo "[audiot] ERROR: $*" >&2; exit 1; }
+timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
+info() { echo "$(timestamp) [audiot] $*"; }
+warn() { echo "$(timestamp) [audiot] WARNING: $*"; }
+die() { echo "$(timestamp) [audiot] ERROR: $*" >&2; exit 1; }
 
 # --- Core Logic Functions ---
 
