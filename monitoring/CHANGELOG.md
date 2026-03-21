@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.8.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.3...monitoring-v0.8.0) (2026-03-21)
+
+
+### Features
+
+* **kiosk:** add KIOSK_IDLE_TIMEOUT for DPMS wake-on-touch support ([5f98444](https://github.com/Audumla/AUDiotMonitor/commit/5f984441b4b6b02cb1305805c4960179a276c834))
+* **kiosk:** expose advanced DPMS states to allow screen dimming ([c4b4300](https://github.com/Audumla/AUDiotMonitor/commit/c4b4300bc74d01cfeba04959a703889b83f56842))
+* **logs:** add timestamps to audiot-dashboard and kiosk logs ([85109c0](https://github.com/Audumla/AUDiotMonitor/commit/85109c0d6d82428726c1918560d52c4d77589c93))
+
+
+### Bug Fixes
+
+* **dashboard:** resolve self-update loop, wrong install dir, and kiosk permission errors ([6bbd69a](https://github.com/Audumla/AUDiotMonitor/commit/6bbd69af06932dc1ebc505751acd576cdfe6f919))
+* **kiosk:** improve wait_for_grafana timeout and logging ([baf4dce](https://github.com/Audumla/AUDiotMonitor/commit/baf4dce39a659ff0b586130ea7031b737f614982))
+* **kiosk:** remove wait_for_grafana to speed up browser startup and cleanup script ([a96dfb2](https://github.com/Audumla/AUDiotMonitor/commit/a96dfb2497cefe2f583d9ce9e71ee779c0435f07))
+* **kiosk:** use /public/img/ for custom CSS to ensure Grafana serves it ([d8a7056](https://github.com/Audumla/AUDiotMonitor/commit/d8a7056271d6bda9322611c24805e52b31a8fa40))
+* **kiosk:** use absolute path for CSS and update kiosk URL parameters ([30f6a86](https://github.com/Audumla/AUDiotMonitor/commit/30f6a860dc0774a9f4089a329104e9853db2957e))
+* **script:** add cache-buster to self-update URL ([7a4a941](https://github.com/Audumla/AUDiotMonitor/commit/7a4a941a511f25bcb7c679952c41164cb4877fd0))
+* **script:** auto-detect INSTALL_DIR if run from a dashboard folder ([e98ffeb](https://github.com/Audumla/AUDiotMonitor/commit/e98ffeb01b2a2cb4ee35d7cb42082de4285c558b))
+* **script:** ensure TARGET_USER detection in do_restart_kiosk to fix log permissions ([6e74d74](https://github.com/Audumla/AUDiotMonitor/commit/6e74d74dd625bac1065dd35c77005a76e44ec1ae))
+* **script:** make self-update line-ending agnostic and resume operation after update ([972c778](https://github.com/Audumla/AUDiotMonitor/commit/972c778a77b3912e38e43609d610847a82ac5502))
+* **script:** make UI patch script more robust and fail-safe ([bbcaccf](https://github.com/Audumla/AUDiotMonitor/commit/bbcaccf105d4e4722c5f5516d4ce32747ac3d845))
+* **script:** push uncommitted changes for UI patching ([de776a7](https://github.com/Audumla/AUDiotMonitor/commit/de776a7e42f22a89c5a6dfe0c2c35d6d1c4f4793))
+* **script:** resolve log file permission issues during kiosk restart ([5b16a58](https://github.com/Audumla/AUDiotMonitor/commit/5b16a5848e3f9bb463289ad08c1de87db426fdb9))
+* **script:** use checksums for self-update to prevent loop ([df6670a](https://github.com/Audumla/AUDiotMonitor/commit/df6670aeaff340fb9c27bc0c639b3516cd273a93))
+* **script:** use more robust sed pattern for CSS injection ([cdf47c4](https://github.com/Audumla/AUDiotMonitor/commit/cdf47c4d640d2e9c8d5edf938a687b602ec06b21))
+
 ## [0.7.3](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.2...monitoring-v0.7.3) (2026-03-20)
 
 
