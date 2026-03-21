@@ -17,13 +17,14 @@ echo "Applying Grafana UI patch..."
 echo "Copying CSS..."
 cp "$CSS_SRC_FILE" "$CSS_DEST_FILE" || echo "Warning: failed to copy CSS"
 
-# 2. Inject CSS link into index.html just before </head>
+# 2. Inject CSS link into index.html
 echo "Injecting CSS into index.html..."
 if grep -q "custom-grafana.css" "$INDEX_HTML"; then
     echo "CSS link already present in index.html"
 else
-    # We use an absolute path here so it works on any dashboard route
-    sed -i 's|</head>|<link rel="stylesheet" href="/public/img/custom-grafana.css">\n</head>|' "$INDEX_HTML" || echo "Warning: failed to inject CSS"
+    # Much more robust sed: find first </head> regardless of exact whitespace/case
+    # and insert our link before it.
+    sed -i 's|.*</[Hh][Ee][Aa][Dd]>.*|<link rel="stylesheet" href="/public/img/custom-grafana.css">\n&|' "$INDEX_HTML" || echo "Warning: failed to inject CSS"
     echo "CSS injected."
 fi
 
