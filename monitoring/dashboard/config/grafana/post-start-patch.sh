@@ -22,9 +22,9 @@ echo "Injecting CSS into index.html..."
 if grep -q "custom-grafana.css" "$INDEX_HTML"; then
     echo "CSS link already present in index.html"
 else
-    # Much more robust sed: find first </head> regardless of exact whitespace/case
-    # and insert our link before it.
-    sed -i 's|.*</[Hh][Ee][Aa][Dd]>.*|<link rel="stylesheet" href="/public/img/custom-grafana.css">\n&|' "$INDEX_HTML" || echo "Warning: failed to inject CSS"
+    # Replace </head> with our CSS link immediately before it.
+    # Inline replacement avoids \n in sed replacement (not reliable in BusyBox/Alpine).
+    sed -i 's|</head>|<link rel="stylesheet" href="/public/img/custom-grafana.css"></head>|' "$INDEX_HTML" || echo "Warning: failed to inject CSS"
     echo "CSS injected."
 fi
 

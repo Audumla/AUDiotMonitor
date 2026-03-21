@@ -13,7 +13,7 @@ set -euo pipefail
 # --- Configuration ---
 # All paths and settings are defined here for clarity.
 # If not explicitly set, try to detect if we are already in a dashboard directory.
-DEFAULT_INSTALL_DIR="/opt/docker/dashboard"
+DEFAULT_INSTALL_DIR="/opt/docker/services/dashboard"
 if [[ -f "./docker-compose.yml" ]] && [[ "$(basename "$(pwd)")" == "dashboard" ]]; then
     DEFAULT_INSTALL_DIR="$(pwd)"
 fi
@@ -126,9 +126,13 @@ do_set_dashboard() {
 do_restart_kiosk() {
     local TARGET_USER="$USER"
     local TARGET_HOME="$HOME"
+    local TARGET_UID
+    TARGET_UID=$(id -u)
+
     if [ "$EUID" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
         TARGET_USER="$SUDO_USER"
-        TARGET_HOME="$(eval echo ~$SUDO_USER)"
+        TARGET_HOME="$(eval echo ~"$SUDO_USER")"
+        TARGET_UID=$(id -u "$SUDO_USER")
     fi
 
     if systemctl --user is-active audiot-kiosk.service >/dev/null 2>&1; then
@@ -139,8 +143,22 @@ do_restart_kiosk() {
         pkill -f "chromium" || true
         sleep 1
         local KIOSK_LOG="/tmp/audiot-kiosk-${TARGET_USER}.log"
-        rm -f "$KIOSK_LOG"
-        DISPLAY=:0 XAUTHORITY="${TARGET_HOME}/.Xauthority" nohup "$KIOSK_SCRIPT" >"$KIOSK_LOG" 2>&1 &
+        # Ensure log file is owned by the target user to avoid permission errors
+        # when switching between sudo and the desktop user.
+        touch "$KIOSK_LOG"
+        chown "$TARGET_USER" "$KIOSK_LOG" 2>/dev/null || true
+
+        if [ "$EUID" -eq 0 ]; then
+            # Run kiosk as the actual desktop user, not as root
+            sudo -u "$TARGET_USER" env \
+                DISPLAY=:0 \
+                XAUTHORITY="${TARGET_HOME}/.Xauthority" \
+                XDG_RUNTIME_DIR="/run/user/${TARGET_UID}" \
+                nohup "$KIOSK_SCRIPT" >>"$KIOSK_LOG" 2>&1 &
+        else
+            DISPLAY=:0 XAUTHORITY="${TARGET_HOME}/.Xauthority" \
+                nohup "$KIOSK_SCRIPT" >>"$KIOSK_LOG" 2>&1 &
+        fi
         info "Kiosk process restarted. Logs: $KIOSK_LOG"
     else
         warn "Kiosk script not found. Cannot restart."
@@ -219,46 +237,50 @@ EOF
 }
 
 # Updates the script itself to the latest version.
+# $1 = the command to resume after updating (e.g. "update")
 do_self_update() {
+    local resume_cmd="${1:-update}"
+
+    # Guard: env var is set when we already replaced ourselves this run.
+    # Prevents an infinite loop if hashes still differ after installing.
+    if [ -n "${_AUDIOT_SKIP_SELF_UPDATE:-}" ]; then
+        return
+    fi
+
     info "Checking for updates to the 'audiot-dashboard' command..."
     local temp_script
     temp_script=$(mktemp)
-    
-    # Add a timestamp to the URL to bypass GitHub's raw file cache (usually 5 mins)
-    local cache_buster="?v=$(date +%s)"
-    
-    if fetch_from_repo "${SELF_URL}${cache_buster}" "$temp_script"; then
-        local local_hash=""
-        local remote_hash=""
-        
-        # Calculate hashes agnostic of line endings (strip \r)
-        get_hash() {
-            sed 's/\r$//' "$1" | sha256sum | cut -d' ' -f1
-        }
 
-        if [ -f "$SCRIPT_PATH_ON_HOST" ]; then
-            local_hash=$(get_hash "$SCRIPT_PATH_ON_HOST")
-        elif [ -f "$0" ]; then
-            local_hash=$(get_hash "$0")
-        fi
-        remote_hash=$(get_hash "$temp_script")
-        
-        if [[ "$local_hash" == "$remote_hash" ]]; then
-            info "'audiot-dashboard' is already at the latest version."
-            rm -f "$temp_script"
-            return
-        fi
-
-        info "Installing new version of 'audiot-dashboard'..."
-        sudo mv "$temp_script" "$SCRIPT_PATH_ON_HOST"
-        sudo chmod +x "$SCRIPT_PATH_ON_HOST"
-        info "'audiot-dashboard' updated. Resuming operation..."
-        
-        # Re-execute the new version of the script with the same arguments
-        exec "$SCRIPT_PATH_ON_HOST" "$@"
-    else
+    if ! fetch_from_repo "$SELF_URL" "$temp_script"; then
         die "Failed to download the latest version of the script."
     fi
+
+    # Calculate hashes, stripping Windows line-endings before comparing
+    get_hash() { sed 's/\r$//' "$1" | sha256sum | cut -d' ' -f1; }
+
+    local local_hash=""
+    if [ -f "$SCRIPT_PATH_ON_HOST" ]; then
+        local_hash=$(get_hash "$SCRIPT_PATH_ON_HOST")
+    elif [ -f "$0" ]; then
+        local_hash=$(get_hash "$0")
+    fi
+    local remote_hash
+    remote_hash=$(get_hash "$temp_script")
+
+    if [[ "$local_hash" == "$remote_hash" ]]; then
+        info "'audiot-dashboard' is already at the latest version."
+        rm -f "$temp_script"
+        return
+    fi
+
+    info "Installing new version of 'audiot-dashboard'..."
+    sudo mv "$temp_script" "$SCRIPT_PATH_ON_HOST"
+    sudo chmod +x "$SCRIPT_PATH_ON_HOST"
+    info "'audiot-dashboard' updated. Resuming '$resume_cmd'..."
+
+    # Re-execute the new script with the original command.
+    # The guard env var prevents do_self_update from running again on re-exec.
+    _AUDIOT_SKIP_SELF_UPDATE=1 exec "$SCRIPT_PATH_ON_HOST" "$resume_cmd"
 }
 
 # Shows the Grafana container logs.
@@ -285,7 +307,7 @@ main() {
             do_install_or_update "false"
             ;;
         update)
-            do_self_update
+            do_self_update "update"
             do_install_or_update "true"
             ;;
         set)
