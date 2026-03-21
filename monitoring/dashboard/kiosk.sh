@@ -222,11 +222,11 @@ if [ -z "${KIOSK_DASHBOARD:-}" ]; then
     echo "[kiosk] Detected resolution: $RES  →  dashboard: $DASHBOARD_UID"
 fi
 
-# The user's provided URL is the ground truth. The slug is the same as the UID.
+# The user's provided URL is the ground truth.
 # Parameters:
 # - kiosk: Hides the side navigation panel.
 # - _dash.hideTimePicker=true: Hides the top time picker and refresh bar.
-KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID/$DASHBOARD_UID?orgId=1&kiosk&_dash.hideTimePicker=true&from=now-5m&to=now"
+KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID/$DASHBOARD_UID?orgId=1&kiosk&_dash.hideTimePicker=true&from=now-5m&to=now&timezone=browser&refresh=5s"
 echo "[kiosk] URL: $KIOSK_URL"
 
 # Configure screen blanking and power management

@@ -22,8 +22,8 @@ echo "Injecting CSS into index.html..."
 if grep -q "custom-grafana.css" "$INDEX_HTML"; then
     echo "CSS link already present in index.html"
 else
-    # We use a relative path here so it works regardless of root_url
-    sed -i 's|</head>|<link rel="stylesheet" href="public/img/custom-grafana.css">\n</head>|' "$INDEX_HTML" || echo "Warning: failed to inject CSS"
+    # We use an absolute path here so it works on any dashboard route
+    sed -i 's|</head>|<link rel="stylesheet" href="/public/img/custom-grafana.css">\n</head>|' "$INDEX_HTML" || echo "Warning: failed to inject CSS"
     echo "CSS injected."
 fi
 
