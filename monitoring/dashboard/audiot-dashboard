@@ -124,8 +124,10 @@ do_restart_kiosk() {
         pkill -f "kiosk.sh" || true
         pkill -f "chromium" || true
         sleep 1
-        DISPLAY=:0 XAUTHORITY="$HOME/.Xauthority" nohup "$KIOSK_SCRIPT" >/tmp/audiot-kiosk.log 2>&1 &
-        info "Kiosk process restarted."
+        local KIOSK_LOG="/tmp/audiot-kiosk-${TARGET_USER:-$USER}.log"
+        rm -f "$KIOSK_LOG"
+        DISPLAY=:0 XAUTHORITY="${TARGET_HOME:-$HOME}/.Xauthority" nohup "$KIOSK_SCRIPT" >"$KIOSK_LOG" 2>&1 &
+        info "Kiosk process restarted. Logs: $KIOSK_LOG"
     else
         warn "Kiosk script not found. Cannot restart."
     fi
