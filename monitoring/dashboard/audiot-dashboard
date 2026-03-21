@@ -12,7 +12,13 @@ set -euo pipefail
 
 # --- Configuration ---
 # All paths and settings are defined here for clarity.
-INSTALL_DIR="${AUDIOT_INSTALL_DIR:-/opt/docker/dashboard}"
+# If not explicitly set, try to detect if we are already in a dashboard directory.
+DEFAULT_INSTALL_DIR="/opt/docker/dashboard"
+if [[ -f "./docker-compose.yml" ]] && [[ "$(basename "$(pwd)")" == "dashboard" ]]; then
+    DEFAULT_INSTALL_DIR="$(pwd)"
+fi
+
+INSTALL_DIR="${AUDIOT_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 REPO_BASE_URL="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main"
 DOCKER_COMPOSE_URL="$REPO_BASE_URL/monitoring/dashboard/docker-compose.yml"
 SELF_URL="$REPO_BASE_URL/monitoring/dashboard/audiot-dashboard" # URL to this script itself
