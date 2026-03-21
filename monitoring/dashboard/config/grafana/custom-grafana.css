@@ -28,25 +28,33 @@ a[aria-label="Help"],
 
 /* ── 2. Prevent scrollbars / force exact viewport fit ─────────────────────── */
 
-/* Hide ALL scrollbars in Chromium at the browser-engine level.
- * This is the most reliable approach for a Chromium kiosk — it works
- * regardless of Grafana's dynamically generated class names or React DOM
- * structure. Dynamic: applies at any screen resolution. */
-::-webkit-scrollbar {
+/* Grafana uses the "baron" library for custom scrollbars.
+ * The visible scrollbar is .baron__bar (a 6px div, position:absolute, right:0).
+ * Hide it and its track — this is the targeted fix for any screen resolution. */
+.baron__bar,
+.baron__track {
     display: none !important;
-    width: 0 !important;
-    height: 0 !important;
 }
 
-/* Suppress outer-page overflow as a belt-and-suspenders measure */
+/* Also suppress the native browser scrollbar on the baron scroller
+ * (belt-and-suspenders for any overflow that baron doesn't intercept) */
+.baron__scroller {
+    overflow: hidden !important;
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+}
+.baron__scroller::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* Suppress outer-page overflow */
 html,
 body {
     overflow: hidden !important;
     height: 100% !important;
 }
 
-/* react-grid-layout adds a bottom margin after the last panel row.
- * Remove it so the grid height matches the panel height exactly. */
+/* react-grid-layout adds a bottom margin after the last panel row */
 .react-grid-layout {
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
