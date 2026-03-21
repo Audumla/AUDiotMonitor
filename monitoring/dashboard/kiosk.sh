@@ -193,12 +193,14 @@ resolve_dashboard_uid() {
 wait_for_grafana() {
     echo "[kiosk] Waiting for Grafana at $GRAFANA_URL ..."
     local i=0
-    while ! curl -sf "$GRAFANA_URL/api/health" > /dev/null 2>&1; do
+    # Use max-time to prevent curl from hanging indefinitely on unresolved hosts
+    while ! curl -sf --max-time 2 "$GRAFANA_URL/api/health" > /dev/null 2>&1; do
         i=$((i + 1))
-        [ "$i" -ge 72 ] && { echo "[kiosk] Grafana did not respond after 6 min — launching anyway"; return; }
+        [ "$i" -ge 72 ] && { echo -e "\n[kiosk] Grafana did not respond after 6 min — launching anyway"; return; }
+        echo -n "."
         sleep 5
     done
-    echo "[kiosk] Grafana ready"
+    echo -e "\n[kiosk] Grafana ready"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
