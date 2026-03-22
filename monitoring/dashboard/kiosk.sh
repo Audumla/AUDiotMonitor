@@ -4,6 +4,10 @@
 # Detects the connected screen resolution and opens the best-matching dashboard
 # in Chromium fullscreen/kiosk mode. Restarts Chromium automatically on exit.
 #
+# Supports two compositor backends (auto-detected):
+#   Wayland  — wlopm for DPMS, wlr-randr for resolution (e.g. RPi Desktop / labwc)
+#   X11      — xset dpms for DPMS, xrandr for resolution (e.g. DietPi + openbox)
+#
 # Usage:
 #   ./kiosk.sh [grafana-url]
 
@@ -21,7 +25,9 @@ GRAFANA_URL="${GRAFANA_URL:-${1:-http://localhost:3000}}"
 REFRESH="${KIOSK_REFRESH:-30s}"
 USER_ID="$(id -u)"
 
-# Environment recovery for display access
+# ── Display backend detection ─────────────────────────────────────────────────
+# Prefer Wayland if a socket exists; fall back to X11.
+
 XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$USER_ID}"
 if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
     WAYLAND_DISPLAY="wayland-0"
@@ -32,17 +38,31 @@ fi
 if [ -z "${XAUTHORITY:-}" ] && [ -f "$HOME/.Xauthority" ]; then
     XAUTHORITY="$HOME/.Xauthority"
 fi
+if [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    DISPLAY=":0"
+fi
 
 export XDG_RUNTIME_DIR
 [ -n "${WAYLAND_DISPLAY:-}" ] && export WAYLAND_DISPLAY
 [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] && export DBUS_SESSION_BUS_ADDRESS
 [ -n "${XAUTHORITY:-}" ] && export XAUTHORITY
+[ -n "${DISPLAY:-}" ] && export DISPLAY
+
+# Select backend: "wayland" if wlopm is available and WAYLAND_DISPLAY is set;
+# otherwise "x11" (requires xset).
+if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlopm &>/dev/null; then
+    _BACKEND="wayland"
+else
+    _BACKEND="x11"
+fi
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [kiosk] $*"
 }
+
+log "Display backend: $_BACKEND (DISPLAY=${DISPLAY:-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-})"
 
 # ── Resolution Detection ──────────────────────────────────────────────────────
 
@@ -129,18 +149,19 @@ KIOSK_URL="$GRAFANA_URL/d/$DASHBOARD_UID/$DASHBOARD_UID?orgId=1&kiosk&_dash.hide
 log "URL: $KIOSK_URL"
 
 # ── Screen power management (DPMS) ────────────────────────────────────────────
-# Works on Wayland via wlopm (direct output power control).
 # Touch/input events on /dev/input are monitored directly so the display wakes
-# even when the Wayland compositor does not route touch through idle-notify.
+# even when the compositor does not route touch through its idle-notify protocol.
 #
-# KIOSK_DPMS_STANDBY  : seconds of inactivity before display powers off (dim)
+# Wayland backend: wlopm --on/--off '*'
+# X11 backend:     xset dpms force on/off
+#
+# KIOSK_DPMS_STANDBY  : seconds of inactivity before display dims/powers off
 # KIOSK_DPMS_OFF      : seconds of inactivity before display fully powers off
 # KIOSK_IDLE_TIMEOUT  : shorthand when standby == off (0 = always on)
 # KIOSK_TOUCH_DEVICE  : override input device path (auto-detected if blank)
 
 find_input_device() {
     # Print the first readable touch/pointer input device path; always returns 0.
-    # (Caller checks for empty output — returning non-zero would trigger set -e.)
     for sysname in /sys/class/input/event*/device/name; do
         [ -f "$sysname" ] || continue
         name=$(cat "$sysname" 2>/dev/null)
@@ -163,6 +184,7 @@ elif [ -n "${KIOSK_DPMS_STANDBY:-}${KIOSK_DPMS_OFF:-}" ]; then
 fi
 
 pkill -f swayidle 2>/dev/null || true
+pkill -f xautolock 2>/dev/null || true
 pkill -f 'dd if=/dev/input' 2>/dev/null || true
 
 _DPMS_LOG="/tmp/kiosk-dpms-${USER}.log"
@@ -170,32 +192,49 @@ _DPMS_LOG="/tmp/kiosk-dpms-${USER}.log"
 if [ "$_dpms_enabled" = "true" ]; then
     dim_t="${KIOSK_DPMS_STANDBY:-${KIOSK_IDLE_TIMEOUT:-600}}"
     off_t="${KIOSK_DPMS_OFF:-${KIOSK_IDLE_TIMEOUT:-1800}}"
-    log "Screen power management: dim=${dim_t}s off=${off_t}s"
+    log "Screen power management: dim=${dim_t}s off=${off_t}s (backend: $_BACKEND)"
 
     INPUT_DEV="${KIOSK_TOUCH_DEVICE:-$(find_input_device 2>/dev/null)}"
 
-    if [ -n "$INPUT_DEV" ] && [ -r "$INPUT_DEV" ] && command -v wlopm &>/dev/null; then
+    # Check if we have a usable DPMS control tool for this backend
+    _dpms_tool_ok=false
+    if [ "$_BACKEND" = "wayland" ] && command -v wlopm &>/dev/null; then
+        _dpms_tool_ok=true
+    elif [ "$_BACKEND" = "x11" ] && command -v xset &>/dev/null; then
+        _dpms_tool_ok=true
+    fi
+
+    if [ -n "$INPUT_DEV" ] && [ -r "$INPUT_DEV" ] && [ "$_dpms_tool_ok" = "true" ]; then
         log "Input-DPMS: watching $INPUT_DEV (off after ${off_t}s, wake on touch)"
         # Direct input monitor: polls device in 5s windows to track idle time.
         # Turns display off after off_t seconds of no input; wakes immediately on touch.
-        # WAYLAND_DISPLAY and XDG_RUNTIME_DIR are hardcoded at fork time for reliability.
+        _DPMS_BACKEND="$_BACKEND"
         _DPMS_WD="${WAYLAND_DISPLAY:-wayland-0}"
         _DPMS_XR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        _DPMS_DP="${DISPLAY:-:0}"
         _DPMS_DEV="$INPUT_DEV"
         _DPMS_DIM="$dim_t"
         _DPMS_OFF="$off_t"
         (
             _state=on
             _last=$(date +%s)
-            _wlopm_on()  {
-                WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" wlopm --on  '*' 2>/dev/null || true
+            _dpms_on() {
+                if [ "$_DPMS_BACKEND" = "wayland" ]; then
+                    WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" wlopm --on  '*' 2>/dev/null || true
+                else
+                    DISPLAY="$_DPMS_DP" xset dpms force on 2>/dev/null || true
+                fi
                 echo "$(date '+%Y-%m-%d %H:%M:%S') display ON" >> "$_DPMS_LOG"
             }
-            _wlopm_off() {
-                WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" wlopm --off '*' 2>/dev/null || true
+            _dpms_off() {
+                if [ "$_DPMS_BACKEND" = "wayland" ]; then
+                    WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" wlopm --off '*' 2>/dev/null || true
+                else
+                    DISPLAY="$_DPMS_DP" xset dpms force off 2>/dev/null || true
+                fi
                 echo "$(date '+%Y-%m-%d %H:%M:%S') display OFF" >> "$_DPMS_LOG"
             }
-            echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS started: dev=$_DPMS_DEV WD=$_DPMS_WD XR=$_DPMS_XR off=${_DPMS_OFF}s" >> "$_DPMS_LOG"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS started: dev=$_DPMS_DEV backend=$_DPMS_BACKEND off=${_DPMS_OFF}s" >> "$_DPMS_LOG"
             while true; do
                 # Re-detect device if it disappeared (e.g. ILITEK-TOUCH USB reconnect)
                 if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
@@ -212,17 +251,17 @@ if [ "$_dpms_enabled" = "true" ]; then
                 if timeout 5 dd if="$_DPMS_DEV" bs=24 count=1 >/dev/null 2>&1; then
                     # Input received — always wake display (idempotent if already on)
                     _last=$(date +%s)
-                    _wlopm_on
+                    _dpms_on
                     _state=on
                 else
                     # 5-second window with no input — check idle duration
                     _now=$(date +%s)
                     _idle=$(( _now - _last ))
                     if [ "$_state" != "off" ] && [ "$_idle" -ge "$_DPMS_OFF" ]; then
-                        _wlopm_off
+                        _dpms_off
                         _state=off
                     elif [ "$_state" = "on" ] && [ "$_idle" -ge "$_DPMS_DIM" ]; then
-                        _wlopm_off
+                        _dpms_off
                         _state=dim
                     fi
                 fi
@@ -230,22 +269,30 @@ if [ "$_dpms_enabled" = "true" ]; then
         ) &
         log "Input-DPMS daemon started (pid $!)"
 
-    elif command -v wlopm &>/dev/null; then
-        # No readable input device — fall back to swayidle for timer-based off
-        log "No input device found; using swayidle for DPMS (wake requires physical compositor activity)"
-        if command -v swayidle &>/dev/null; then
+    elif [ "$_dpms_tool_ok" = "true" ]; then
+        # No readable input device — timer-based fallback
+        log "No input device found; using timer-based DPMS (wake requires physical display activity)"
+        if [ "$_BACKEND" = "wayland" ] && command -v swayidle &>/dev/null; then
             swayidle -w \
                 timeout "$dim_t" "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)} wlopm --off '*' 2>/dev/null || true" \
                 resume           "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)} wlopm --on  '*' 2>/dev/null || true" \
                 &
             log "swayidle started (pid $!)"
+        elif [ "$_BACKEND" = "x11" ]; then
+            # Configure X11 DPMS timers directly; xset handles idle timing in the X server
+            DISPLAY="${DISPLAY:-:0}" xset +dpms 2>/dev/null || true
+            DISPLAY="${DISPLAY:-:0}" xset dpms "$dim_t" "$dim_t" "$off_t" 2>/dev/null || true
+            log "X11 DPMS timers set (standby=${dim_t}s off=${off_t}s)"
         fi
     fi
 else
     log "Screen power management disabled (always on)"
-    if command -v wlopm &>/dev/null; then
+    if [ "$_BACKEND" = "wayland" ] && command -v wlopm &>/dev/null; then
         WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
             wlopm --on '*' 2>/dev/null || true
+    elif [ "$_BACKEND" = "x11" ] && command -v xset &>/dev/null; then
+        DISPLAY="${DISPLAY:-:0}" xset -dpms 2>/dev/null || true
+        DISPLAY="${DISPLAY:-:0}" xset s off 2>/dev/null || true
     fi
 fi
 
@@ -272,11 +319,18 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
-log "Launching $CHROMIUM in kiosk mode"
+# Select Chromium ozone platform flag based on backend
+if [ "$_BACKEND" = "wayland" ]; then
+    _OZONE_FLAG="--ozone-platform=wayland"
+else
+    _OZONE_FLAG="--ozone-platform=x11"
+fi
+
+log "Launching $CHROMIUM in kiosk mode ($_OZONE_FLAG)"
 
 while true; do
     "$CHROMIUM" \
-        --ozone-platform=wayland \
+        $_OZONE_FLAG \
         --kiosk \
         --noerrdialogs \
         --disable-infobars \
