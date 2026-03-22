@@ -4,280 +4,235 @@
   "tags": ["audiot", "custom", "wide", "gpu"],
   "timezone": "browser",
   "schemaVersion": 38,
-  "refresh": "5s",
+  "refresh": "2s",
   "time": { "from": "now-5m", "to": "now" },
   "panels": [
+
     {
       "id": 1,
-      "type": "gauge",
+      "type": "timeseries",
       "title": "GPU (AMD 7900XTX 1)",
       "gridPos": { "h": 5, "w": 3, "x": 0, "y": 0 },
-      "targets": [{
-        "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:03:00.0\"}",
-        "legendFormat": "GPU 1"
-      }],
+      "targets": [{ "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:03:00.0\"}", "legendFormat": "Compute" }],
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
+          "unit": "percent", "min": 0, "max": 100,
           "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 60 },
-              { "color": "orange", "value": 80 },
-              { "color": "red", "value": 95 }
-            ]
-          }
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 60 },
+            { "color": "orange", "value": 80 },
+            { "color": "red", "value": 95 }
+          ]}
         }
       }
     },
-    {
-      "id": 2,
-      "type": "gauge",
-      "title": "VRAM (7900XTX 1)",
-      "gridPos": { "h": 6, "w": 3, "x": 0, "y": 5 },
-      "targets": [{
-        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100",
-        "legendFormat": "VRAM 1"
-      }],
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "orange", "value": 85 },
-              { "color": "red", "value": 95 }
-            ]
-          }
-        }
-      }
-    },
+
     {
       "id": 3,
-      "type": "gauge",
+      "type": "timeseries",
       "title": "GPU (AMD 7900XTX 2)",
       "gridPos": { "h": 5, "w": 3, "x": 3, "y": 0 },
-      "targets": [{
-        "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:06:00.0\"}",
-        "legendFormat": "GPU 2"
-      }],
+      "targets": [{ "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:06:00.0\"}", "legendFormat": "Compute" }],
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
+          "unit": "percent", "min": 0, "max": 100,
           "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 60 },
-              { "color": "orange", "value": 80 },
-              { "color": "red", "value": 95 }
-            ]
-          }
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 60 },
+            { "color": "orange", "value": 80 },
+            { "color": "red", "value": 95 }
+          ]}
         }
       }
     },
-    {
-      "id": 4,
-      "type": "gauge",
-      "title": "VRAM (7900XTX 2)",
-      "gridPos": { "h": 6, "w": 3, "x": 3, "y": 5 },
-      "targets": [{
-        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100",
-        "legendFormat": "VRAM 2"
-      }],
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "orange", "value": 85 },
-              { "color": "red", "value": 95 }
-            ]
-          }
-        }
-      }
-    },
+
     {
       "id": 5,
-      "type": "gauge",
+      "type": "timeseries",
       "title": "GPU (RX 6900XE)",
       "gridPos": { "h": 5, "w": 3, "x": 6, "y": 0 },
-      "targets": [{
-        "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:7e:00.0\"}",
-        "legendFormat": "GPU 3"
-      }],
+      "targets": [{ "expr": "hw_device_utilization_percent{device_class=\"gpu\", component=\"compute\", device_id=\"pci-0000:7e:00.0\"}", "legendFormat": "Compute" }],
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
+          "unit": "percent", "min": 0, "max": 100,
           "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 60 },
-              { "color": "orange", "value": 80 },
-              { "color": "red", "value": 95 }
-            ]
-          }
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 60 },
+            { "color": "orange", "value": 80 },
+            { "color": "red", "value": 95 }
+          ]}
         }
       }
     },
-    {
-      "id": 6,
-      "type": "gauge",
-      "title": "VRAM (RX 6900XE)",
-      "gridPos": { "h": 6, "w": 3, "x": 6, "y": 5 },
-      "targets": [{
-        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100",
-        "legendFormat": "VRAM 3"
-      }],
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "orange", "value": 85 },
-              { "color": "red", "value": 95 }
-            ]
-          }
-        }
-      }
-    },
+
     {
       "id": 7,
-      "type": "gauge",
-      "title": "CPU",
-      "gridPos": { "h": 9, "w": 3, "x": 18, "y": 0 },
-      "targets": [{
-        "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
-        "legendFormat": "CPU"
-      }],
+      "type": "timeseries",
+      "title": "System CPU",
+      "gridPos": { "h": 5, "w": 15, "x": 9, "y": 0 },
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[30s])) * 100)", "legendFormat": "CPU %" }],
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
+          "unit": "percent", "min": 0, "max": 100,
           "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 50 },
-              { "color": "orange", "value": 75 },
-              { "color": "red", "value": 90 }
-            ]
-          }
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 50 },
+            { "color": "orange", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
         }
       }
     },
+
     {
-      "id": 8,
-      "type": "gauge",
-      "title": "RAM",
-      "gridPos": { "h": 9, "w": 3, "x": 21, "y": 0 },
-      "targets": [{
-        "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
-        "legendFormat": "RAM"
-      }],
+      "id": 2,
+      "type": "timeseries",
+      "title": "VRAM (7900XTX 1)",
+      "gridPos": { "h": 6, "w": 3, "x": 0, "y": 5 },
+      "targets": [{ "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100", "legendFormat": "VRAM %" }],
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "noValue": "N/A"
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
+          "unit": "percent", "min": 0, "max": 100,
           "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 60 },
-              { "color": "orange", "value": 80 },
-              { "color": "red", "value": 92 }
-            ]
-          }
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "orange", "value": 85 },
+            { "color": "red", "value": 95 }
+          ]}
+        }
+      }
+    },
+
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "VRAM (7900XTX 2)",
+      "gridPos": { "h": 6, "w": 3, "x": 3, "y": 5 },
+      "targets": [{ "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100", "legendFormat": "VRAM %" }],
+      "options": {
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "color": { "mode": "thresholds" },
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "orange", "value": 85 },
+            { "color": "red", "value": 95 }
+          ]}
+        }
+      }
+    },
+
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "VRAM (RX 6900XE)",
+      "gridPos": { "h": 6, "w": 3, "x": 6, "y": 5 },
+      "targets": [{ "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100", "legendFormat": "VRAM %" }],
+      "options": {
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "color": { "mode": "thresholds" },
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "orange", "value": 85 },
+            { "color": "red", "value": 95 }
+          ]}
+        }
+      }
+    },
+
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "System RAM",
+      "gridPos": { "h": 6, "w": 8, "x": 9, "y": 5 },
+      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "RAM %" }],
+      "options": {
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "color": { "mode": "thresholds" },
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 60 },
+            { "color": "orange", "value": 80 },
+            { "color": "red", "value": 92 }
+          ]}
+        }
+      }
+    },
+
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "PSU Output",
+      "gridPos": { "h": 6, "w": 7, "x": 17, "y": 5 },
+      "targets": [{ "expr": "sum(node_hwmon_power_watt)", "legendFormat": "Watts" }],
+      "options": {
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": { "displayMode": "hidden", "showLegend": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "min": 0,
+          "color": { "mode": "thresholds" },
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 800 },
+            { "color": "orange", "value": 1200 },
+            { "color": "red", "value": 1600 }
+          ]}
         }
       }
     }
+
   ]
 }

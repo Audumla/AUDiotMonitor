@@ -197,6 +197,18 @@ if [ "$_dpms_enabled" = "true" ]; then
             }
             echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS started: dev=$_DPMS_DEV WD=$_DPMS_WD XR=$_DPMS_XR off=${_DPMS_OFF}s" >> "$_DPMS_LOG"
             while true; do
+                # Re-detect device if it disappeared (e.g. ILITEK-TOUCH USB reconnect)
+                if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
+                    _new_dev=$(find_input_device 2>/dev/null)
+                    if [ -n "$_new_dev" ] && [ "$_new_dev" != "$_DPMS_DEV" ]; then
+                        _DPMS_DEV="$_new_dev"
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS: device -> $_DPMS_DEV" >> "$_DPMS_LOG"
+                    fi
+                    if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
+                        sleep 5
+                        continue
+                    fi
+                fi
                 if timeout 5 dd if="$_DPMS_DEV" bs=24 count=1 >/dev/null 2>&1; then
                     # Input received — always wake display (idempotent if already on)
                     _last=$(date +%s)
@@ -264,6 +276,7 @@ log "Launching $CHROMIUM in kiosk mode"
 
 while true; do
     "$CHROMIUM" \
+        --ozone-platform=wayland \
         --kiosk \
         --noerrdialogs \
         --disable-infobars \

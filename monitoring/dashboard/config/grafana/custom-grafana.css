@@ -62,19 +62,13 @@ body {
 
 /* ── 3. Panel title: center and prevent truncation ───────────────────────── */
 
-.panel-title-text,
-[class*="panel-title"] h2,
-[class*="panelTitle"] {
+/* Grafana 12 renders panel titles as <h2 class="css-1fxx2s4"> inside css-1io1zg-panel-title */
+.react-grid-item h2,
+h2.css-1fxx2s4 {
     text-align: center !important;
-    width: 100% !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
-    white-space: normal !important;
 }
 
-/* The title container also clips — expand it */
-.panel-title,
-[class*="panel-header"],
-[class*="panelHeader"] {
+/* Allow full title to show without clipping */
+.css-1io1zg-panel-title {
     overflow: visible !important;
 }
