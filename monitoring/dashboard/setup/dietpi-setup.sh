@@ -103,6 +103,21 @@ log "udev rule installed"
 usermod -aG docker "$KIOSK_USER" 2>/dev/null || true
 log "Added $KIOSK_USER to docker group"
 
+# ── 6. Prometheus config for DietPi (single-host layout) ─────────────────────
+
+PROMETHEUS_CFG="$KIOSK_DIR/config/prometheus/prometheus.yml"
+DIETPI_CFG="$KIOSK_DIR/config/prometheus/prometheus.dietpi.yml"
+if [ -f "$DIETPI_CFG" ] && [ ! -f "$PROMETHEUS_CFG" ]; then
+    cp "$DIETPI_CFG" "$PROMETHEUS_CFG"
+    log "Installed prometheus.yml for DietPi single-host layout"
+fi
+
 log ""
-log "Setup complete. Reboot to start the kiosk."
+log "Setup complete."
+log ""
+log "Start the monitoring stack:"
+log "  cd $KIOSK_DIR"
+log "  docker compose -f docker-compose.dietpi.yml up -d"
+log ""
+log "Then reboot to start the kiosk browser:"
 log "  sudo reboot"
