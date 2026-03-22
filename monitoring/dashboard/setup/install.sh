@@ -1,52 +1,59 @@
 #!/usr/bin/env bash
 # AUDiot DietPi Bootstrap Installer
 #
-# Downloads and installs the complete AUDiot monitoring stack on a fresh DietPi host.
-# Handles prerequisites, layout deployment, Docker stack startup, and kiosk setup.
+# Installs the complete AUDiot monitoring stack on a fresh DietPi host.
+# Pulls all Docker images from Docker Hub — no git clone required.
 #
 # Run as root:
 #   curl -sSL https://raw.githubusercontent.com/Audumla/AUDiotMonitor/dietpi/monitoring/dashboard/setup/install.sh | sudo bash
 #
-# Or with options:
-#   sudo bash install.sh [--no-kiosk] [--branch dietpi] [--install-dir /opt/docker/services/dashboard]
+# Options (set as env vars or flags):
+#   --no-kiosk            Skip X11 kiosk setup (headless/server mode)
+#   --tag <tag>           Docker image tag (default: latest)
+#   --install-dir <path>  Deploy path (default: /opt/docker/services/dashboard)
+#   --user <name>         Kiosk user (default: dietpi)
 
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-REPO_URL="${AUDIOT_REPO:-https://github.com/Audumla/AUDiotMonitor.git}"
 BRANCH="${AUDIOT_BRANCH:-dietpi}"
+RAW_BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/${BRANCH}/monitoring/dashboard"
 INSTALL_DIR="${INSTALL_DIR:-/opt/docker/services/dashboard}"
 KIOSK_USER="${KIOSK_USER:-dietpi}"
+AUDIOT_TAG="${AUDIOT_TAG:-latest}"
 SETUP_KIOSK=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --no-kiosk)    SETUP_KIOSK=false; shift ;;
-        --branch)      BRANCH="$2"; shift 2 ;;
+        --tag)         AUDIOT_TAG="$2"; shift 2 ;;
         --install-dir) INSTALL_DIR="$2"; shift 2 ;;
         --user)        KIOSK_USER="$2"; shift 2 ;;
-        *) echo "Unknown option: $1"; exit 1 ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
 
-CLONE_DIR="/tmp/audiot-install-$$"
+log() { echo "$(date '+%H:%M:%S') [audiot-install] $*"; }
 
-log()  { echo "$(date '+%H:%M:%S') [audiot-install] $*"; }
-die()  { echo "ERROR: $*" >&2; exit 1; }
+fetch() {
+    local url="$RAW_BASE/$1"
+    local dst="$2"
+    mkdir -p "$(dirname "$dst")"
+    curl -fsSL "$url" -o "$dst"
+    log "  fetched $(basename "$dst")"
+}
 
 # ── 1. Prerequisites ──────────────────────────────────────────────────────────
 
 log "Installing prerequisites..."
 apt-get update -qq
-apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    ca-certificates \
-    docker.io \
-    docker-compose-plugin
+apt-get install -y --no-install-recommends curl ca-certificates
 
-# Add kiosk user to docker group
+# Docker
+if ! command -v docker &>/dev/null; then
+    curl -fsSL https://get.docker.com | sh
+fi
 usermod -aG docker "$KIOSK_USER" 2>/dev/null || true
 
 if [ "$SETUP_KIOSK" = "true" ]; then
@@ -60,44 +67,37 @@ if [ "$SETUP_KIOSK" = "true" ]; then
         x11-xserver-utils
 fi
 
-# ── 2. Clone repository ───────────────────────────────────────────────────────
+# ── 2. Fetch host-side files from GitHub raw ──────────────────────────────────
 
-log "Cloning $REPO_URL (branch: $BRANCH)..."
-rm -rf "$CLONE_DIR"
-git clone --depth=1 --branch "$BRANCH" "$REPO_URL" "$CLONE_DIR"
-SOURCE_DIR="$CLONE_DIR/monitoring/dashboard"
-
-# ── 3. Deploy layout ──────────────────────────────────────────────────────────
-
-log "Deploying layout to $INSTALL_DIR..."
+log "Fetching config files..."
 mkdir -p "$INSTALL_DIR"
-INSTALL_DIR="$INSTALL_DIR" bash "$SOURCE_DIR/install-layout.sh"
 
-# DietPi uses the combined compose file as the default
-cp "$SOURCE_DIR/docker-compose.dietpi.yml" "$INSTALL_DIR/docker-compose.yml"
-log "Installed docker-compose.yml (DietPi combined stack)"
+fetch "docker-compose.dietpi.yml"             "$INSTALL_DIR/docker-compose.yml"
+fetch "config/prometheus/prometheus.dietpi.yml" "$INSTALL_DIR/config/prometheus/prometheus.yml"
+fetch "config/kiosk.env.example"              "$INSTALL_DIR/config/kiosk.env"
+fetch "audiot-kiosk.service"                  "$INSTALL_DIR/audiot-kiosk.service"
 
-# Deploy prometheus config for DietPi single-host layout
-PROM_CFG="$INSTALL_DIR/config/prometheus/prometheus.yml"
-mkdir -p "$(dirname "$PROM_CFG")"
-if [ ! -f "$PROM_CFG" ]; then
-    cp "$SOURCE_DIR/config/prometheus/prometheus.dietpi.yml" "$PROM_CFG"
-    log "Installed prometheus.yml"
-fi
+# kiosk.sh: also baked into the Docker image, but needed on the host
+# before the container has started for the first time.
+fetch "kiosk.sh" "$INSTALL_DIR/kiosk.sh"
+chmod +x "$INSTALL_DIR/kiosk.sh"
 
-# Copy kiosk service file
-cp "$SOURCE_DIR/audiot-kiosk.service" "$INSTALL_DIR/audiot-kiosk.service"
-
-# Fix ownership of install directory
 chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR" 2>/dev/null || true
 
-# ── 4. udev rule: ILITEK touchscreen autosuspend ──────────────────────────────
+# ── 3. udev rule: ILITEK touchscreen autosuspend ──────────────────────────────
 
 log "Installing udev rule for ILITEK touchscreen..."
 cat > /etc/udev/rules.d/99-ilitek-touch.rules << 'EOF'
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="222a", ATTR{power/control}="on"
 EOF
 udevadm control --reload-rules
+
+# ── 4. Start monitoring stack ─────────────────────────────────────────────────
+
+log "Pulling images and starting monitoring stack..."
+cd "$INSTALL_DIR"
+AUDIOT_TAG="$AUDIOT_TAG" docker compose up -d
+log "Stack started"
 
 # ── 5. Kiosk X11 autologin and systemd service ────────────────────────────────
 
@@ -123,14 +123,12 @@ if [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
 fi
 BASHEOF
         chown "$KIOSK_USER:$KIOSK_USER" "$PROFILE" 2>/dev/null || true
-        log "Updated $PROFILE"
     fi
 
-    # Minimal .xinitrc: openbox + kiosk service wakes into it
+    # Minimal .xinitrc: openbox session (kiosk.sh handles DPMS itself)
     XINITRC="/home/$KIOSK_USER/.xinitrc"
     cat > "$XINITRC" << 'XINITEOF'
 #!/bin/sh
-# AUDiot kiosk X session
 xset s off
 xset -dpms
 xset s noblank
@@ -140,41 +138,29 @@ XINITEOF
     chmod +x "$XINITRC"
     chown "$KIOSK_USER:$KIOSK_USER" "$XINITRC" 2>/dev/null || true
 
-    # Install and enable kiosk systemd user service
-    # Use user service so it starts after the X session is up
-    SERVICE_SRC="$INSTALL_DIR/audiot-kiosk.service"
+    # Install kiosk as a systemd user service
     USER_SERVICE_DIR="/home/$KIOSK_USER/.config/systemd/user"
     mkdir -p "$USER_SERVICE_DIR"
-    # Patch User= out of service file (not needed for user service)
-    sed '/^User=/d' "$SERVICE_SRC" > "$USER_SERVICE_DIR/audiot-kiosk.service"
+    sed '/^User=/d' "$INSTALL_DIR/audiot-kiosk.service" \
+        > "$USER_SERVICE_DIR/audiot-kiosk.service"
     chown -R "$KIOSK_USER:$KIOSK_USER" "/home/$KIOSK_USER/.config" 2>/dev/null || true
-    # Enable lingering so user services start at boot
     loginctl enable-linger "$KIOSK_USER" 2>/dev/null || true
-    # Enable the service for the kiosk user
-    sudo -u "$KIOSK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$KIOSK_USER")" \
+    sudo -u "$KIOSK_USER" \
+        XDG_RUNTIME_DIR="/run/user/$(id -u "$KIOSK_USER")" \
         systemctl --user enable audiot-kiosk.service 2>/dev/null || true
-    log "audiot-kiosk.service installed as user service for $KIOSK_USER"
+    log "audiot-kiosk.service enabled for $KIOSK_USER"
 fi
 
-# ── 6. Start monitoring stack ─────────────────────────────────────────────────
-
-log "Starting monitoring stack..."
-cd "$INSTALL_DIR"
-docker compose up -d
-log "Stack started"
-
-# ── 7. Cleanup ────────────────────────────────────────────────────────────────
-
-rm -rf "$CLONE_DIR"
+# ── Done ──────────────────────────────────────────────────────────────────────
 
 log ""
 log "Installation complete."
 log ""
-log "Monitoring stack: docker compose -f $INSTALL_DIR/docker-compose.yml ps"
-log "Grafana:          http://localhost:3000  (admin / admin)"
-log "Prometheus:       http://localhost:9090"
+log "Stack status:  docker compose -C $INSTALL_DIR ps"
+log "Grafana:       http://$(hostname -I | awk '{print $1}'):3000  (admin / admin)"
+log "Prometheus:    http://$(hostname -I | awk '{print $1}'):9090"
 if [ "$SETUP_KIOSK" = "true" ]; then
     log ""
-    log "Reboot to start the kiosk display:"
+    log "Reboot to launch the kiosk display:"
     log "  sudo reboot"
 fi
