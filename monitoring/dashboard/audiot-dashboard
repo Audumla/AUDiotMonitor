@@ -63,13 +63,6 @@ create_layout() {
     info "Layout created."
 }
 
-# Applies the UI patch to the running Grafana container
-do_apply_patch() {
-    info "Applying UI patch to Grafana container..."
-    # Sleep briefly to ensure the container is ready to accept exec commands
-    sleep 3
-    docker compose -f "$INSTALL_DIR/docker-compose.yml" exec -u root grafana /bin/sh /opt/grafana-patch/post-start-patch.sh || warn "Failed to apply UI patch."
-}
 
 # Installs or updates the dashboard stack.
 do_install_or_update() {
@@ -81,27 +74,30 @@ do_install_or_update() {
 
     # Fetch all necessary files
     fetch_from_repo "$DOCKER_COMPOSE_URL" "$INSTALL_DIR/docker-compose.yml"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/Dockerfile" "$INSTALL_DIR/Dockerfile"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/entrypoint.sh" "$INSTALL_DIR/entrypoint.sh"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/kiosk.sh" "$KIOSK_SCRIPT"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/grafana.ini" "$INSTALL_DIR/config/grafana/grafana.ini"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/custom-grafana.css" "$INSTALL_DIR/config/grafana/custom-grafana.css"
-    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/post-start-patch.sh" "$INSTALL_DIR/config/grafana/post-start-patch.sh"
+    fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/kiosk-fix.js" "$INSTALL_DIR/config/grafana/kiosk-fix.js"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/provisioning/datasources/prometheus.yaml" "$INSTALL_DIR/config/grafana/provisioning/datasources/prometheus.yaml"
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/grafana/provisioning/dashboards/dashboards.yaml" "$INSTALL_DIR/config/grafana/provisioning/dashboards/dashboards.yaml"
-    
+
     # Create kiosk.env if it doesn't exist
     if [ ! -f "$CONFIG_FILE" ]; then
         fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/config/kiosk.env.example" "$CONFIG_FILE"
     fi
-    
-    # Fetch dashboards (example of fetching one, could be expanded)
+
+    # Fetch dashboards
     fetch_from_repo "$REPO_BASE_URL/monitoring/dashboard/dashboards/profiles/standard/system-overview.json" "$INSTALL_DIR/dashboards/profiles/standard/system-overview.json"
 
-    chmod +x "$KIOSK_SCRIPT"
-    
+    chmod +x "$KIOSK_SCRIPT" "$INSTALL_DIR/entrypoint.sh"
+
+    info "Building Docker image (patches CSS/JS into Grafana at build time)..."
+    docker compose -f "$INSTALL_DIR/docker-compose.yml" build
+
     info "Starting Docker services..."
     docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d
-    
-    do_apply_patch
 
     info "Configuring kiosk autostart..."
     do_kiosk_install

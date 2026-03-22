@@ -59,3 +59,22 @@ body {
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
 }
+
+/* ── 3. Panel title: center and prevent truncation ───────────────────────── */
+
+.panel-title-text,
+[class*="panel-title"] h2,
+[class*="panelTitle"] {
+    text-align: center !important;
+    width: 100% !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: normal !important;
+}
+
+/* The title container also clips — expand it */
+.panel-title,
+[class*="panel-header"],
+[class*="panelHeader"] {
+    overflow: visible !important;
+}

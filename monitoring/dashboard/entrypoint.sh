@@ -33,11 +33,9 @@ if [ -z "$(ls -A "$DASHBOARD_VOL/custom" 2>/dev/null || true)" ] && [ -d "/opt/a
     cp -rn /opt/audiot-dashboard/examples/custom/* "$DASHBOARD_VOL/custom/"
 fi
 
-# 4. Copy control scripts into the volume so they are available to the host operator
-# We place them in the root of the dashboards volume for visibility.
-cp /opt/audiot-dashboard/set-dashboard.sh "$DASHBOARD_VOL/set-dashboard.sh"
+# 4. Copy kiosk.sh into the volume root so host operators can find it easily.
 cp /opt/audiot-dashboard/kiosk.sh "$DASHBOARD_VOL/kiosk.sh"
-chmod +x "$DASHBOARD_VOL/set-dashboard.sh" "$DASHBOARD_VOL/kiosk.sh"
+chmod +x "$DASHBOARD_VOL/kiosk.sh"
 
 # 5. Fix permissions so Grafana can write/read
 # This is needed if the volume was mounted as root

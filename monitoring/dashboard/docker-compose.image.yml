@@ -1,9 +1,11 @@
-# AUDiot Monitor — Dashboard Stack (Standalone Image)
+# AUDiot Monitor — Dashboard Stack (Standalone Pre-built Image)
 #
-# Runs the official pre-baked AUDiot Grafana image.
-# No config files or repo clone needed — just run:
+# Uses the pre-built audumla/audiot-dashboard image published on Docker Hub.
+# All Grafana UI patches (kiosk CSS/JS, branding removal) are baked into the
+# image — no repo clone, no runtime patching required.
 #
-#   PROMETHEUS_URL=http://<collector-ip>:9090 docker compose up -d
+# Quickstart:
+#   PROMETHEUS_URL=http://<collector-ip>:9090 docker compose -f docker-compose.image.yml up -d
 
 services:
 
@@ -13,18 +15,18 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Persistent storage for dashboards and Grafana database
       - grafana-dashboards:/var/lib/grafana/dashboards
       - grafana-data:/var/lib/grafana
-      - ./config/grafana/custom-grafana.css:/opt/grafana-patch/custom-grafana.css:ro
-      - ./config/grafana/post-start-patch.sh:/opt/grafana-patch/post-start-patch.sh:ro
-    post_start:
-      - command: /bin/sh /opt/grafana-patch/post-start-patch.sh
-        user: root
     environment:
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
       - HWEXP_URL=${HWEXP_URL:-http://localhost:9200}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 128m
     restart: unless-stopped
 
 volumes:
