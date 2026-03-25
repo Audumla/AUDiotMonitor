@@ -176,6 +176,69 @@ find_input_device() {
     return 0
 }
 
+probe_dimmer() {
+    # Probe available dimming tools in priority order; set _DIMMER_READY and
+    # the dim/restore command strings used by swayidle callbacks.
+    #
+    # Priority:
+    #   1. wl-gammarelay  — Wayland wlr-gamma-control (installed via Docker image)
+    #   2. ddcutil        — DDC/CI brightness over HDMI I2C (monitor must support it)
+    #
+    # Sets on success: _DIMMER_READY=true, _DIMMER_CMD_DIM, _DIMMER_CMD_RESTORE
+    # Logs reason and leaves _DIMMER_READY=false when no tool works.
+    _DIMMER_READY=false
+    _DIMMER_CMD_DIM=""
+    _DIMMER_CMD_RESTORE=""
+
+    [ "$_BACKEND" = "wayland" ] || return 0
+
+    local brightness="${KIOSK_DIM_BRIGHTNESS:-0.2}"
+    # ddcutil uses 0-100; convert float to integer percentage
+    local brightness_pct
+    brightness_pct=$(awk "BEGIN { printf \"%d\", $brightness * 100 }")
+
+    # ── Option 1: wl-gammarelay (Wayland gamma control) ───────────────────────
+    # Built into the Docker kiosk image via CI; not installed on bare DietPi.
+    if command -v wl-gammarelay &>/dev/null && command -v busctl &>/dev/null; then
+        pkill -f wl-gammarelay 2>/dev/null || true
+        WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" \
+            wl-gammarelay >/dev/null 2>&1 &
+        _relay_pid=$!
+        sleep 1
+        if busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors \
+                SetBrightness d 0.5 >/dev/null 2>&1; then
+            busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors \
+                SetBrightness d 1.0 >/dev/null 2>&1 || true
+            log "Dimmer: wl-gammarelay OK (pid $_relay_pid) — dimming enabled"
+            _DIMMER_CMD_DIM="busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors SetBrightness d $brightness 2>/dev/null || true"
+            _DIMMER_CMD_RESTORE="busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors SetBrightness d 1.0 2>/dev/null || true"
+            _DIMMER_READY=true
+            return 0
+        else
+            log "Dimmer: wl-gammarelay test failed (wlr-gamma-control not supported?)"
+            kill "$_relay_pid" 2>/dev/null || true
+        fi
+    else
+        log "Dimmer: wl-gammarelay not installed (expected in Docker kiosk image)"
+    fi
+
+    # ── Option 2: ddcutil (DDC/CI brightness via HDMI I2C) ────────────────────
+    # Works when the connected monitor supports DDC/CI on its HDMI input.
+    if command -v ddcutil &>/dev/null; then
+        if ddcutil getvcp 10 --brief --noverify 2>/dev/null | grep -q '^VCP 10'; then
+            log "Dimmer: ddcutil OK (DDC/CI VCP 10) — dimming enabled at ${brightness_pct}%"
+            _DIMMER_CMD_DIM="ddcutil setvcp 10 $brightness_pct 2>/dev/null || true"
+            _DIMMER_CMD_RESTORE="ddcutil setvcp 10 100 2>/dev/null || true"
+            _DIMMER_READY=true
+            return 0
+        else
+            log "Dimmer: ddcutil present but VCP 10 (brightness) not supported by display"
+        fi
+    fi
+
+    log "Dimmer: no working dimmer found — display will power off without dimming"
+}
+
 _dpms_enabled=false
 if [ -n "${KIOSK_IDLE_TIMEOUT:-}" ] && [ "${KIOSK_IDLE_TIMEOUT}" -gt 0 ] 2>/dev/null; then
     _dpms_enabled=true
@@ -194,95 +257,91 @@ if [ "$_dpms_enabled" = "true" ]; then
     off_t="${KIOSK_DPMS_OFF:-${KIOSK_IDLE_TIMEOUT:-1800}}"
     log "Screen power management: dim=${dim_t}s off=${off_t}s (backend: $_BACKEND)"
 
-    INPUT_DEV="${KIOSK_TOUCH_DEVICE:-$(find_input_device 2>/dev/null)}"
+    _DPMS_WD="${WAYLAND_DISPLAY:-wayland-0}"
+    _DPMS_XR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
-    # Check if we have a usable DPMS control tool for this backend
-    _dpms_tool_ok=false
-    if [ "$_BACKEND" = "wayland" ] && command -v wlopm &>/dev/null; then
-        _dpms_tool_ok=true
-    elif [ "$_BACKEND" = "x11" ] && command -v xset &>/dev/null; then
-        _dpms_tool_ok=true
-    fi
+    if [ "$_BACKEND" = "wayland" ] && command -v swayidle &>/dev/null && command -v wlopm &>/dev/null; then
+        # Wayland: swayidle integrates with labwc's idle-notify protocol so touch/keyboard
+        # reliably wakes the display even when the screen is powered off.
+        # Probe for dimming support — cascades through wl-gammarelay then ddcutil.
+        probe_dimmer
 
-    if [ -n "$INPUT_DEV" ] && [ -r "$INPUT_DEV" ] && [ "$_dpms_tool_ok" = "true" ]; then
-        log "Input-DPMS: watching $INPUT_DEV (off after ${off_t}s, wake on touch)"
-        # Direct input monitor: polls device in 5s windows to track idle time.
-        # Turns display off after off_t seconds of no input; wakes immediately on touch.
-        _DPMS_BACKEND="$_BACKEND"
-        _DPMS_WD="${WAYLAND_DISPLAY:-wayland-0}"
-        _DPMS_XR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-        _DPMS_DP="${DISPLAY:-:0}"
-        _DPMS_DEV="$INPUT_DEV"
-        _DPMS_DIM="$dim_t"
-        _DPMS_OFF="$off_t"
-        (
-            _state=on
-            _last=$(date +%s)
-            _dpms_on() {
-                if [ "$_DPMS_BACKEND" = "wayland" ]; then
-                    WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" wlopm --on  '*' 2>/dev/null || true
-                else
-                    DISPLAY="$_DPMS_DP" xset dpms force on 2>/dev/null || true
-                fi
-                echo "$(date '+%Y-%m-%d %H:%M:%S') display ON" >> "$_DPMS_LOG"
-            }
-            _dpms_off() {
-                if [ "$_DPMS_BACKEND" = "wayland" ]; then
-                    WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" wlopm --off '*' 2>/dev/null || true
-                else
-                    DISPLAY="$_DPMS_DP" xset dpms force off 2>/dev/null || true
-                fi
-                echo "$(date '+%Y-%m-%d %H:%M:%S') display OFF" >> "$_DPMS_LOG"
-            }
-            echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS started: dev=$_DPMS_DEV backend=$_DPMS_BACKEND off=${_DPMS_OFF}s" >> "$_DPMS_LOG"
-            while true; do
-                # Re-detect device if it disappeared (e.g. ILITEK-TOUCH USB reconnect)
-                if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
-                    _new_dev=$(find_input_device 2>/dev/null)
-                    if [ -n "$_new_dev" ] && [ "$_new_dev" != "$_DPMS_DEV" ]; then
-                        _DPMS_DEV="$_new_dev"
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS: device -> $_DPMS_DEV" >> "$_DPMS_LOG"
-                    fi
-                    if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
-                        sleep 5
-                        continue
-                    fi
-                fi
-                if timeout 5 dd if="$_DPMS_DEV" bs=24 count=1 >/dev/null 2>&1; then
-                    # Input received — always wake display (idempotent if already on)
-                    _last=$(date +%s)
-                    _dpms_on
-                    _state=on
-                else
-                    # 5-second window with no input — check idle duration
-                    _now=$(date +%s)
-                    _idle=$(( _now - _last ))
-                    if [ "$_state" != "off" ] && [ "$_idle" -ge "$_DPMS_OFF" ]; then
-                        _dpms_off
-                        _state=off
-                    elif [ "$_state" = "on" ] && [ "$_idle" -ge "$_DPMS_DIM" ]; then
-                        _dpms_off
-                        _state=dim
-                    fi
-                fi
-            done
-        ) &
-        log "Input-DPMS daemon started (pid $!)"
+        _CMD_OFF="WAYLAND_DISPLAY='$_DPMS_WD' XDG_RUNTIME_DIR='$_DPMS_XR' wlopm --off '*' 2>/dev/null || true; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display OFF\" >> '$_DPMS_LOG'"
+        _CMD_ON="WAYLAND_DISPLAY='$_DPMS_WD' XDG_RUNTIME_DIR='$_DPMS_XR' wlopm --on '*' 2>/dev/null || true; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display ON\" >> '$_DPMS_LOG'"
+        _CMD_DIM="$_DIMMER_CMD_DIM; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display DIM\" >> '$_DPMS_LOG'"
+        _CMD_RESTORE="$_DIMMER_CMD_RESTORE"
 
-    elif [ "$_dpms_tool_ok" = "true" ]; then
-        # No readable input device — timer-based fallback
-        log "No input device found; using timer-based DPMS (wake requires physical display activity)"
-        if [ "$_BACKEND" = "wayland" ] && command -v swayidle &>/dev/null; then
+        if [ "$_DIMMER_READY" = "true" ] && [ "$dim_t" -lt "$off_t" ] 2>/dev/null; then
+            log "Screen power management: dim=${dim_t}s off=${off_t}s brightness=${KIOSK_DIM_BRIGHTNESS:-0.2} (swayidle+dimmer+wlopm)"
+            WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" \
             swayidle -w \
-                timeout "$dim_t" "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)} wlopm --off '*' 2>/dev/null || true" \
-                resume           "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)} wlopm --on  '*' 2>/dev/null || true" \
+                timeout "$dim_t" "$_CMD_DIM" \
+                timeout "$off_t" "$_CMD_OFF" \
+                resume          "$_CMD_ON; $_CMD_RESTORE" \
                 &
-            log "swayidle started (pid $!)"
-        elif [ "$_BACKEND" = "x11" ]; then
-            # Configure X11 DPMS timers directly; xset handles idle timing in the X server
+        else
+            log "Screen power management: off=${off_t}s (swayidle+wlopm)"
+            WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" \
+            swayidle -w \
+                timeout "$off_t" "$_CMD_OFF" \
+                resume          "$_CMD_ON" \
+                &
+        fi
+        log "swayidle started (pid $!)"
+
+    elif [ "$_BACKEND" = "x11" ] && command -v xset &>/dev/null; then
+        INPUT_DEV="${KIOSK_TOUCH_DEVICE:-$(find_input_device 2>/dev/null)}"
+        if [ -n "$INPUT_DEV" ] && [ -r "$INPUT_DEV" ]; then
+            log "Input-DPMS: watching $INPUT_DEV (off after ${off_t}s, wake on touch)"
+            # X11: poll /dev/input directly since X11 DPMS timers don't respond to touch-only events.
+            _DPMS_DP="${DISPLAY:-:0}"
+            _DPMS_DEV="$INPUT_DEV"
+            _DPMS_DIM="$dim_t"
+            _DPMS_OFF="$off_t"
+            (
+                _state=on
+                _last=$(date +%s)
+                _dpms_on() {
+                    DISPLAY="$_DPMS_DP" xset dpms force on 2>/dev/null || true
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') display ON" >> "$_DPMS_LOG"
+                }
+                _dpms_off() {
+                    DISPLAY="$_DPMS_DP" xset dpms force off 2>/dev/null || true
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') display OFF" >> "$_DPMS_LOG"
+                }
+                echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS started: dev=$_DPMS_DEV off=${_DPMS_OFF}s" >> "$_DPMS_LOG"
+                while true; do
+                    if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
+                        _new_dev=$(find_input_device 2>/dev/null)
+                        if [ -n "$_new_dev" ] && [ "$_new_dev" != "$_DPMS_DEV" ]; then
+                            _DPMS_DEV="$_new_dev"
+                            echo "$(date '+%Y-%m-%d %H:%M:%S') Input-DPMS: device -> $_DPMS_DEV" >> "$_DPMS_LOG"
+                        fi
+                        if [ -z "$_DPMS_DEV" ] || [ ! -r "$_DPMS_DEV" ]; then
+                            sleep 5; continue
+                        fi
+                    fi
+                    if timeout 5 dd if="$_DPMS_DEV" bs=24 count=1 >/dev/null 2>&1; then
+                        _last=$(date +%s)
+                        _dpms_on
+                        _state=on
+                    else
+                        _now=$(date +%s)
+                        _idle=$(( _now - _last ))
+                        if [ "$_state" != "off" ] && [ "$_idle" -ge "$_DPMS_OFF" ]; then
+                            _dpms_off; _state=off
+                        elif [ "$_state" = "on" ] && [ "$_idle" -ge "$_DPMS_DIM" ]; then
+                            _dpms_off; _state=dim
+                        fi
+                    fi
+                done
+            ) &
+            log "Input-DPMS daemon started (pid $!)"
+        else
+            # X11 fallback: configure DPMS timers in the X server
+            log "No input device found; using X11 DPMS timers (standby=${dim_t}s off=${off_t}s)"
             DISPLAY="${DISPLAY:-:0}" xset +dpms 2>/dev/null || true
             DISPLAY="${DISPLAY:-:0}" xset dpms "$dim_t" "$dim_t" "$off_t" 2>/dev/null || true
-            log "X11 DPMS timers set (standby=${dim_t}s off=${off_t}s)"
         fi
     fi
 else
