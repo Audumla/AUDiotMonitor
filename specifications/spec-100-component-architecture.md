@@ -2,89 +2,108 @@
 
 **Status:** Draft
 **Project:** AUDiotMonitor
-**Covers:** Componentization strategy; manifest-driven adapter pattern; cross-project
-component registration; Docker image separation; optional runtime dependency build path
-**Related:** [spec-801](spec-801-llmgateway-monitor-adapter.md) — LLM gateway adapter (reference implementation)
+**Covers:** System boundary definition; manifest-driven software component monitoring;
+external project data integration via Prometheus; Docker image separation; CI build path
+for optional runtime tools
+**Related:** [spec-801](spec-801-llmgateway-monitor-adapter.md) — LLM gateway manifest adapter (reference implementation)
 
 ---
 
-## 1. Problem Statement
+## 1. System Boundary
 
-The current system is partially monolithic:
+AUDiotMonitor has two distinct concerns that must not blur:
 
-| Problem | Impact |
-| --- | --- |
-| `llamaswap` adapter is hardcoded | Adding a new LLM service requires Go code in this repo |
-| No standard way for external projects to contribute monitoring | Every new service needs a change here |
-| `wl-gammarelay` must be compiled from source on each target device | Requires Rust toolchain post-deployment; fragile |
-| Single Docker image per tier | Kiosk display tools (wl-gammarelay, swayidle) mixed with Grafana concerns |
-| Kiosk launched natively; no reproducible build | Display environment differs per device |
+| Concern | Owner | Extension point |
+| --- | --- | --- |
+| **Hardware metrics** — temperatures, GPU state, VRAM, fans, etc. | This repo | New hwexp adapters added here |
+| **External service data** — LLM model state, application health, any non-hardware metric | External project | Prometheus `/metrics` endpoint; this repo only adds a scrape config |
 
-**Goal:** Any service — in this repo or a separate project — can be monitored by
-dropping a YAML manifest file. No code changes to AUDiotMonitor are required.
-Optional runtime tools are built in CI and delivered as Docker image layers or
-release artifacts, never compiled on the target device.
+**Hardware adapters are always internal.** Any new hardware source (new GPU vendor,
+new sensor type, new platform) gets a Go adapter in `hwexp/internal/adapters/`.
+That work happens in this repo; there is no external adapter plugin system.
+
+**External project data is always decoupled.** An external project exposes a
+standard Prometheus `/metrics` endpoint. AUDiotMonitor's Prometheus scrapes it.
+No hwexp code changes are ever required for external data.
 
 ---
 
-## 2. Component Manifest Pattern
+## 2. How External Projects Expose Data
 
-Defined concretely in [spec-801](spec-801-llmgateway-monitor-adapter.md). Summary:
+An external project that wants its metrics in Grafana:
 
-A **component manifest** is a YAML file that describes how to:
-1. Check a service is alive (`health` stanza — HTTP GET, expected status)
-2. Collect metrics (`metrics[]` stanza — HTTP GET + jq/Prometheus extraction)
-3. Reach the service (`connection` stanza — host, port, optional auth)
+1. Runs a Prometheus exporter on a known port (any language, any framework)
+2. Adds a scrape entry to the collector's `prometheus.yml`
 
-The `gateway_manifest` hwexp adapter reads manifests from one or more directories
-and polls each service. Zero Go code is needed for new components.
+```yaml
+# monitoring/collector/config/prometheus/prometheus.yml
+scrape_configs:
+  - job_name: 'llama-swap'
+    static_configs:
+      - targets: ['host.docker.internal:9400']   # or the actual host:port
 
-### 2.1 Generalisation Beyond the LLM Gateway
-
-Spec-801 names the adapter `gateway_manifest` and targets LLM backends. The
-underlying mechanism is generic: **any HTTP service** that exposes a health
-endpoint and at least one JSON or Prometheus-format metrics endpoint can be
-described in a manifest.
-
-The refactor renames the adapter `component_manifest` with full backward
-compatibility (the `gateway_manifest` name remains as an alias). The manifest
-schema is unchanged.
-
-### 2.2 Manifest Directory Convention
-
-```
-/etc/hwexp/components/            ← standard install location
-  <project>-<component>.yaml      ← e.g. llamaswap-server.yaml, litellm-proxy.yaml
-
-/etc/hwexp/components-local/      ← user overrides (higher priority, git-ignored)
-  <component>.yaml
+  - job_name: 'my-other-service'
+    static_configs:
+      - targets: ['host.docker.internal:9401']
 ```
 
-External projects install their manifests here via:
-- **Same machine, bind mount:** Docker bind-mount `<project>/config/components` → `/etc/hwexp/components/<project>/`
-- **Same machine, symlink:** `ln -s /opt/myproject/config/components /etc/hwexp/components/myproject`
-- **Remote machine:** Copy manifests to `monitoring/collector/config/hwexp/components/<project>/` in this repo and redeploy the collector stack
+That is the entire integration. No hwexp changes. No manifest files. No adapter
+code. Grafana queries the metrics by name directly.
 
-Neither approach requires changes to AUDiotMonitor code.
-
-### 2.3 Metric Namespace
-
-Manifest authors own their metric names via `prometheus_name`. The only rule:
-all component metrics must begin with a project prefix (e.g. `gateway_`, `llama_`,
-`audia_`). The mapping rule `^<prefix>_` passes them through automatically.
+This is the **primary integration path for external projects.**
 
 ---
 
-## 3. Docker Image Separation
+## 3. Component Manifests — Software Services Correlated With Hardware
 
-### 3.1 Current Images
+The component manifest adapter (spec-801) serves a narrower purpose than general
+external data integration: it is for **software services that need to be displayed
+alongside and correlated with hardware metrics** in the same Grafana panels.
+
+Examples:
+
+- LLM model loaded → shown next to GPU temperature and VRAM usage
+- Inference backend health → shown in the same dashboard row as GPU utilisation
+
+For this use case, hwexp polls the service via a manifest YAML file and emits
+measurements through its normal normalization pipeline. This allows the same
+device/label model to be applied and enables Grafana queries that join hardware
+and software metrics using shared labels.
+
+A manifest is the right tool when:
+
+- The service does not already expose Prometheus metrics, OR
+- You need the data correlated with a specific hardware device via hwexp labels
+
+A Prometheus scrape is the right tool when:
+
+- The service already exports Prometheus metrics, OR
+- The data does not need to be joined with hardware device labels
+
+### 3.1 Manifest Directory
+
+```text
+monitoring/collector/config/hwexp/components/
+  llamaswap.yaml        ← llama-swap reference manifest
+  <service>.yaml        ← add one file per service to correlate with hardware
+```
+
+These files are part of this repo. Any service that needs hardware correlation
+gets a manifest added here. Services that only need visibility in Grafana use
+the Prometheus scrape path instead.
+
+---
+
+## 4. Docker Image Separation
+
+### 4.1 Current Images
 
 | Image | Tier | Contents |
 | --- | --- | --- |
 | `audumla/audiot-hwexp` | Collector | hwexp binary + default configs |
 | `audumla/audiot-dashboard` | Dashboard | Grafana + provisioning + kiosk patches |
 
-### 3.2 Target Images
+### 4.2 Target Images
 
 | Image | Tier | Contents | Change |
 | --- | --- | --- | --- |
@@ -102,102 +121,64 @@ chmod +x /usr/local/bin/wl-gammarelay
 ```
 
 This keeps the Rust toolchain and build environment entirely in CI. The target
-device gets a pre-built binary with no compiler required.
+device receives a pre-built binary with no compiler required.
 
-### 3.3 wl-gammarelay Build (kiosk-tools image)
+### 4.3 wl-gammarelay Build (kiosk-tools image)
 
-New file: `monitoring/dashboard/kiosk/Dockerfile`
-
-```dockerfile
-# ── Stage 1: build wl-gammarelay ──────────────────────────────────────────────
-FROM rust:1-slim-bookworm AS wl-gammarelay-builder
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libdbus-1-dev pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-RUN cargo install wl-gammarelay --locked
-
-# ── Stage 2: minimal runtime image ───────────────────────────────────────────
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libdbus-1-3 \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=wl-gammarelay-builder /usr/local/cargo/bin/wl-gammarelay /usr/local/bin/
-# Additional kiosk host tools can be added here in future stages.
-CMD ["/usr/local/bin/wl-gammarelay"]
-```
-
-CI publishes `audumla/audiot-kiosk-tools:latest` (and versioned tags) on every
-merge to `main`. The DietPi bootstrap installer pulls this image to extract binaries.
+Dockerfile at `monitoring/dashboard/kiosk/Dockerfile` — multi-stage Rust build,
+thin Debian runtime. CI publishes `audumla/audiot-kiosk-tools:latest` (and
+versioned tags) on every merge to `main`.
 
 ---
 
-## 4. Refactor Scope (branch: `refactor/component-architecture`)
+## 5. Refactor Scope (branch: `refactor/component-architecture`)
 
-### Phase A — Manifest Adapter (hwexp)
+### Phase A — Component Manifest Adapter (hwexp)
+
+Implements spec-801. Replaces the hardcoded `llamaswap` Go adapter with a
+manifest-driven adapter that polls any HTTP service described in a YAML file.
 
 | Task | File(s) |
 | --- | --- |
-| Rename `gateway_manifest` → `component_manifest` (alias kept) | `hwexp/internal/adapters/component_manifest/` |
-| Implement adapter, loader, extractor, config | spec-801 §3 |
+| Implement `component_manifest` adapter | `hwexp/internal/adapters/component_manifest/` |
+| Loader, extractor (JSON + Prometheus text), config | Same package |
 | Register adapter in main | `cmd/hwexp/main.go` |
 | Add mapping rules | `monitoring/collector/config/hwexp/mappings.yaml` |
 | Update hwexp.yaml | `monitoring/collector/config/hwexp/hwexp.yaml` |
-| Disable old `llamaswap` adapter | Same |
+| Disable old `llamaswap` adapter (config flag, not deleted) | Same |
 
 ### Phase B — Manifest Distribution
 
 | Task | File(s) |
 | --- | --- |
-| Add `components/` directory to collector config | `monitoring/collector/config/hwexp/components/` |
-| Add llamaswap manifest (reference implementation) | `monitoring/collector/config/hwexp/components/llamaswap.yaml` |
-| Document bind-mount pattern for same-machine projects | README + spec-801 §7 |
+| llamaswap reference manifest | `monitoring/collector/config/hwexp/components/llamaswap.yaml` ✓ |
+| Bind-mount in collector Docker compose | `monitoring/collector/docker-compose.yml` |
 
 ### Phase C — Docker Build (kiosk-tools)
 
 | Task | File(s) |
 | --- | --- |
-| Create kiosk-tools Dockerfile | `monitoring/dashboard/kiosk/Dockerfile` |
-| Add CI workflow for kiosk-tools image | `.github/workflows/kiosk-tools.yml` (or equivalent) |
-| Update DietPi bootstrap to extract binary | `monitoring/dashboard/setup/dietpi-setup.sh` |
-| Update kiosk.sh comment (wl-gammarelay installed via kiosk-tools) | `monitoring/dashboard/kiosk.sh` |
+| kiosk-tools Dockerfile | `monitoring/dashboard/kiosk/Dockerfile` ✓ |
+| CI workflow | `.github/workflows/kiosk-tools.yml` |
+| DietPi bootstrap extracts binary | `monitoring/dashboard/setup/dietpi-setup.sh` |
 
 ### Phase D — Grafana Dashboard
 
 | Task | File(s) |
 | --- | --- |
-| Create LLM Gateway dashboard | `monitoring/dashboard/dashboards/llmgateway.json` |
-| Add provisioning entry | `monitoring/dashboard/config/grafana/` |
-
----
-
-## 5. External Project Integration — llama-swap Example
-
-The user's local llama-swap instance at `h:/development/tools/llama-swap` can be
-monitored by:
-
-1. Creating `monitoring/collector/config/hwexp/components/llamaswap.yaml` in this
-   repo with the appropriate `connection.host`, `health`, and `metrics` stanzas.
-
-2. On the monitoring host, the collector Docker container bind-mounts this directory
-   to `/etc/hwexp/components/` — no changes to AUDiotMonitor code needed.
-
-3. Grafana panels reference `gateway_llamaswap_*` (or whatever `prometheus_name`
-   values the manifest declares) — no adapter changes needed.
-
-When llama-swap adds new endpoints, only the manifest YAML changes. New components
-(litellm, vLLM, etc.) require only a new YAML file.
+| LLM Gateway dashboard | `monitoring/dashboard/dashboards/llmgateway.json` |
+| Provisioning entry | `monitoring/dashboard/config/grafana/` |
 
 ---
 
 ## 6. Delivery Order
 
-```
-Phase A  →  Phase B  →  Phase C  →  Phase D
-  (adapter)   (manifests)  (docker)    (grafana)
-```
+```text
+Phase A  →  Phase B  →  Phase D
+  (adapter)   (manifests)  (grafana)
 
-Phases A and C are independent and can be developed in parallel.
-Phase B requires Phase A. Phase D requires Phase B.
+Phase C  (independent — kiosk-tools docker build)
+```
 
 ---
 
@@ -205,8 +186,10 @@ Phase B requires Phase A. Phase D requires Phase B.
 
 | Constraint | Detail |
 | --- | --- |
+| Hardware adapters stay internal | No external plugin system for hwexp adapters |
+| External data via Prometheus | External projects own their exporters; this repo adds only a scrape entry |
 | No core hwexp changes | component_manifest uses existing Adapter interface |
-| Backward compatible | llamaswap adapter remains available during transition; disabled by config not deleted |
-| No secrets in manifests | Token env var names only; never actual values |
-| arm64 support | kiosk-tools image built for linux/arm64 (RPi target) and linux/amd64 |
+| Backward compatible | Old llamaswap adapter disabled by config, not deleted |
+| No secrets in manifests | Token env var name only; actual value never in the manifest |
+| arm64 + amd64 | kiosk-tools image multi-platform build |
 | Idempotent bootstrap | Re-running DietPi setup does not break existing install |
