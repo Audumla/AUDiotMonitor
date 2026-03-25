@@ -1,0 +1,45 @@
+# llamaswap component manifest
+#
+# Monitors a local llama-swap instance and exposes health + model metrics
+# to Prometheus via the hwexp component_manifest adapter.
+#
+# See spec-100 §2 and spec-801 for the manifest schema.
+# Copy or symlink this directory to /etc/hwexp/components/ on the collector host.
+
+id: llamaswap
+display_name: "llama-swap"
+enabled: true
+
+connection:
+  host: "127.0.0.1"
+  port: 41080
+  auth:
+    type: none
+
+health:
+  endpoint: /health
+  expect_status: 200
+  timeout_s: 3
+
+metrics:
+  - id: models_loaded
+    endpoint: /v1/models
+    extract: ".data | length"
+    prometheus_name: gateway_llamaswap_models_loaded
+    unit: count
+    poll_interval_s: 15
+
+  - id: active_model
+    endpoint: /v1/models
+    extract: '.data[0].id // "none"'
+    prometheus_name: gateway_llamaswap_active_model
+    unit: label
+    poll_interval_s: 15
+
+  - id: vram_ratio
+    endpoint: /metrics
+    extract: "llama_kv_cache_usage_ratio"
+    prometheus_name: gateway_llamaswap_vram_ratio
+    unit: ratio
+    poll_interval_s: 30
+    source_format: prometheus
