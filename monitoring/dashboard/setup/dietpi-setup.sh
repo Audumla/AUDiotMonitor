@@ -139,12 +139,31 @@ EOF
 udevadm control --reload-rules
 log "udev rule installed"
 
-# ── 7. Docker group ───────────────────────────────────────────────────────────
+# ── 7. wl-gammarelay binary (display brightness / display sleep) ──────────────
+# Pre-built binary from GitHub releases — no Rust toolchain required.
+
+log "Installing wl-gammarelay..."
+_arch=$(uname -m)
+case "$_arch" in
+    aarch64|arm64) _suffix="arm64" ;;
+    x86_64|amd64)  _suffix="amd64" ;;
+    *) log "  WARNING: unsupported arch $_arch — skipping wl-gammarelay install"; _suffix="" ;;
+esac
+if [ -n "${_suffix:-}" ] && [ ! -f /usr/local/bin/wl-gammarelay ]; then
+    _gamma_url="https://github.com/Audumla/AUDiotMonitor/releases/latest/download/wl-gammarelay-linux-${_suffix}"
+    curl -fsSL "$_gamma_url" -o /usr/local/bin/wl-gammarelay
+    chmod +x /usr/local/bin/wl-gammarelay
+    log "  wl-gammarelay installed"
+elif [ -f /usr/local/bin/wl-gammarelay ]; then
+    log "  wl-gammarelay already installed — skipping"
+fi
+
+# ── 8. Docker group ───────────────────────────────────────────────────────────
 
 usermod -aG docker "$KIOSK_USER" 2>/dev/null || true
 log "Added $KIOSK_USER to docker group"
 
-# ── 8. Prometheus config for DietPi (single-host layout) ─────────────────────
+# ── 9. Prometheus config for DietPi (single-host layout) ─────────────────────
 
 PROMETHEUS_CFG="$KIOSK_DIR/config/prometheus/prometheus.yml"
 DIETPI_CFG="$KIOSK_DIR/config/prometheus/prometheus.dietpi.yml"
