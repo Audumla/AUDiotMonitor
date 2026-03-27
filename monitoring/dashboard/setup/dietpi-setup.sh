@@ -140,22 +140,24 @@ udevadm control --reload-rules
 log "udev rule installed"
 
 # ── 7. wl-gammarelay binary (display brightness / display sleep) ──────────────
-# Pre-built binary from GitHub releases — no Rust toolchain required.
+# Extracted from the dashboard image — correct arch guaranteed, no separate download.
+# Requires the dashboard image to be present (run 'docker compose up -d' first,
+# or 'docker pull audumla/audiot-dashboard:latest' if running standalone).
 
 log "Installing wl-gammarelay..."
-_arch=$(uname -m)
-case "$_arch" in
-    aarch64|arm64) _suffix="arm64" ;;
-    x86_64|amd64)  _suffix="amd64" ;;
-    *) log "  WARNING: unsupported arch $_arch — skipping wl-gammarelay install"; _suffix="" ;;
-esac
-if [ -n "${_suffix:-}" ] && [ ! -f /usr/local/bin/wl-gammarelay ]; then
-    _gamma_url="https://github.com/Audumla/AUDiotMonitor/releases/latest/download/wl-gammarelay-linux-${_suffix}"
-    curl -fsSL "$_gamma_url" -o /usr/local/bin/wl-gammarelay
-    chmod +x /usr/local/bin/wl-gammarelay
-    log "  wl-gammarelay installed"
-elif [ -f /usr/local/bin/wl-gammarelay ]; then
+if [ -f /usr/local/bin/wl-gammarelay ]; then
     log "  wl-gammarelay already installed — skipping"
+else
+    _image="audumla/audiot-dashboard:latest"
+    if docker image inspect "$_image" >/dev/null 2>&1 || docker pull "$_image" >/dev/null 2>&1; then
+        docker run --rm --entrypoint cat "$_image" \
+            /opt/audiot-dashboard/wl-gammarelay > /usr/local/bin/wl-gammarelay
+        chmod +x /usr/local/bin/wl-gammarelay
+        log "  wl-gammarelay installed"
+    else
+        log "  WARNING: could not pull dashboard image — skipping wl-gammarelay install"
+        log "  Run manually: docker run --rm audumla/audiot-dashboard cat /opt/audiot-dashboard/wl-gammarelay > /usr/local/bin/wl-gammarelay"
+    fi
 fi
 
 # ── 8. Docker group ───────────────────────────────────────────────────────────

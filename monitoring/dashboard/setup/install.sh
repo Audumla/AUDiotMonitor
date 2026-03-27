@@ -109,32 +109,25 @@ ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="222a", ATTR{power/control}="on
 EOF
 udevadm control --reload-rules
 
-# ── 4. wl-gammarelay binary (display brightness / display sleep) ──────────────
-# Pre-built binary released alongside the monitoring stack — no Rust toolchain
-# required on the target device.
-
-if [ "$SETUP_KIOSK" = "true" ] && [ ! -f /usr/local/bin/wl-gammarelay ]; then
-    log "Installing wl-gammarelay..."
-    _arch=$(uname -m)
-    case "$_arch" in
-        aarch64|arm64) _suffix="arm64" ;;
-        x86_64|amd64)  _suffix="amd64" ;;
-        *) log "  WARNING: unsupported arch $_arch — skipping wl-gammarelay install" ;;
-    esac
-    if [ -n "${_suffix:-}" ]; then
-        _gamma_url="https://github.com/Audumla/AUDiotMonitor/releases/latest/download/wl-gammarelay-linux-${_suffix}"
-        curl -fsSL "$_gamma_url" -o /usr/local/bin/wl-gammarelay
-        chmod +x /usr/local/bin/wl-gammarelay
-        log "  wl-gammarelay installed (/usr/local/bin/wl-gammarelay)"
-    fi
-fi
-
 # ── 5. Start monitoring stack ─────────────────────────────────────────────────
 
 log "Pulling images and starting monitoring stack..."
 cd "$INSTALL_DIR"
 AUDIOT_TAG="$AUDIOT_TAG" docker compose up -d
 log "Stack started"
+
+# ── 6. Extract kiosk tools from dashboard image ───────────────────────────────
+# wl-gammarelay is baked into the dashboard image at the correct arch.
+# Extract it now that the image is already pulled — no separate download needed.
+
+if [ "$SETUP_KIOSK" = "true" ] && [ ! -f /usr/local/bin/wl-gammarelay ]; then
+    log "Extracting wl-gammarelay from dashboard image..."
+    _image="audumla/audiot-dashboard:${AUDIOT_TAG:-latest}"
+    docker run --rm --entrypoint cat "$_image" \
+        /opt/audiot-dashboard/wl-gammarelay > /usr/local/bin/wl-gammarelay
+    chmod +x /usr/local/bin/wl-gammarelay
+    log "  wl-gammarelay installed (/usr/local/bin/wl-gammarelay)"
+fi
 
 # ── 5. Kiosk X11 autologin and systemd service ────────────────────────────────
 

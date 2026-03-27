@@ -153,7 +153,9 @@ jobs:
 
   monitoring-docker-publish:
     name: Publish Dashboard Image
-    needs: [release]
+    # Depends on kiosk-tools-publish so the Rust build cache is warm before
+    # the dashboard image build runs (wl-gammarelay is baked into the image).
+    needs: [release, kiosk-tools-publish]
     if: ${{ always() && needs.release.result != 'failure' && needs.release.outputs.monitoring_release_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -187,7 +189,9 @@ jobs:
           tags: |
             audumla/audiot-dashboard:${{ steps.meta.outputs.version }}
             audumla/audiot-dashboard:latest
-          cache-from: type=registry,ref=audumla/audiot-dashboard:buildcache
+          cache-from: |
+            type=registry,ref=audumla/audiot-kiosk-tools:buildcache
+            type=registry,ref=audumla/audiot-dashboard:buildcache
           cache-to: type=registry,ref=audumla/audiot-dashboard:buildcache,mode=max
 
   kiosk-tools-publish:
