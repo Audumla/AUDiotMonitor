@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - 'hwexp/**'
+      - 'monitoring/dashboard/**'
       - '.github/workflows/dev-publish.yml'
   workflow_dispatch:
 
@@ -18,8 +19,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  dev-publish:
-    name: Build & Push :dev
+  hwexp-dev-publish:
+    name: Build & Push audiot-hwexp:dev
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,7 +48,34 @@ jobs:
           build-args: |
             VERSION=dev
             BUILDTIME=${{ github.event.head_commit.timestamp }}
-          # Registry cache persists across runs and is reusable from local
-          # machines via: docker buildx build --cache-from type=registry,...
           cache-from: type=registry,ref=audumla/audiot-hwexp:buildcache
           cache-to: type=registry,ref=audumla/audiot-hwexp:buildcache,mode=max
+
+  dashboard-dev-publish:
+    name: Build & Push audiot-dashboard:dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push :dev (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/dashboard
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: audumla/audiot-dashboard:dev
+          cache-from: type=registry,ref=audumla/audiot-dashboard:buildcache
+          cache-to: type=registry,ref=audumla/audiot-dashboard:buildcache,mode=max
