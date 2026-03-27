@@ -205,13 +205,15 @@ probe_dimmer() {
             wl-gammarelay >/dev/null 2>&1 &
         _relay_pid=$!
         sleep 1
-        if busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors \
-                SetBrightness d 0.5 >/dev/null 2>&1; then
-            busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors \
-                SetBrightness d 1.0 >/dev/null 2>&1 || true
-            log "Dimmer: wl-gammarelay OK (pid $_relay_pid) — dimming enabled"
-            _DIMMER_CMD_DIM="busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors SetBrightness d $brightness 2>/dev/null || true"
-            _DIMMER_CMD_RESTORE="busctl --user call rs.wl-gammarelay / rs.wl-gammarelay.colors SetBrightness d 1.0 2>/dev/null || true"
+        local _dbus_addr="unix:path=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/bus"
+        if DBUS_SESSION_BUS_ADDRESS="$_dbus_addr" busctl --user set-property \
+                rs.wl-gammarelay / rs.wl.gammarelay Brightness d 0.5 >/dev/null 2>&1; then
+            DBUS_SESSION_BUS_ADDRESS="$_dbus_addr" busctl --user set-property \
+                rs.wl-gammarelay / rs.wl.gammarelay Brightness d 1.0 >/dev/null 2>&1 || true
+            log "Dimmer: wl-gammarelay OK (pid $_relay_pid) — brightness control enabled"
+            _DIMMER_CMD_DIM="DBUS_SESSION_BUS_ADDRESS='$_dbus_addr' busctl --user set-property rs.wl-gammarelay / rs.wl.gammarelay Brightness d $brightness 2>/dev/null || true"
+            _DIMMER_CMD_RESTORE="DBUS_SESSION_BUS_ADDRESS='$_dbus_addr' busctl --user set-property rs.wl-gammarelay / rs.wl.gammarelay Brightness d 1.0 2>/dev/null || true"
+            _DIMMER_CMD_BLANK="DBUS_SESSION_BUS_ADDRESS='$_dbus_addr' busctl --user set-property rs.wl-gammarelay / rs.wl.gammarelay Brightness d 0.0 2>/dev/null || true"
             _DIMMER_READY=true
             return 0
         else
@@ -278,6 +280,14 @@ if [ "$_dpms_enabled" = "true" ]; then
         _BLANKER="wlopm"
         _CMD_DIM="$_DIMMER_CMD_DIM; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display DIM\" >> '$_DPMS_LOG'"
         _CMD_RESTORE="$_DIMMER_CMD_RESTORE"
+
+        # wl-gammarelay: use brightness=0 as blanker instead of wlopm --off.
+        # Keeps HDMI signal alive so monitor shows black rather than "no signal".
+        if [ "$_DIMMER_READY" = "true" ]; then
+            _CMD_OFF="$_DIMMER_CMD_BLANK; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display BLANK\" >> '$_DPMS_LOG'"
+            _CMD_ON="$_DIMMER_CMD_RESTORE; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display UNBLANK\" >> '$_DPMS_LOG'"
+            _BLANKER="wl-gammarelay"
+        fi
 
         if [ "$_DIMMER_READY" = "true" ] && [ "$dim_t" -lt "$off_t" ] 2>/dev/null; then
             log "Screen power management: dim=${dim_t}s off=${off_t}s brightness=${KIOSK_DIM_BRIGHTNESS:-0.2} (swayidle+dimmer+$_BLANKER)"

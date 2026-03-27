@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libdbus-1-dev \
         pkg-config \
     && rm -rf /var/lib/apt/lists/*
-RUN cargo install wl-gammarelay --locked
+RUN cargo install wl-gammarelay-rs --locked
 
 # ── Stage 2: minimal runtime image ───────────────────────────────────────────
 FROM debian:bookworm-slim
@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libdbus-1-3 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=wl-gammarelay-builder /usr/local/cargo/bin/wl-gammarelay /usr/local/bin/wl-gammarelay
+COPY --from=wl-gammarelay-builder /usr/local/cargo/bin/wl-gammarelay-rs /usr/local/bin/wl-gammarelay
 
 # Default: print available binaries
 CMD ["ls", "-la", "/usr/local/bin/"]
