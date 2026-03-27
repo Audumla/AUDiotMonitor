@@ -15,6 +15,17 @@
 
 set -euo pipefail
 
+# ── Shared library ─────────────────────────────────────────────────────────────
+# Source from local directory when run in-place, or fetch from GitHub as fallback.
+_LIB="$(dirname "$0")/lib.sh"
+if [ ! -f "$_LIB" ]; then
+    _LIB="/tmp/audiot-lib.sh"
+    curl -fsSL "https://raw.githubusercontent.com/Audumla/AUDiotMonitor/main/monitoring/dashboard/setup/lib.sh" \
+        -o "$_LIB"
+fi
+# shellcheck source=lib.sh
+. "$_LIB"
+
 KIOSK_USER="${KIOSK_USER:-dietpi}"
 KIOSK_DIR="${KIOSK_DIR:-/opt/docker/services/dashboard}"
 SERVICE_FILE="$KIOSK_DIR/audiot-kiosk.service"
@@ -42,41 +53,9 @@ apt-get install -y --no-install-recommends \
 # This configures the dietpi user to autologin and start X.
 
 log "Configuring autologin..."
-
-# getty autologin
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $KIOSK_USER --noclear %I \$TERM
-EOF
-
-# Start X session on login — add to .bash_profile if not headless
-PROFILE="/home/$KIOSK_USER/.bash_profile"
-if ! grep -q 'startx' "$PROFILE" 2>/dev/null; then
-    cat >> "$PROFILE" << 'EOF'
-
-# Start X session on tty1 autologin (AUDiot kiosk)
-if [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    exec startx /home/dietpi/.xinitrc -- :0 vt1
-fi
-EOF
-    log "Added startx to $PROFILE"
-fi
-
-# Minimal .xinitrc: openbox + DPMS disable (kiosk.sh handles DPMS itself)
-XINITRC="/home/$KIOSK_USER/.xinitrc"
-cat > "$XINITRC" << 'EOF'
-#!/bin/sh
-# Minimal X session for AUDiot kiosk
-xset s off
-xset -dpms
-xset s noblank
-openbox --config-file /dev/null &
-exec true
-EOF
-chmod +x "$XINITRC"
-chown "$KIOSK_USER:$KIOSK_USER" "$XINITRC" "$PROFILE" 2>/dev/null || true
+setup_getty_autologin "$KIOSK_USER"
+setup_bash_profile    "$KIOSK_USER"
+setup_xinitrc         "$KIOSK_USER"
 
 # ── 3. Systemd kiosk service ──────────────────────────────────────────────────
 
@@ -133,10 +112,7 @@ log "USB autosuspend disabled"
 # Belt-and-suspenders: keep the per-device udev rule even with global disable.
 
 log "Installing udev rule for ILITEK touchscreen..."
-cat > /etc/udev/rules.d/99-ilitek-touch.rules << 'EOF'
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="222a", ATTR{power/control}="on"
-EOF
-udevadm control --reload-rules
+install_udev_rule_ilitek
 log "udev rule installed"
 
 # ── 7. wl-gammarelay binary (display brightness / display sleep) ──────────────
@@ -145,24 +121,11 @@ log "udev rule installed"
 # or 'docker pull audumla/audiot-dashboard:latest' if running standalone).
 
 log "Installing wl-gammarelay..."
-if [ -f /usr/local/bin/wl-gammarelay ]; then
-    log "  wl-gammarelay already installed — skipping"
-else
-    _image="audumla/audiot-dashboard:latest"
-    if docker image inspect "$_image" >/dev/null 2>&1 || docker pull "$_image" >/dev/null 2>&1; then
-        docker run --rm --entrypoint cat "$_image" \
-            /opt/audiot-dashboard/wl-gammarelay > /usr/local/bin/wl-gammarelay
-        chmod +x /usr/local/bin/wl-gammarelay
-        log "  wl-gammarelay installed"
-    else
-        log "  WARNING: could not pull dashboard image — skipping wl-gammarelay install"
-        log "  Run manually: docker run --rm audumla/audiot-dashboard cat /opt/audiot-dashboard/wl-gammarelay > /usr/local/bin/wl-gammarelay"
-    fi
-fi
+extract_wl_gammarelay "audumla/audiot-dashboard:latest"
 
 # ── 8. Docker group ───────────────────────────────────────────────────────────
 
-usermod -aG docker "$KIOSK_USER" 2>/dev/null || true
+add_docker_group "$KIOSK_USER"
 log "Added $KIOSK_USER to docker group"
 
 # ── 9. Prometheus config for DietPi (single-host layout) ─────────────────────

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'hwexp/**'
+      - 'monitoring/dashboard/setup/**'
       - '.github/workflows/ci.yml'
   schedule:
     # Nightly at 02:00 UTC — catches dependency or environment drift
@@ -106,6 +107,15 @@ jobs:
             fedora:latest \
             bash -c "bash /tests/test-rpm-install.sh /tmp/hwexp.rpm"
 
+      - name: Test RPM Install (openSUSE Leap)
+        run: |
+          RPM=$(find hwexp/dist -maxdepth 1 -name "*.rpm" | head -1)
+          docker run --rm \
+            -v "$(realpath "$RPM"):/tmp/hwexp.rpm:ro" \
+            -v "${{ github.workspace }}/hwexp/tests/integration:/tests:ro" \
+            opensuse/leap:latest \
+            bash -c "bash /tests/test-opensuse-install.sh /tmp/hwexp.rpm"
+
       - name: Test hwmon Adapter (fake sysfs)
         run: |
           bash hwexp/tests/integration/test-hwmon-install.sh \
@@ -116,6 +126,37 @@ jobs:
         run: |
           DEB=$(find hwexp/dist -maxdepth 1 -name "*.deb" | head -1)
           bash hwexp/tests/integration/test-network-smoke.sh "$DEB"
+
+  setup-scripts-test:
+    name: Setup Scripts Tests (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Full Debian Bookworm (amd64) — same base as DietPi on x86
+          - label: "debian-bookworm-amd64"
+            image: "debian:bookworm"
+            platform: "linux/amd64"
+          # ARM64 Debian Bookworm — matches DietPi on Raspberry Pi (arm64)
+          - label: "debian-bookworm-arm64"
+            image: "arm64v8/debian:bookworm"
+            platform: "linux/arm64"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for ARM64 emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Run lib.sh tests in ${{ matrix.label }} container
+        run: |
+          docker run --rm \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}/monitoring/dashboard/setup:/setup:ro" \
+            ${{ matrix.image }} \
+            bash /setup/test-lib.sh
 
   monitoring-integration-test:
     name: Monitoring Integration Tests

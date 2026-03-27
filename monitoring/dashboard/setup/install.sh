@@ -44,6 +44,11 @@ fetch() {
     log "  fetched $(basename "$dst")"
 }
 
+# Load shared library (fetch it from GitHub so curl-pipe invocations work)
+fetch "setup/lib.sh" "/tmp/audiot-lib.sh"
+# shellcheck source=/dev/null
+. /tmp/audiot-lib.sh
+
 # ── 1. Prerequisites ──────────────────────────────────────────────────────────
 
 log "Installing prerequisites..."
@@ -54,7 +59,7 @@ apt-get install -y --no-install-recommends curl ca-certificates
 if ! command -v docker &>/dev/null; then
     curl -fsSL https://get.docker.com | sh
 fi
-usermod -aG docker "$KIOSK_USER" 2>/dev/null || true
+add_docker_group "$KIOSK_USER"
 
 if [ "$SETUP_KIOSK" = "true" ]; then
     apt-get install -y --no-install-recommends \
@@ -104,10 +109,7 @@ chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR" 2>/dev/null || true
 # ── 3. udev rule: ILITEK touchscreen autosuspend ──────────────────────────────
 
 log "Installing udev rule for ILITEK touchscreen..."
-cat > /etc/udev/rules.d/99-ilitek-touch.rules << 'EOF'
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="222a", ATTR{power/control}="on"
-EOF
-udevadm control --reload-rules
+install_udev_rule_ilitek
 
 # ── 5. Start monitoring stack ─────────────────────────────────────────────────
 
@@ -120,53 +122,18 @@ log "Stack started"
 # wl-gammarelay is baked into the dashboard image at the correct arch.
 # Extract it now that the image is already pulled — no separate download needed.
 
-if [ "$SETUP_KIOSK" = "true" ] && [ ! -f /usr/local/bin/wl-gammarelay ]; then
+if [ "$SETUP_KIOSK" = "true" ]; then
     log "Extracting wl-gammarelay from dashboard image..."
-    _image="audumla/audiot-dashboard:${AUDIOT_TAG:-latest}"
-    docker run --rm --entrypoint cat "$_image" \
-        /opt/audiot-dashboard/wl-gammarelay > /usr/local/bin/wl-gammarelay
-    chmod +x /usr/local/bin/wl-gammarelay
-    log "  wl-gammarelay installed (/usr/local/bin/wl-gammarelay)"
+    extract_wl_gammarelay "audumla/audiot-dashboard:${AUDIOT_TAG:-latest}"
 fi
 
 # ── 5. Kiosk X11 autologin and systemd service ────────────────────────────────
 
 if [ "$SETUP_KIOSK" = "true" ]; then
     log "Configuring kiosk autologin for user: $KIOSK_USER..."
-
-    # getty autologin on tty1
-    mkdir -p /etc/systemd/system/getty@tty1.service.d
-    cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $KIOSK_USER --noclear %I \$TERM
-EOF
-
-    # .bash_profile: launch X on tty1
-    PROFILE="/home/$KIOSK_USER/.bash_profile"
-    if ! grep -q 'audiot-kiosk' "$PROFILE" 2>/dev/null; then
-        cat >> "$PROFILE" << 'BASHEOF'
-
-# AUDiot kiosk: start X session on tty1 autologin
-if [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    exec startx "$HOME/.xinitrc" -- :0 vt1
-fi
-BASHEOF
-        chown "$KIOSK_USER:$KIOSK_USER" "$PROFILE" 2>/dev/null || true
-    fi
-
-    # Minimal .xinitrc: openbox session (kiosk.sh handles DPMS itself)
-    XINITRC="/home/$KIOSK_USER/.xinitrc"
-    cat > "$XINITRC" << 'XINITEOF'
-#!/bin/sh
-xset s off
-xset -dpms
-xset s noblank
-openbox --config-file /dev/null &
-exec true
-XINITEOF
-    chmod +x "$XINITRC"
-    chown "$KIOSK_USER:$KIOSK_USER" "$XINITRC" 2>/dev/null || true
+    setup_getty_autologin "$KIOSK_USER"
+    setup_bash_profile    "$KIOSK_USER"
+    setup_xinitrc         "$KIOSK_USER"
 
     # Install kiosk as a systemd user service
     USER_SERVICE_DIR="/home/$KIOSK_USER/.config/systemd/user"

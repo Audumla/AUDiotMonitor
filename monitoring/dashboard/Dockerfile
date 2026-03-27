@@ -21,7 +21,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 RUN cargo install wl-gammarelay-rs --locked
 
-# ── Stage 1: Grafana kiosk image ─────────────────────────────────────────────
+# ── Stage 1: kiosk-tools (standalone binary image) ────────────────────────────
+# Build: docker build --target kiosk-tools -o type=local,dest=dist/ .
+FROM debian:bookworm-slim AS kiosk-tools
+LABEL org.opencontainers.image.title="audiot-kiosk-tools" \
+      org.opencontainers.image.description="Pre-built kiosk host binaries (wl-gammarelay)" \
+      org.opencontainers.image.source="https://github.com/audumla/AUDiotMonitor"
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libdbus-1-3 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=wl-gammarelay-builder /usr/local/cargo/bin/wl-gammarelay-rs /usr/local/bin/wl-gammarelay
+CMD ["ls", "-la", "/usr/local/bin/"]
+
+# ── Stage 2: Grafana kiosk image ─────────────────────────────────────────────
 FROM grafana/grafana:latest
 
 # ── 1. Provisioning and dashboard library ─────────────────────────────────────
