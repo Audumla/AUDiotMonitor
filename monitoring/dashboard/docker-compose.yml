@@ -1,24 +1,28 @@
-# AUDiot Monitor — Dashboard Stack
+# AUDiot Monitor — Dashboard Stack (Display Node)
 #
-# Intended layout:
-#   ./config/grafana/...     -> Grafana provisioning and grafana.ini
-#   ./config/kiosk.env       -> Kiosk selection config
-#   ./dashboards/profiles/   -> Default profiles
-#   ./dashboards/custom/     -> Your own dashboards for this host
+# Grafana-only stack for a kiosk display node pointing at an external
+# Prometheus/hwexp collector.  Uses the pre-built Docker Hub image —
+# no git clone or local build required.
 #
-# Install the layout into /opt/docker/services/dashboard with:
-#   ./install-layout.sh
+# Prerequisites:
+#   - Docker installed
+#   - .env file with PROMETHEUS_URL and HWEXP_URL set (see .env.example)
+#   - ./dashboards/ directory present (profiles/ + custom/)
 #
-# Then start Grafana with:
-#   cd /opt/docker/services/dashboard
+# Quickstart:
+#   cp .env.example .env          # then edit PROMETHEUS_URL / HWEXP_URL
 #   docker compose up -d
+#
+# Local development (build image from source):
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+#   (create docker-compose.override.yml with `services.grafana.build: .`)
 
 services:
 
   grafana:
-    build: .    # builds audiot-dashboard image locally from the Dockerfile
+    image: audumla/audiot-dashboard:${AUDIOT_TAG:-latest}
     container_name: audiot-grafana
-    entrypoint: /run.sh   # use Grafana's native entrypoint; custom one is for named-volume installs
+    entrypoint: /run.sh   # use Grafana's native entrypoint; provisioning is baked into the image
     ports:
       - "3000:3000"
     volumes:

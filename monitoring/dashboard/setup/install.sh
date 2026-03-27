@@ -72,15 +72,32 @@ fi
 log "Fetching config files..."
 mkdir -p "$INSTALL_DIR"
 
-fetch "docker-compose.dietpi.yml"             "$INSTALL_DIR/docker-compose.yml"
-fetch "config/prometheus/prometheus.dietpi.yml" "$INSTALL_DIR/config/prometheus/prometheus.yml"
-fetch "config/kiosk.env.example"              "$INSTALL_DIR/config/kiosk.env"
-fetch "audiot-kiosk.service"                  "$INSTALL_DIR/audiot-kiosk.service"
+fetch "docker-compose.yml"          "$INSTALL_DIR/docker-compose.yml"
+fetch ".env.example"                "$INSTALL_DIR/.env.example"
+fetch "config/kiosk.env.example"    "$INSTALL_DIR/config/kiosk.env"
+fetch "audiot-kiosk.service"        "$INSTALL_DIR/audiot-kiosk.service"
 
-# kiosk.sh: also baked into the Docker image, but needed on the host
-# before the container has started for the first time.
-fetch "kiosk.sh" "$INSTALL_DIR/kiosk.sh"
-chmod +x "$INSTALL_DIR/kiosk.sh"
+# Kiosk scripts (needed on the host; also baked into the Docker image)
+fetch "kiosk.sh"        "$INSTALL_DIR/kiosk.sh"
+fetch "kiosk-switch.sh" "$INSTALL_DIR/kiosk-switch.sh"
+chmod +x "$INSTALL_DIR/kiosk.sh" "$INSTALL_DIR/kiosk-switch.sh"
+
+# Dashboard JSON files
+for profile in profiles/debug profiles/mobile profiles/standard profiles/wide-screens custom; do
+    mkdir -p "$INSTALL_DIR/dashboards/$profile"
+    # fetch manifest to discover files (graceful — skip if directory is empty)
+done
+fetch "dashboards/profiles/standard/panel-1080p.json"      "$INSTALL_DIR/dashboards/profiles/standard/panel-1080p.json"
+fetch "dashboards/profiles/standard/system-overview.json"   "$INSTALL_DIR/dashboards/profiles/standard/system-overview.json"
+fetch "dashboards/profiles/mobile/panel-portrait.json"      "$INSTALL_DIR/dashboards/profiles/mobile/panel-portrait.json"
+fetch "dashboards/custom/triple-gpu-wide.json"              "$INSTALL_DIR/dashboards/custom/triple-gpu-wide.json" || true
+fetch "dashboards/custom/triple-gpu-combined.json"          "$INSTALL_DIR/dashboards/custom/triple-gpu-combined.json" || true
+
+# Seed .env from example if not already present
+if [ ! -f "$INSTALL_DIR/.env" ]; then
+    cp "$INSTALL_DIR/.env.example" "$INSTALL_DIR/.env"
+    log "  created .env from .env.example — set PROMETHEUS_URL and HWEXP_URL before starting"
+fi
 
 chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR" 2>/dev/null || true
 
