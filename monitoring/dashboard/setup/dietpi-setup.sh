@@ -89,7 +89,48 @@ systemctl daemon-reload
 systemctl enable audiot-kiosk.service
 log "audiot-kiosk.service enabled"
 
-# ── 4. udev rule: disable ILITEK touchscreen USB autosuspend ─────────────────
+# ── 4. Disable system suspend ─────────────────────────────────────────────────
+# The kiosk manages display sleep via wlopm/DPMS.  Powering off the Wayland
+# output (wlopm --off) removes the active seat from logind's view, which can
+# trigger systemd-logind's idle-suspend action and put the whole RPi to sleep.
+# Mask all sleep targets and set IdleAction=ignore so only the display sleeps.
+
+log "Disabling system suspend..."
+systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target \
+    2>/dev/null || true
+
+# logind: no idle suspend, ignore power/sleep keys (kiosk has no lid or power btn)
+mkdir -p /etc/systemd/logind.conf.d
+cat > /etc/systemd/logind.conf.d/kiosk-no-sleep.conf << 'EOF'
+[Login]
+IdleAction=ignore
+IdleActionSec=0
+HandleSuspendKey=ignore
+HandleHibernateKey=ignore
+HandlePowerKey=ignore
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+EOF
+systemctl restart systemd-logind 2>/dev/null || true
+log "System suspend disabled"
+
+# ── 5. Disable USB autosuspend ────────────────────────────────────────────────
+# The USB hub connecting eth0 (smsc95xx) and the touch screen has autosuspend
+# enabled by default. When the hub suspends, SSH connectivity and touch input
+# are lost. Disable autosuspend globally for all USB devices.
+
+log "Disabling USB autosuspend..."
+echo 'options usbcore autosuspend=-1' \
+    > /etc/modprobe.d/kiosk-no-usb-autosuspend.conf
+# Apply immediately without reboot
+for dev in /sys/bus/usb/devices/*/power/control; do
+    echo on > "$dev" 2>/dev/null || true
+done
+log "USB autosuspend disabled"
+
+# ── 6. udev rule: disable ILITEK touchscreen USB autosuspend ─────────────────
+# Belt-and-suspenders: keep the per-device udev rule even with global disable.
 
 log "Installing udev rule for ILITEK touchscreen..."
 cat > /etc/udev/rules.d/99-ilitek-touch.rules << 'EOF'
@@ -98,12 +139,12 @@ EOF
 udevadm control --reload-rules
 log "udev rule installed"
 
-# ── 5. Docker group ───────────────────────────────────────────────────────────
+# ── 7. Docker group ───────────────────────────────────────────────────────────
 
 usermod -aG docker "$KIOSK_USER" 2>/dev/null || true
 log "Added $KIOSK_USER to docker group"
 
-# ── 6. Prometheus config for DietPi (single-host layout) ─────────────────────
+# ── 8. Prometheus config for DietPi (single-host layout) ─────────────────────
 
 PROMETHEUS_CFG="$KIOSK_DIR/config/prometheus/prometheus.yml"
 DIETPI_CFG="$KIOSK_DIR/config/prometheus/prometheus.dietpi.yml"

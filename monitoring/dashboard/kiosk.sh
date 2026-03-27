@@ -248,6 +248,7 @@ fi
 
 pkill -f swayidle 2>/dev/null || true
 pkill -f xautolock 2>/dev/null || true
+pkill -f 'swaylock -f -c 000000' 2>/dev/null || true
 pkill -f 'dd if=/dev/input' 2>/dev/null || true
 
 _DPMS_LOG="/tmp/kiosk-dpms-${USER}.log"
@@ -261,18 +262,25 @@ if [ "$_dpms_enabled" = "true" ]; then
     _DPMS_XR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
     if [ "$_BACKEND" = "wayland" ] && command -v swayidle &>/dev/null && command -v wlopm &>/dev/null; then
-        # Wayland: swayidle integrates with labwc's idle-notify protocol so touch/keyboard
-        # reliably wakes the display even when the screen is powered off.
+        # Wayland: swayidle handles the idle timeout and powers the display off via wlopm.
+        # However, labwc stops routing input events through its idle-notify protocol once
+        # the output is powered off, so swayidle's resume hook may never fire on touch or
+        # mouse input.  A supplemental input watcher (below) reads /dev/input directly and
+        # calls wlopm --on to guarantee the display wakes on any input event.
         # Probe for dimming support — cascades through wl-gammarelay then ddcutil.
         probe_dimmer
 
+        # Prefer swaylock for blanking: overlays a black surface without cutting the
+        # HDMI signal, so the monitor shows black instead of "no signal".
+        # Fall back to wlopm --off if swaylock is unavailable.
         _CMD_OFF="WAYLAND_DISPLAY='$_DPMS_WD' XDG_RUNTIME_DIR='$_DPMS_XR' wlopm --off '*' 2>/dev/null || true; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display OFF\" >> '$_DPMS_LOG'"
         _CMD_ON="WAYLAND_DISPLAY='$_DPMS_WD' XDG_RUNTIME_DIR='$_DPMS_XR' wlopm --on '*' 2>/dev/null || true; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display ON\" >> '$_DPMS_LOG'"
+        _BLANKER="wlopm"
         _CMD_DIM="$_DIMMER_CMD_DIM; echo \"\$(date '+%Y-%m-%d %H:%M:%S') display DIM\" >> '$_DPMS_LOG'"
         _CMD_RESTORE="$_DIMMER_CMD_RESTORE"
 
         if [ "$_DIMMER_READY" = "true" ] && [ "$dim_t" -lt "$off_t" ] 2>/dev/null; then
-            log "Screen power management: dim=${dim_t}s off=${off_t}s brightness=${KIOSK_DIM_BRIGHTNESS:-0.2} (swayidle+dimmer+wlopm)"
+            log "Screen power management: dim=${dim_t}s off=${off_t}s brightness=${KIOSK_DIM_BRIGHTNESS:-0.2} (swayidle+dimmer+$_BLANKER)"
             WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" \
             swayidle -w \
                 timeout "$dim_t" "$_CMD_DIM" \
@@ -280,7 +288,7 @@ if [ "$_dpms_enabled" = "true" ]; then
                 resume          "$_CMD_ON; $_CMD_RESTORE" \
                 &
         else
-            log "Screen power management: off=${off_t}s (swayidle+wlopm)"
+            log "Screen power management: off=${off_t}s (swayidle+$_BLANKER)"
             WAYLAND_DISPLAY="$_DPMS_WD" XDG_RUNTIME_DIR="$_DPMS_XR" \
             swayidle -w \
                 timeout "$off_t" "$_CMD_OFF" \
@@ -288,6 +296,56 @@ if [ "$_dpms_enabled" = "true" ]; then
                 &
         fi
         log "swayidle started (pid $!)"
+
+        # Supplemental input watcher: reads /dev/input directly so any input device
+        # wakes the display even when labwc's idle-notify protocol stops after wlopm --off.
+        # Watches ALL readable /dev/input/event* devices (covers touch, mouse, keyboard)
+        # plus /dev/input/mice (kernel aggregate, catches hot-plugged mice automatically).
+        # Also restores brightness after wake in case wl-gammarelay dimmed the screen.
+        # A supervisor loop re-scans every 30 s so devices that appear after startup
+        # (e.g. USB touch reconnect) are picked up without a kiosk restart.
+        _WAKE_WD="$_DPMS_WD"
+        _WAKE_XR="$_DPMS_XR"
+        # On wake: restore brightness (if dimmer was used) and dismiss swaylock blanker
+        _WAKE_RESTORE="${_DIMMER_CMD_RESTORE:-}"
+
+        _start_wake_watcher() {
+            local dev="$1" bs="${2:-24}"
+            [ -r "$dev" ] || return 1
+            (
+                while true; do
+                    [ -r "$dev" ] || { sleep 5; continue; }
+                    if timeout 10 dd if="$dev" bs="$bs" count=1 >/dev/null 2>&1; then
+                        WAYLAND_DISPLAY="$_WAKE_WD" XDG_RUNTIME_DIR="$_WAKE_XR" \
+                            wlopm --on '*' 2>/dev/null || true
+                        [ -n "$_WAKE_RESTORE" ] && eval "$_WAKE_RESTORE" 2>/dev/null || true
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') wake[$dev]: input, display ON" >> "$_DPMS_LOG"
+                    fi
+                done
+            ) &
+        }
+
+        # Supervisor: starts one watcher per event device, re-checks every 30 s for new ones
+        (
+            declare -A _watched
+            while true; do
+                for dev in /dev/input/event*; do
+                    [ -r "$dev" ] || continue
+                    [ "${_watched[$dev]+set}" = "set" ] && continue
+                    _start_wake_watcher "$dev" 24
+                    _watched[$dev]=$!
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') wake-supervisor: watching $dev (pid $!)" >> "$_DPMS_LOG"
+                done
+                sleep 30
+            done
+        ) &
+        log "Wayland wake-watcher supervisor started (pid $!)"
+
+        # /dev/input/mice aggregates all mice (existing and hot-plugged); 3-byte PS/2 packets
+        if [ -r /dev/input/mice ]; then
+            _start_wake_watcher /dev/input/mice 3
+            log "Wayland wake-watcher: mice aggregate /dev/input/mice (pid $!)"
+        fi
 
     elif [ "$_BACKEND" = "x11" ] && command -v xset &>/dev/null; then
         INPUT_DEV="${KIOSK_TOUCH_DEVICE:-$(find_input_device 2>/dev/null)}"
@@ -298,10 +356,17 @@ if [ "$_dpms_enabled" = "true" ]; then
             _DPMS_DEV="$INPUT_DEV"
             _DPMS_DIM="$dim_t"
             _DPMS_OFF="$off_t"
+            # Enable DPMS in the X server so force on/off commands work.
+            # .xinitrc disables DPMS (xset -dpms) to hand control to this script;
+            # we must re-enable it here before using 'xset dpms force'.
+            # Set X11's own timers to 0 so the X server never fires them independently.
+            DISPLAY="$_DPMS_DP" xset +dpms 2>/dev/null || true
+            DISPLAY="$_DPMS_DP" xset dpms 0 0 0 2>/dev/null || true
             (
                 _state=on
                 _last=$(date +%s)
                 _dpms_on() {
+                    DISPLAY="$_DPMS_DP" xset +dpms 2>/dev/null || true
                     DISPLAY="$_DPMS_DP" xset dpms force on 2>/dev/null || true
                     echo "$(date '+%Y-%m-%d %H:%M:%S') display ON" >> "$_DPMS_LOG"
                 }
