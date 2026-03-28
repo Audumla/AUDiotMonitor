@@ -10,4 +10,4 @@ Legend: **Implemented** | *Draft / in progress* | Planned
 
 | Spec | Status | Description |
 | --- | --- | --- |
-| [spec-801](spec-801-llmgateway-monitor-adapter.md) | *Draft* | Generic manifest-driven hwexp adapter for AUDiaLLMGateway components — replaces bare `llamaswap` adapter, adds Prometheus metrics and Grafana dashboard |
+| [spec-801](spec-801-llmgateway-monitor-adapter.md) | *Draft* | Generic manifest-driven `gateway_manifest` hwexp adapter — manifest-driven software component monitoring with hardware correlation and Grafana dashboard |

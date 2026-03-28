@@ -41,8 +41,10 @@ type AdaptersConfig struct {
 	LinuxHwmon            AdapterConfig `yaml:"linux_hwmon,omitempty"`
 	LinuxGpuVendor        AdapterConfig `yaml:"linux_gpu_vendor,omitempty"`
 	LinuxVendorExec       AdapterConfig `yaml:"linux_vendor_exec,omitempty"`
+	LinuxStorage          AdapterConfig `yaml:"linux_storage,omitempty"`
+	LinuxSystem           AdapterConfig `yaml:"linux_system,omitempty"`
 	LinuxNodeBridge       AdapterConfig `yaml:"linux_node_bridge,omitempty"`
-	Llamaswap             AdapterConfig `yaml:"llamaswap,omitempty"`
+	GatewayManifest       AdapterConfig `yaml:"gateway_manifest,omitempty"`
 	WindowsExporterBridge AdapterConfig `yaml:"windows_exporter_bridge,omitempty"`
 	DarwinNodeBridge      AdapterConfig `yaml:"darwin_node_bridge,omitempty"`
 }

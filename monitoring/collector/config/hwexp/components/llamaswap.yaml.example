@@ -1,10 +1,11 @@
-# llamaswap component manifest
+# llamaswap component manifest EXAMPLE
 #
-# Monitors a local llama-swap instance and exposes health + model metrics
-# to Prometheus via the hwexp component_manifest adapter.
+# Reference manifest for monitoring a local llama-swap instance.
+# Demonstrates the gateway_manifest adapter schema (spec-801).
 #
-# See spec-100 §2 and spec-801 for the manifest schema.
-# Copy or symlink this directory to /etc/hwexp/components/ on the collector host.
+# Once the gateway_manifest adapter is implemented (Stage 1.2),
+# copy this file (without the .example suffix) to /etc/hwexp/components/
+# on the collector host.
 
 id: llamaswap
 display_name: "llama-swap"

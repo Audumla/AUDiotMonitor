@@ -16,11 +16,11 @@ Custom hardware or software data can be ingested by placing executable scripts i
 
 # 8. Local LLM monitoring requirement
 
-## 8.7 Implementation: Llamaswap Adapter
-LLM monitoring is now a built-in capability of the core exporter via the `llamaswap` adapter.
-- **Configuration**: Enabled via `adapters.llamaswap.enabled: true`.
-- **Default Endpoint**: `http://localhost:50099`.
-- **Data Source**: Polls the OpenAI-compatible `/v1/models` API.
+## 8.7 Implementation: Gateway Manifest Adapter (Planned)
+
+LLM and software component monitoring will be provided by the `gateway_manifest` adapter (spec-801).
+The adapter reads YAML manifests from `/etc/hwexp/components/` and polls configured endpoints.
+See `monitoring/collector/config/hwexp/components/llamaswap.yaml.example` for a reference manifest.
 
 ---
 

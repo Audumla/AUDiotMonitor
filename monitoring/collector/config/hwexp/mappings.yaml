@@ -59,3 +59,130 @@ rules:
       device_class: "gpu"
       component: "thermal"
       sensor: "core"
+
+  - id: "gateway_up"
+    priority: 100
+    match:
+      source: "gateway_manifest"
+      raw_name: "component_up"
+    normalize:
+      metric_family: "gateway_component_up"
+      metric_type: "gauge"
+      logical_name_template: "gateway_${logical_device_name}_up"
+      labels:
+        component: "${logical_device_name}"
+
+  - id: "gateway_info"
+    priority: 100
+    match:
+      source: "gateway_manifest"
+      raw_name: "component_info"
+    normalize:
+      metric_family: "gateway_component_info"
+      metric_type: "info"
+      logical_name_template: "gateway_${logical_device_name}_info"
+      labels:
+        component: "${logical_device_name}"
+
+  - id: "gateway_passthrough"
+    priority: 10
+    match:
+      source: "gateway_manifest"
+      raw_name_regex: "^gateway_"
+    normalize:
+      metric_family: "${0}"
+      metric_type: "gauge"
+      logical_name_template: "${0}"
+
+  - id: "disk_health"
+    priority: 100
+    match:
+      source: "linux_storage"
+      raw_name: "disk_health_status"
+    normalize:
+      metric_family: "hw_device_disk_health_status"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_health"
+
+  - id: "disk_temp"
+    priority: 100
+    match:
+      source: "linux_storage"
+      raw_name: "disk_temperature"
+    normalize:
+      metric_family: "hw_device_temperature_celsius"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_temp"
+      sensor: "core"
+
+  - id: "disk_life"
+    priority: 100
+    match:
+      source: "linux_storage"
+      raw_name: "disk_life_remaining_percent"
+    normalize:
+      metric_family: "hw_device_disk_life_remaining_percent"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_life_remaining"
+
+  - id: "disk_hours"
+    priority: 100
+    match:
+      source: "linux_storage"
+      raw_name: "disk_power_on_hours"
+    normalize:
+      metric_family: "hw_device_disk_power_on_hours_total"
+      metric_type: "counter"
+      logical_name_template: "${logical_device_name}_power_on_hours"
+
+  - id: "system_thermal"
+    priority: 100
+    match:
+      source: "linux_system"
+      raw_name: "thermal_zone_temp"
+    normalize:
+      metric_family: "hw_device_temperature_celsius"
+      metric_type: "gauge"
+      logical_name_template: "system_${zone}_temp"
+      unit_scale: 0.001
+      device_class: "thermal"
+      sensor: "zone"
+
+  - id: "system_cstate"
+    priority: 100
+    match:
+      source: "linux_system"
+      raw_name: "cpu_cstate_residency"
+    normalize:
+      metric_family: "hw_device_utilization_percent"
+      metric_type: "gauge"
+      logical_name_template: "cpu_cstate_${state}_residency"
+      device_class: "cpu"
+      component: "compute"
+      sensor: "cstate"
+
+  - id: "system_interrupts"
+    priority: 100
+    match:
+      source: "linux_system"
+      raw_name: "system_interrupts_rate"
+    normalize:
+      metric_family: "hw_device_sensor_count"
+      metric_type: "gauge"
+      logical_name_template: "system_interrupts_per_second"
+      device_class: "cpu"
+      component: "system"
+      sensor: "interrupts"
+
+  - id: "system_ecc"
+    priority: 100
+    match:
+      source: "linux_system"
+      raw_name: "memory_ecc_ce_count"
+    normalize:
+      metric_family: "hw_device_memory_ecc_errors_total"
+      metric_type: "counter"
+      logical_name_template: "memory_ecc_ce_total_${mc}"
+      device_class: "memory"
+      component: "system"
+      sensor: "ecc"

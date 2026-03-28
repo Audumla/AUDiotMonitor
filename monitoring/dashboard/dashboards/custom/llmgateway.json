@@ -1,0 +1,66 @@
+{
+  "uid": "audiot-llmgateway",
+  "title": "AUDiot LLM Gateway Correlation",
+  "tags": ["audiot", "llm", "correlation", "gpu"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Active LLM Backends",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "LLM Token Throughput (Sum)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "targets": [
+        { "expr": "sum(rate(gateway_llamacpp_prompt_tokens_total[1m]))", "legendFormat": "Prompt Tokens/s" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "GPU Temperature vs LLM Load",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "targets": [
+        { "expr": "hw_device_temperature_celsius{device_class=\"gpu\"}", "legendFormat": "GPU Temp {{device_id}}" },
+        { "expr": "gateway_component_up * 50", "legendFormat": "Component {{component}} Up" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": { "drawStyle": "line", "fillOpacity": 5 }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Correlated VRAM Usage",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "targets": [
+        { "expr": "hw_device_utilization_percent{device_class=\"gpu\", sensor=\"usage\", component=\"memory\"}", "legendFormat": "Hardware VRAM % {{device_id}}" },
+        { "expr": "gateway_vllm_cache_usage_percent", "legendFormat": "Software Cache % {{device_id}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0, "max": 100,
+          "custom": { "lineWidth": 2 }
+        }
+      }
+    }
+  ]
+}
