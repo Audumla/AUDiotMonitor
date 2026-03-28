@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.21.1...hwexp-v0.21.2) (2026-03-28)
+
+
+### Bug Fixes
+
+* **mapping:** restore GPU VRAM series and enforce exact raw_name matching ([4bfbb35](https://github.com/Audumla/AUDiotMonitor/commit/4bfbb3524e25d8d7f0434ae3aa29afc7b8298e98))
+
 ## [0.21.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.21.0...hwexp-v0.21.1) (2026-03-28)
 
 

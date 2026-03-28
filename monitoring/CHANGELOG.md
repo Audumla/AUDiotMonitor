@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.1...monitoring-v0.9.2) (2026-03-28)
+
+
+### Bug Fixes
+
+* **mapping:** restore GPU VRAM series and enforce exact raw_name matching ([4bfbb35](https://github.com/Audumla/AUDiotMonitor/commit/4bfbb3524e25d8d7f0434ae3aa29afc7b8298e98))
+
 ## [0.9.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.0...monitoring-v0.9.1) (2026-03-28)
 
 
