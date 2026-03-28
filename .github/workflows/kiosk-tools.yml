@@ -1,0 +1,67 @@
+name: Kiosk Tools
+
+# Builds wl-gammarelay binaries for linux/arm64 and linux/amd64 using the
+# multi-stage Dockerfile at monitoring/dashboard/kiosk/Dockerfile.
+#
+# On push to main: builds and stores binaries as workflow artifacts (CI check).
+# On monitoring release: release-please.yml kiosk-tools-publish uploads them
+#   as GitHub release assets downloadable via:
+#     releases/latest/download/wl-gammarelay-linux-arm64
+#     releases/latest/download/wl-gammarelay-linux-amd64
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'monitoring/dashboard/Dockerfile'
+      - '.github/workflows/kiosk-tools.yml'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: Build wl-gammarelay binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/arm64, linux/amd64]
+        include:
+          - platform: linux/arm64
+            suffix: arm64
+          - platform: linux/amd64
+            suffix: amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker setup
+        uses: ./.github/actions/docker-setup
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and extract binary (${{ matrix.suffix }})
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/dashboard
+          target: kiosk-tools
+          platforms: ${{ matrix.platform }}
+          push: false
+          outputs: type=local,dest=dist/${{ matrix.suffix }}
+          cache-from: type=registry,ref=audumla/audiot-kiosk-tools:buildcache
+          cache-to: type=registry,ref=audumla/audiot-kiosk-tools:buildcache,mode=max
+
+      - name: Stage binary
+        run: |
+          cp dist/${{ matrix.suffix }}/usr/local/bin/wl-gammarelay \
+             wl-gammarelay-linux-${{ matrix.suffix }}
+          ls -lh wl-gammarelay-linux-${{ matrix.suffix }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wl-gammarelay-linux-${{ matrix.suffix }}
+          path: wl-gammarelay-linux-${{ matrix.suffix }}
+          retention-days: 14

@@ -185,5 +185,21 @@
       "Updated specifications/overview.md and specifications/dashboard_implementation_spec.md to reflect logical profile organization and grafana-init behavior.",
       "Ensured INSTALL.md provides clear instructions for persisting user edits via local folder mapping."
     ]
+  },
+  {
+    "id": "CHG-a9062daa",
+    "agent": "codex",
+    "change_group": "github-deployments",
+    "plugin_version": "unreleased",
+    "date": "2026-03-27",
+    "recorded_at": "2026-03-27T05:40:39.942692Z",
+    "summary_tags": [
+      "Bug Fix"
+    ],
+    "summary": "Fix CI and release blockers in workflows and hwexp automapper/integration tests.",
+    "details": [
+      "Fixed CI monitoring test working directory and docker cache auth failures.",
+      "Restricted automapper inference to expected raw-name families and stabilized temperature-metric checks in integration scripts."
+    ]
   }
 ]

@@ -1,0 +1,119 @@
+# AUDiot Monitor — DietPi Combined Stack
+#
+# Runs the full monitoring stack (collector + dashboard) on a single DietPi host.
+# The kiosk browser (Chromium) runs natively via the audiot-kiosk systemd service.
+#
+# Prerequisites:
+#   - Docker installed (dietpi-setup.sh handles this)
+#   - Layout deployed to /opt/docker/services/dashboard:
+#       ./install-layout.sh
+#
+# Start:
+#   cd /opt/docker/services/dashboard
+#   docker compose -f docker-compose.dietpi.yml up -d
+#
+# To pin Grafana to a pre-built image instead of building locally:
+#   docker compose -f docker-compose.dietpi.yml -f docker-compose.image.yml up -d
+
+services:
+
+  # ── Hardware sensor exporter ───────────────────────────────────────────────
+  hwexp:
+    image: audumla/audiot-hwexp:latest
+    container_name: hwexp
+    privileged: true
+    volumes:
+      - /sys:/sys:ro
+      - /proc:/proc:ro
+      - ./config/hwexp/hwexp.yaml:/etc/hwexp/hwexp.yaml:ro
+      - ./config/hwexp/mappings.yaml:/etc/hwexp/mappings.yaml:ro
+      - hwexp-data:/var/lib/hwexp
+    environment:
+      HWEXP_HOST: ${HWEXP_HOST:-${HOSTNAME:-localhost}}
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+
+  # ── OS metrics exporter ────────────────────────────────────────────────────
+  # network_mode: host required for ethtool ioctls and systemd/logind dbus.
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    network_mode: host
+    pid: host
+    privileged: true
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /run/dbus:/run/dbus:ro
+      - /run/dbus:/var/run/dbus:ro
+      - /run/udev:/run/udev:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/rootfs
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      - --collector.thermal_zone
+      - --collector.processes
+      - --collector.interrupts
+      - --collector.softirqs
+      - --collector.tcpstat
+      - --collector.wifi
+      - --no-collector.rapl         # not available on ARM (Raspberry Pi)
+      - --no-collector.drbd
+      - --no-collector.slabinfo
+    restart: unless-stopped
+
+  # ── Metrics database ───────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    user: "1000:1000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - --config.file=/etc/prometheus/audiot/prometheus.yml
+      - --storage.tsdb.path=/prometheus/data
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+    volumes:
+      - ./config/prometheus:/etc/prometheus/audiot
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  # ── Grafana dashboard ──────────────────────────────────────────────────────
+  grafana:
+    image: audumla/audiot-dashboard:${AUDIOT_TAG:-latest}
+    container_name: audiot-grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    environment:
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}
+      - HWEXP_URL=${HWEXP_URL:-http://hwexp:9200}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-true}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
+      - GF_DATABASE_WAL=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+    deploy:
+      resources:
+        limits:
+          memory: 256m      # reduced from 512m — DietPi hosts are RAM-constrained
+        reservations:
+          memory: 64m
+    restart: unless-stopped
+
+volumes:
+  grafana-dashboards:
+  grafana-data:
+  prometheus-data:
+  hwexp-data:

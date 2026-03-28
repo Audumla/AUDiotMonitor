@@ -68,7 +68,7 @@ A set of bash scripts provides a unified interface for stack operations:
 - `linux_hwmon`: Kernel hwmon subsystem.
 - `linux_gpu`: AMD (sysfs) and NVIDIA (nvidia-smi) telemetry.
 - `linux_static`: System inventory (DMI, /proc).
-- `llamaswap`: Local LLM model monitoring.
+- `gateway_manifest`: Manifest-driven software component monitoring with hardware correlation (spec-801, planned).
 - `vendor_exec`: Custom external scripts/plugins.
 
 ---

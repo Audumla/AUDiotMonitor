@@ -10,10 +10,14 @@ import (
 	"strings"
 	"syscall"
 
+	"time"
+
+	"hwexp/internal/adapters/gateway_manifest"
 	"hwexp/internal/adapters/hwmon"
 	"hwexp/internal/adapters/linux_gpu"
 	"hwexp/internal/adapters/linux_static"
-	"hwexp/internal/adapters/llamaswap"
+	"hwexp/internal/adapters/linux_storage"
+	"hwexp/internal/adapters/linux_system"
 	"hwexp/internal/adapters/mock"
 	"hwexp/internal/adapters/vendor_exec"
 	"hwexp/internal/config"
@@ -54,8 +58,8 @@ func printBanner(cfg *config.Config, configPath string) {
 	if cfg.Adapters.LinuxVendorExec.Enabled {
 		adapterNames = append(adapterNames, "linux_vendor_exec")
 	}
-	if cfg.Adapters.Llamaswap.Enabled {
-		adapterNames = append(adapterNames, "llamaswap")
+	if cfg.Adapters.LinuxStorage.Enabled {
+		adapterNames = append(adapterNames, "linux_storage")
 	}
 	adapterStr := strings.Join(adapterNames, ", ")
 
@@ -174,18 +178,19 @@ func main() {
 		adapters = append(adapters, linux_gpu.NewAdapter(""))
 	}
 
+	if cfg.Adapters.LinuxStorage.Enabled && *fixturePath == "" {
+		l.Info("startup", "Using linux_storage adapter", nil)
+		adapters = append(adapters, linux_storage.NewAdapter())
+	}
+
+	if cfg.Adapters.LinuxSystem.Enabled && *fixturePath == "" {
+		l.Info("startup", "Using linux_system adapter", nil)
+		adapters = append(adapters, linux_system.NewAdapter())
+	}
+
 	if *fixturePath == "" {
 		l.Info("startup", "Using linux_static adapter", nil)
 		adapters = append(adapters, linux_static.NewAdapter(""))
-	}
-
-	if cfg.Adapters.Llamaswap.Enabled && *fixturePath == "" {
-		endpoint := "http://localhost:50099"
-		if e, ok := cfg.Adapters.Llamaswap.Settings["endpoint"].(string); ok && e != "" {
-			endpoint = e
-		}
-		l.Info("startup", "Using llamaswap adapter", map[string]interface{}{"endpoint": endpoint})
-		adapters = append(adapters, llamaswap.NewAdapter(endpoint))
 	}
 
 	if cfg.Adapters.LinuxVendorExec.Enabled && *fixturePath == "" {
@@ -193,8 +198,38 @@ func main() {
 		if d, ok := cfg.Adapters.LinuxVendorExec.Settings["scripts_dir"].(string); ok && d != "" {
 			scriptsDir = d
 		}
-		l.Info("startup", "Using vendor_exec adapter", map[string]interface{}{"dir": scriptsDir})
-		adapters = append(adapters, vendor_exec.NewAdapter(scriptsDir))
+		sourceFormat := "json"
+		if f, ok := cfg.Adapters.LinuxVendorExec.Settings["source_format"].(string); ok && f != "" {
+			sourceFormat = f
+		}
+		timeout := cfg.Adapters.LinuxVendorExec.Timeout
+		if timeout == 0 {
+			timeout = 5 * time.Second
+		}
+
+		l.Info("startup", "Using vendor_exec adapter", map[string]interface{}{
+			"dir":           scriptsDir,
+			"timeout":       timeout.String(),
+			"source_format": sourceFormat,
+		})
+		adapters = append(adapters, vendor_exec.NewAdapter(scriptsDir, timeout, sourceFormat))
+	}
+
+	if cfg.Adapters.GatewayManifest.Enabled && *fixturePath == "" {
+		projectDir := "/etc/hwexp/components"
+		if d, ok := cfg.Adapters.GatewayManifest.Settings["manifest_dir"].(string); ok && d != "" {
+			projectDir = d
+		}
+		localDir := "/etc/hwexp/local/components"
+		if d, ok := cfg.Adapters.GatewayManifest.Settings["local_manifest_dir"].(string); ok && d != "" {
+			localDir = d
+		}
+
+		l.Info("startup", "Using gateway_manifest adapter", map[string]interface{}{
+			"project_dir": projectDir,
+			"local_dir":   localDir,
+		})
+		adapters = append(adapters, gateway_manifest.NewAdapter(projectDir, localDir))
 	}
 
 	if len(adapters) == 0 {

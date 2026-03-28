@@ -122,14 +122,8 @@ jobs:
           fi
           echo "buildtime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Docker setup
+        uses: ./.github/actions/docker-setup
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -153,7 +147,9 @@ jobs:
 
   monitoring-docker-publish:
     name: Publish Dashboard Image
-    needs: [release]
+    # Depends on kiosk-tools-publish so the Rust build cache is warm before
+    # the dashboard image build runs (wl-gammarelay is baked into the image).
+    needs: [release, kiosk-tools-publish]
     if: ${{ always() && needs.release.result != 'failure' && needs.release.outputs.monitoring_release_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -166,14 +162,8 @@ jobs:
           TAG="${{ needs.release.outputs.monitoring_tag_name }}"
           echo "version=${TAG#monitoring-v}" >> $GITHUB_OUTPUT
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Docker setup
+        uses: ./.github/actions/docker-setup
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -187,6 +177,95 @@ jobs:
           tags: |
             audumla/audiot-dashboard:${{ steps.meta.outputs.version }}
             audumla/audiot-dashboard:latest
+          cache-from: |
+            type=registry,ref=audumla/audiot-kiosk-tools:buildcache
+            type=registry,ref=audumla/audiot-dashboard:buildcache
+          cache-to: type=registry,ref=audumla/audiot-dashboard:buildcache,mode=max
+
+  kiosk-tools-publish:
+    name: Build & Upload wl-gammarelay Binaries
+    needs: [release]
+    if: ${{ always() && needs.release.result != 'failure' && needs.release.outputs.monitoring_release_created == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/arm64, linux/amd64]
+        include:
+          - platform: linux/arm64
+            suffix: arm64
+          - platform: linux/amd64
+            suffix: amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker setup
+        uses: ./.github/actions/docker-setup
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and extract binary (${{ matrix.suffix }})
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/dashboard
+          target: kiosk-tools
+          platforms: ${{ matrix.platform }}
+          push: false
+          outputs: type=local,dest=dist/${{ matrix.suffix }}
+          cache-from: type=registry,ref=audumla/audiot-kiosk-tools:buildcache
+          cache-to: type=registry,ref=audumla/audiot-kiosk-tools:buildcache,mode=max
+
+      - name: Stage binary
+        run: |
+          cp dist/${{ matrix.suffix }}/usr/local/bin/wl-gammarelay \
+             wl-gammarelay-linux-${{ matrix.suffix }}
+
+      - name: Upload to GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.release.outputs.monitoring_tag_name }}" \
+            wl-gammarelay-linux-${{ matrix.suffix }} --clobber
+
+  monitoring-release-artifacts:
+    name: Upload Monitoring Release Artifacts
+    needs: [release]
+    if: ${{ always() && needs.release.result != 'failure' && needs.release.outputs.monitoring_release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage artifacts
+        run: |
+          TAG="${{ needs.release.outputs.monitoring_tag_name }}"
+          VERSION="${TAG#monitoring-v}"
+          mkdir -p dist
+
+          # Compose files
+          cp monitoring/dashboard/docker-compose.yml          dist/docker-compose.yml
+          cp monitoring/dashboard/docker-compose.dietpi.yml   dist/docker-compose.dietpi.yml
+          cp monitoring/dashboard/.env.example                dist/env.example
+
+          # Kiosk host scripts
+          cp monitoring/dashboard/kiosk.sh                    dist/kiosk.sh
+          cp monitoring/dashboard/kiosk-switch.sh             dist/kiosk-switch.sh
+
+          # Bootstrap installer (lib.sh is sourced by both installers)
+          cp monitoring/dashboard/setup/install.sh            dist/install.sh
+          cp monitoring/dashboard/setup/dietpi-setup.sh       dist/dietpi-setup.sh
+          cp monitoring/dashboard/setup/lib.sh                dist/lib.sh
+
+          # Prometheus config for single-host (DietPi) layout
+          cp monitoring/dashboard/config/prometheus/prometheus.dietpi.yml dist/prometheus.dietpi.yml
+
+      - name: Upload to GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.release.outputs.monitoring_tag_name }}"
+          gh release upload "$TAG" dist/* --clobber
 
   release-summary:
     name: Release Summary

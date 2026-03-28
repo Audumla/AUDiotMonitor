@@ -1,18 +1,19 @@
 [Unit]
 Description=AUDiot Dashboard Kiosk
-After=network.target grafana.service
+After=network.target graphical-session.target
+Wants=graphical-session.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/dietpi/.Xauthority
 # Point to the host-owned layout install path
 WorkingDirectory=/opt/docker/services/dashboard
 ExecStart=/opt/docker/services/dashboard/kiosk.sh
 Restart=always
 RestartSec=10
-# Allow kiosk.sh to handle its own restart loop but restart the whole service
-# if it dies unexpectedly.
+User=dietpi
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

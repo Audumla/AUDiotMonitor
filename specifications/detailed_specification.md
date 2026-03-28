@@ -881,7 +881,7 @@ Known keys in v1:
 * `linux_gpu_vendor`
 * `linux_vendor_exec`: Supports `scripts_dir` (default: `/etc/hwexp/custom.d`)
 * `linux_node_bridge`
-* `llamaswap`: Supports `endpoint` (default: `http://localhost:50099`)
+* `gateway_manifest`: Manifest-driven component monitoring (planned — see spec-801)
 * `windows_exporter_bridge`
 * `darwin_node_bridge`
 

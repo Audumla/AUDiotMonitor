@@ -94,6 +94,9 @@ func (e *Engine) executeCycle(ctx context.Context) {
 	newRaw := make(map[string]model.RawMeasurement, 128)
 	newDecisions := make([]model.MappingDecision, 0, 128)
 
+	// Device index for correlation (PCI Slot -> Device)
+	deviceIndex := make(map[string]model.DiscoveredDevice)
+
 	// Read autoMapEnabled once per cycle rather than once per measurement.
 	e.mu.RLock()
 	autoMapEnabled := e.autoMapEnabled
@@ -112,6 +115,10 @@ func (e *Engine) executeCycle(ctx context.Context) {
 		}
 		for _, d := range devices {
 			newDevices[d.StableID] = d
+			// Index by PCI slot if available
+			if slot, ok := d.RawIdentifiers["pci_slot"]; ok && slot != "" {
+				deviceIndex[slot] = d
+			}
 		}
 
 		// 2. Poll
@@ -128,7 +135,7 @@ func (e *Engine) executeCycle(ctx context.Context) {
 
 			device, exists := newDevices[r.StableDeviceID]
 			if !exists {
-				continue 
+				continue
 			}
 
 			norm, decision := e.mapper.Map(device, r)
@@ -136,6 +143,31 @@ func (e *Engine) executeCycle(ctx context.Context) {
 				newDecisions = append(newDecisions, *decision)
 				if decision.Decision == "ignored" {
 					mappingFailures++
+				}
+			}
+
+			// Stage 3: Hardware Correlation (Join Layer)
+			if norm != nil && r.Metadata != nil {
+				if slot, ok := r.Metadata["correlation_pci_slot"]; ok && slot != "" {
+					if targetDev, found := deviceIndex[slot]; found {
+						// Inject hardware labels
+						if norm.Labels == nil {
+							norm.Labels = make(map[string]string)
+						}
+						norm.Labels["device_id"] = targetDev.StableID
+						norm.Labels["vendor"] = targetDev.Vendor
+						norm.Labels["model"] = targetDev.Model
+						if targetDev.DisplayName != "" {
+							norm.Labels["display_name"] = targetDev.DisplayName
+						}
+					}
+				}
+				// Also handle model_name from two-tier discovery
+				if modelName, ok := r.Metadata["model_name"]; ok {
+					if norm.Labels == nil {
+						norm.Labels = make(map[string]string)
+					}
+					norm.Labels["model_name"] = modelName
 				}
 			}
 

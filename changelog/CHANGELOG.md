@@ -63,4 +63,8 @@
 - Updated specifications/overview.md and specifications/dashboard_implementation_spec.md to reflect logical profile organization and grafana-init behavior.
 - Ensured INSTALL.md provides clear instructions for persisting user edits via local folder mapping.
 
+### Fix CI and release blockers in workflows and hwexp automapper/integration tests. (Bug Fix)
+- Fixed CI monitoring test working directory and docker cache auth failures.
+- Restricted automapper inference to expected raw-name families and stabilized temperature-metric checks in integration scripts.
+
 ---

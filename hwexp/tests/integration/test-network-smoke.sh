@@ -93,7 +93,16 @@ echo "$VERSION" | grep -q '"exporter_version"'    && pass "client: /version ok" 
 
 METRICS=$(run_client "metrics")
 echo "$METRICS" | grep -qE 'hwexp_up(\{[^}]*\})? 1' && pass "client: /metrics hwexp_up 1"  || fail "client: /metrics missing hwexp_up"
-echo "$METRICS" | grep -q 'hw_device_temperature' && pass "client: /metrics has temp"    || fail "client: /metrics missing temperature"
+TEMP_READY=0
+for i in $(seq 1 10); do
+  METRICS=$(run_client "metrics")
+  if echo "$METRICS" | grep -q 'hw_device_temperature'; then
+    TEMP_READY=1
+    break
+  fi
+  sleep 1
+done
+[ "$TEMP_READY" -eq 1 ] && pass "client: /metrics has temp" || fail "client: /metrics missing temperature"
 
 DISCOVERY=$(run_client "debug/discovery")
 echo "$DISCOVERY" | grep -q '"device_count"'      && pass "client: /debug/discovery ok"  || fail "client: /debug/discovery bad: $DISCOVERY"

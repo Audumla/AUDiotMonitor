@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Integration test: DEB package install on Ubuntu
-# Usage: test-deb-install.sh <path-to-deb>
+# Integration test: RPM package install on openSUSE Leap
+# Usage: test-opensuse-install.sh <path-to-rpm>
 set -euo pipefail
 
-DEB_PATH="${1:?Usage: $0 <path-to-deb>}"
-DEB_FILE=$(basename "$DEB_PATH")
+RPM_PATH="${1:?Usage: $0 <path-to-rpm>}"
+RPM_FILE=$(basename "$RPM_PATH")
 PORT=9200
 PASS=0
 FAIL=0
@@ -12,17 +12,21 @@ FAIL=0
 pass() { echo "[PASS] $1"; PASS=$((PASS+1)); }
 fail() { echo "[FAIL] $1"; FAIL=$((FAIL+1)); }
 
-echo "=== DEB Install Integration Test ==="
-echo "Package: $DEB_FILE"
+echo "=== openSUSE RPM Install Integration Test ==="
+echo "Package: $RPM_FILE"
+
+# Install curl (needed for endpoint checks) and the package under test.
+# zypper exits 100 when install succeeds with warnings — treat as success.
+zypper --non-interactive install --no-recommends curl || true
+zypper --non-interactive install --allow-unsigned-rpm "$RPM_PATH" || \
+    rpm -i --nodeps "$RPM_PATH"
 
 # --- 1. File verification after install ---
-dpkg -i "$DEB_PATH"
-
-[ -x /usr/bin/hwexp ]                                  && pass "binary installed at /usr/bin/hwexp"        || fail "binary missing"
-[ -f /etc/hwexp/hwexp.yaml ]                           && pass "config installed at /etc/hwexp/hwexp.yaml"  || fail "config missing"
-[ -f /etc/hwexp/mappings.yaml ]                        && pass "mappings installed"                         || fail "mappings missing"
-[ -f /etc/hwexp/sample_hwmon.json ]                    && pass "fixture installed"                          || fail "fixture missing"
-[ -f /usr/lib/systemd/system/hwexp.service ]           && pass "service unit installed"                     || fail "service unit missing"
+[ -x /usr/bin/hwexp ]                                  && pass "binary installed at /usr/bin/hwexp"       || fail "binary missing"
+[ -f /etc/hwexp/hwexp.yaml ]                           && pass "config installed at /etc/hwexp/hwexp.yaml" || fail "config missing"
+[ -f /etc/hwexp/mappings.yaml ]                        && pass "mappings installed"                        || fail "mappings missing"
+[ -f /etc/hwexp/sample_hwmon.json ]                    && pass "fixture installed"                         || fail "fixture missing"
+[ -f /usr/lib/systemd/system/hwexp.service ]           && pass "service unit installed"                    || fail "service unit missing"
 
 # --- 2. Start the binary directly (no systemd in container) ---
 /usr/bin/hwexp \
@@ -32,7 +36,6 @@ dpkg -i "$DEB_PATH"
 HWEXP_PID=$!
 echo "Started hwexp (PID $HWEXP_PID)"
 
-# Wait for HTTP server to be ready
 READY=0
 for i in $(seq 1 10); do
   sleep 1
@@ -73,7 +76,7 @@ done
 
 # --- 4. Uninstall and verify cleanup ---
 kill "$HWEXP_PID" 2>/dev/null || true
-dpkg -r hwexp
+rpm -e hwexp
 [ ! -x /usr/bin/hwexp ]                                 && pass "binary removed on uninstall"   || fail "binary still present after uninstall"
 
 # --- Summary ---

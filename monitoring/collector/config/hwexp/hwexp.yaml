@@ -12,11 +12,21 @@ adapters:
     enabled: true
   linux_gpu_vendor:
     enabled: true
-  llamaswap:
+  linux_vendor_exec:
     enabled: true
     settings:
-      endpoint: "http://localhost:50099"
-
+      scripts_dir: "/etc/hwexp/custom.d"
+      source_format: "json"
+    timeout: 5s
+  linux_storage:
+    enabled: true
+  linux_system:
+    enabled: true
+  gateway_manifest:
+    enabled: true
+    settings:
+      manifest_dir: "/etc/hwexp/components"
+      local_manifest_dir: "/etc/hwexp/local/components"
 mapping:
   rules_file: "/etc/hwexp/mappings.yaml"
   strict_mode: false
