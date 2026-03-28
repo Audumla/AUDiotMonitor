@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.2...monitoring-v0.9.3) (2026-03-28)
+
+
+### Bug Fixes
+
+* **monitoring:** use gauge for gateway_info to keep Prometheus scrape valid ([83347d3](https://github.com/Audumla/AUDiotMonitor/commit/83347d3ff56ec4ffc5b1914a83ca70573f5bd2b4))
+
 ## [0.9.2](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.1...monitoring-v0.9.2) (2026-03-28)
 
 
