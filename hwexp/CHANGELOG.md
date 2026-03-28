@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.21.0...hwexp-v0.21.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* **release:** align adapters, compose mounts, and docs for artifact-only deploy ([2c86408](https://github.com/Audumla/AUDiotMonitor/commit/2c864080fdcd8b12f8b54024b160483f3df521f8))
+
 ## [0.21.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.20.0...hwexp-v0.21.0) (2026-03-28)
 
 

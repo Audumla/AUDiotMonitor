@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.0...monitoring-v0.9.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* **release:** align adapters, compose mounts, and docs for artifact-only deploy ([2c86408](https://github.com/Audumla/AUDiotMonitor/commit/2c864080fdcd8b12f8b54024b160483f3df521f8))
+
 ## [0.9.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.8.0...monitoring-v0.9.0) (2026-03-28)
 
 
