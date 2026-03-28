@@ -81,4 +81,9 @@
 - Added bootstrap tests covering fixture-only mode and config-driven adapter composition.
 - Kept runtime behavior intact while reducing main.go complexity and startup coupling.
 
+### Made monitoring integration tests runtime-aware so unsupported hosts skip cleanly instead of failing. (Test Update)
+- Added prerequisite checks for bash and docker compose runtime availability.
+- Added a session autouse fixture that skips integration tests when prerequisites are unavailable.
+- Kept full integration behavior unchanged when prerequisites exist.
+
 ---

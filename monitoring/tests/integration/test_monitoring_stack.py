@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 import time
+import shutil
 import requests
 import pytest
 import yaml
@@ -12,6 +13,40 @@ MONITORING_ROOT = Path(__file__).resolve().parents[2]
 COLLECTOR_ROOT = MONITORING_ROOT / "collector"
 DASHBOARD_ROOT = MONITORING_ROOT / "dashboard"
 FIXTURE_PATH = MONITORING_ROOT.parent / "hwexp" / "tests" / "fixtures" / "sample_hwmon.json"
+
+
+def _can_run_bash() -> tuple[bool, str]:
+    bash_path = shutil.which("bash")
+    if not bash_path:
+        return False, "bash not found in PATH"
+    try:
+        subprocess.run([bash_path, "-lc", "echo ok"], check=True, capture_output=True, timeout=10)
+    except (subprocess.SubprocessError, OSError) as exc:
+        return False, f"bash unusable: {exc}"
+    return True, ""
+
+
+def _can_run_docker_compose() -> tuple[bool, str]:
+    docker_path = shutil.which("docker")
+    if not docker_path:
+        return False, "docker not found in PATH"
+    try:
+        subprocess.run([docker_path, "compose", "version"], check=True, capture_output=True, timeout=10)
+        subprocess.run([docker_path, "info"], check=True, capture_output=True, timeout=10)
+    except (subprocess.SubprocessError, OSError) as exc:
+        return False, f"docker compose unavailable: {exc}"
+    return True, ""
+
+
+@pytest.fixture(scope="session", autouse=True)
+def require_integration_runtime():
+    ok_bash, reason_bash = _can_run_bash()
+    if not ok_bash:
+        pytest.skip(f"integration runtime prerequisite missing: {reason_bash}")
+
+    ok_docker, reason_docker = _can_run_docker_compose()
+    if not ok_docker:
+        pytest.skip(f"integration runtime prerequisite missing: {reason_docker}")
 
 @pytest.fixture(scope="session")
 def temp_run_dir():
