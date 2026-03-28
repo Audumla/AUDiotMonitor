@@ -235,5 +235,23 @@
       "Moved startup capability requirement checks into internal/capabilities/checker with injectable lookup and logger.",
       "Added unit tests for join enrichment/indexing and capability requirement evaluation."
     ]
+  },
+  {
+    "id": "CHG-38772f05",
+    "agent": "codex",
+    "change_group": "modernization-uplift",
+    "plugin_version": "unreleased",
+    "date": "2026-03-29",
+    "recorded_at": "2026-03-28T13:49:17.682564Z",
+    "summary_tags": [
+      "Code Refactoring",
+      "Test Update"
+    ],
+    "summary": "Extracted adapter startup wiring into a dedicated bootstrap module.",
+    "details": [
+      "Moved adapter selection/building logic from cmd/hwexp/main.go to internal/bootstrap/adapters.go.",
+      "Added bootstrap tests covering fixture-only mode and config-driven adapter composition.",
+      "Kept runtime behavior intact while reducing main.go complexity and startup coupling."
+    ]
   }
 ]

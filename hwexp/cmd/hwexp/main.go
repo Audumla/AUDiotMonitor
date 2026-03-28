@@ -4,22 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
-
-	"time"
-
-	"hwexp/internal/adapters/gateway_manifest"
-	"hwexp/internal/adapters/hwmon"
-	"hwexp/internal/adapters/linux_gpu"
-	"hwexp/internal/adapters/linux_static"
-	"hwexp/internal/adapters/linux_storage"
-	"hwexp/internal/adapters/linux_system"
-	"hwexp/internal/adapters/mock"
-	"hwexp/internal/adapters/vendor_exec"
+	"hwexp/internal/bootstrap"
 	"hwexp/internal/capabilities"
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
@@ -28,6 +13,11 @@ import (
 	"hwexp/internal/mapper"
 	"hwexp/internal/store"
 	"hwexp/internal/version"
+	"log"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 )
 
 // bannerInner is the number of characters between the two ║ box chars on each line.
@@ -154,87 +144,9 @@ func main() {
 	}
 
 	// 5. Select adapters
-	// --fixture flag forces mock mode (for testing/CI).
-	// Otherwise use adapters enabled in config.
-	var adapters []engine.Adapter
-
-	if *fixturePath != "" {
-		l.Info("startup", "Using mock adapter (--fixture override)", map[string]interface{}{"fixture": *fixturePath})
-		a := mock.NewAdapter(*fixturePath)
-		if err := a.Load(); err != nil {
-			l.Fatal("startup", "Failed to load fixture", "ADAPTER_INIT_FAILED", map[string]interface{}{"error": err.Error()})
-		}
-		adapters = append(adapters, a)
-	} else if cfg.Adapters.LinuxHwmon.Enabled {
-		hwmonPath := hwmon.DefaultBasePath
-		if p, ok := cfg.Adapters.LinuxHwmon.Settings["hwmon_path"].(string); ok && p != "" {
-			hwmonPath = p
-		}
-		l.Info("startup", "Using linux_hwmon adapter", map[string]interface{}{"path": hwmonPath})
-		adapters = append(adapters, hwmon.NewAdapter(hwmonPath))
-	}
-
-	if cfg.Adapters.LinuxGpuVendor.Enabled && *fixturePath == "" {
-		l.Info("startup", "Using linux_gpu adapter", nil)
-		adapters = append(adapters, linux_gpu.NewAdapter(""))
-	}
-
-	if cfg.Adapters.LinuxStorage.Enabled && *fixturePath == "" {
-		l.Info("startup", "Using linux_storage adapter", nil)
-		adapters = append(adapters, linux_storage.NewAdapter())
-	}
-
-	if cfg.Adapters.LinuxSystem.Enabled && *fixturePath == "" {
-		l.Info("startup", "Using linux_system adapter", nil)
-		adapters = append(adapters, linux_system.NewAdapter())
-	}
-
-	if *fixturePath == "" {
-		l.Info("startup", "Using linux_static adapter", nil)
-		adapters = append(adapters, linux_static.NewAdapter(""))
-	}
-
-	if cfg.Adapters.LinuxVendorExec.Enabled && *fixturePath == "" {
-		scriptsDir := "/etc/hwexp/custom.d"
-		if d, ok := cfg.Adapters.LinuxVendorExec.Settings["scripts_dir"].(string); ok && d != "" {
-			scriptsDir = d
-		}
-		sourceFormat := "json"
-		if f, ok := cfg.Adapters.LinuxVendorExec.Settings["source_format"].(string); ok && f != "" {
-			sourceFormat = f
-		}
-		timeout := cfg.Adapters.LinuxVendorExec.Timeout
-		if timeout == 0 {
-			timeout = 5 * time.Second
-		}
-
-		l.Info("startup", "Using vendor_exec adapter", map[string]interface{}{
-			"dir":           scriptsDir,
-			"timeout":       timeout.String(),
-			"source_format": sourceFormat,
-		})
-		adapters = append(adapters, vendor_exec.NewAdapter(scriptsDir, timeout, sourceFormat))
-	}
-
-	if cfg.Adapters.GatewayManifest.Enabled && *fixturePath == "" {
-		projectDir := "/etc/hwexp/components"
-		if d, ok := cfg.Adapters.GatewayManifest.Settings["manifest_dir"].(string); ok && d != "" {
-			projectDir = d
-		}
-		localDir := "/etc/hwexp/local/components"
-		if d, ok := cfg.Adapters.GatewayManifest.Settings["local_manifest_dir"].(string); ok && d != "" {
-			localDir = d
-		}
-
-		l.Info("startup", "Using gateway_manifest adapter", map[string]interface{}{
-			"project_dir": projectDir,
-			"local_dir":   localDir,
-		})
-		adapters = append(adapters, gateway_manifest.NewAdapter(projectDir, localDir))
-	}
-
-	if len(adapters) == 0 {
-		l.Fatal("startup", "No adapters enabled in config and no --fixture provided", "CFG_LOAD_FAILED", nil)
+	adapters, err := bootstrap.BuildAdapters(cfg, *fixturePath, l)
+	if err != nil {
+		l.Fatal("startup", "Failed to initialize adapters", "ADAPTER_INIT_FAILED", map[string]interface{}{"error": err.Error()})
 	}
 
 	// 6. Initialize State Store
