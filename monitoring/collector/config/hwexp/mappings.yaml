@@ -109,7 +109,7 @@ rules:
       raw_name_regex: "^component_info$"
     normalize:
       metric_family: "gateway_component_info"
-      metric_type: "info"
+      metric_type: "gauge"
       logical_name_template: "gateway_${logical_device_name}_info"
       labels:
         component: "${logical_device_name}"
