@@ -16,10 +16,11 @@ Custom hardware or software data can be ingested by placing executable scripts i
 
 # 8. Local LLM monitoring requirement
 
-## 8.7 Implementation: Gateway Manifest Adapter (Planned)
+## 8.7 Implementation: Gateway Manifest Adapter
 
-LLM and software component monitoring will be provided by the `gateway_manifest` adapter (spec-801).
+LLM and software component monitoring is provided by the `gateway_manifest` adapter (spec-801).
 The adapter reads YAML manifests from `/etc/hwexp/components/` and polls configured endpoints.
+Local host overrides are loaded from `/etc/hwexp/local/components/`.
 See `monitoring/collector/config/hwexp/components/llamaswap.yaml.example` for a reference manifest.
 
 ---
@@ -52,6 +53,8 @@ Standard installation paths for Linux / Docker:
 | --- | --- |
 | `/etc/hwexp/hwexp.yaml` | Main configuration file. |
 | `/etc/hwexp/conf.d/` | **Modular Config**: Additional `.yaml` files merged at startup. |
+| `/etc/hwexp/components/` | **Component Manifests**: Service definitions polled by `gateway_manifest`. |
+| `/etc/hwexp/local/components/` | **Component Overrides**: Local host overrides for manifests. |
 | `/etc/hwexp/custom.d/` | **Custom Plugins**: Executable scripts for custom data. |
 | `/etc/hwexp/mappings.yaml` | Manual metric mapping rules. |
 | `/var/lib/hwexp/mappings.auto.yaml` | Auto-generated mapping rules. |

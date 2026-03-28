@@ -881,7 +881,9 @@ Known keys in v1:
 * `linux_gpu_vendor`
 * `linux_vendor_exec`: Supports `scripts_dir` (default: `/etc/hwexp/custom.d`)
 * `linux_node_bridge`
-* `gateway_manifest`: Manifest-driven component monitoring (planned — see spec-801)
+* `gateway_manifest`: Manifest-driven component monitoring (see spec-801)
+* `linux_storage`: Smart-backed storage telemetry (`smartctl --json`)
+* `linux_system`: ACPI/system telemetry (thermal zones, c-state, interrupts, ECC)
 * `windows_exporter_bridge`
 * `darwin_node_bridge`
 

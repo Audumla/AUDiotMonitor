@@ -22,6 +22,9 @@ services:
       - /proc:/proc:ro
       - ./config/hwexp/hwexp.yaml:/etc/hwexp/hwexp.yaml:ro
       - ./config/hwexp/mappings.yaml:/etc/hwexp/mappings.yaml:ro
+      - ./config/hwexp/components:/etc/hwexp/components:ro
+      - ./config/hwexp/local/components:/etc/hwexp/local/components:ro
+      - ./config/hwexp/custom.d:/etc/hwexp/custom.d:ro
       - ./hwexp:/var/lib/hwexp        # persists auto-generated mapping rules
     environment:
       HWEXP_HOST: ${HWEXP_HOST:-${HOSTNAME:-localhost}}

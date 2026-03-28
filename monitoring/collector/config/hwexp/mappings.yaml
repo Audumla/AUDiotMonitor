@@ -88,7 +88,7 @@ rules:
     priority: 10
     match:
       source: "gateway_manifest"
-      raw_name_regex: "^gateway_"
+      raw_name_regex: "^gateway_.*$"
     normalize:
       metric_family: "${0}"
       metric_type: "gauge"

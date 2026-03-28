@@ -6,7 +6,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strings"
+	"strconv"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -153,14 +153,28 @@ func (e *Engine) Map(device model.DiscoveredDevice, raw model.RawMeasurement) (*
 
 func (e *Engine) evaluateMatch(cr *compiledRule, device model.DiscoveredDevice, raw model.RawMeasurement) (bool, []string) {
 	m := cr.rule.Match
-	if m.Platform != "" && m.Platform != device.Platform { return false, nil }
-	if m.Source != "" && m.Source != device.Source { return false, nil }
-	if m.DeviceClass != "" && m.DeviceClass != device.DeviceClass { return false, nil }
-	if m.Vendor != "" && m.Vendor != device.Vendor { return false, nil }
-	if m.ComponentHint != "" && m.ComponentHint != raw.ComponentHint { return false, nil }
+	if m.Platform != "" && m.Platform != device.Platform {
+		return false, nil
+	}
+	if m.Source != "" && m.Source != device.Source {
+		return false, nil
+	}
+	if m.DeviceClass != "" && m.DeviceClass != device.DeviceClass {
+		return false, nil
+	}
+	if m.Vendor != "" && m.Vendor != device.Vendor {
+		return false, nil
+	}
+	if m.ComponentHint != "" && m.ComponentHint != raw.ComponentHint {
+		return false, nil
+	}
 
-	if cr.modelRegex != nil && !cr.modelRegex.MatchString(device.Model) { return false, nil }
-	if cr.stableIDRegex != nil && !cr.stableIDRegex.MatchString(device.StableID) { return false, nil }
+	if cr.modelRegex != nil && !cr.modelRegex.MatchString(device.Model) {
+		return false, nil
+	}
+	if cr.stableIDRegex != nil && !cr.stableIDRegex.MatchString(device.StableID) {
+		return false, nil
+	}
 
 	var regexMatches []string
 	if cr.rawNameRegex != nil {
@@ -182,14 +196,8 @@ func (e *Engine) applyNormalization(cr *compiledRule, device model.DiscoveredDev
 	}
 	val += n.UnitOffset
 
-	// Expand logical name template. Simple replacement for ${1}, ${2} etc.
-	// For production, regex.Expand is safer.
-	logicalName := n.LogicalNameTemplate
-	logicalName = strings.ReplaceAll(logicalName, "${logical_device_name}", device.LogicalDeviceName)
-	for i, matchStr := range regexMatches {
-		placeholder := fmt.Sprintf("${%d}", i)
-		logicalName = strings.ReplaceAll(logicalName, placeholder, matchStr)
-	}
+	metricFamily := expandTemplate(n.MetricFamily, device, raw, regexMatches)
+	logicalName := expandTemplate(n.LogicalNameTemplate, device, raw, regexMatches)
 
 	// Merge labels
 	labels := make(map[string]string)
@@ -201,17 +209,17 @@ func (e *Engine) applyNormalization(cr *compiledRule, device model.DiscoveredDev
 	}
 	labels["device_id"] = device.StableID
 	labels["logical_name"] = logicalName
-	labels["sensor"] = n.Sensor
-	labels["component"] = n.Component
+	labels["sensor"] = expandTemplate(n.Sensor, device, raw, regexMatches)
+	labels["component"] = expandTemplate(n.Component, device, raw, regexMatches)
 
 	for k, v := range n.Labels {
-		labels[k] = v
+		labels[k] = expandTemplate(v, device, raw, regexMatches)
 	}
 
 	norm := &model.NormalizedMeasurement{
 		StableDeviceID: device.StableID,
 		LogicalName:    logicalName,
-		MetricFamily:   n.MetricFamily,
+		MetricFamily:   metricFamily,
 		MetricType:     n.MetricType,
 		Value:          val,
 		Unit:           raw.RawUnit,
@@ -229,9 +237,49 @@ func (e *Engine) applyNormalization(cr *compiledRule, device model.DiscoveredDev
 		RawName:        raw.RawName,
 		RawUnit:        raw.RawUnit,
 		ConvertedValue: val,
-		MetricFamily:   n.MetricFamily,
+		MetricFamily:   metricFamily,
 		LogicalName:    logicalName,
 	}
 
 	return norm, decision
+}
+
+var templateTokenRE = regexp.MustCompile(`\$\{([^}]+)\}`)
+
+func expandTemplate(t string, device model.DiscoveredDevice, raw model.RawMeasurement, regexMatches []string) string {
+	if t == "" {
+		return t
+	}
+
+	return templateTokenRE.ReplaceAllStringFunc(t, func(token string) string {
+		m := templateTokenRE.FindStringSubmatch(token)
+		if len(m) != 2 {
+			return token
+		}
+		key := m[1]
+
+		if key == "logical_device_name" {
+			return device.LogicalDeviceName
+		}
+		if key == "stable_device_id" {
+			return device.StableID
+		}
+
+		// Regex capture placeholders: ${0}, ${1}, ...
+		if idx, err := strconv.Atoi(key); err == nil {
+			if idx >= 0 && idx < len(regexMatches) {
+				return regexMatches[idx]
+			}
+			return ""
+		}
+
+		// Metadata placeholders: ${zone}, ${state}, ${mc}, ...
+		if raw.Metadata != nil {
+			if v, ok := raw.Metadata[key]; ok {
+				return v
+			}
+		}
+
+		return ""
+	})
 }

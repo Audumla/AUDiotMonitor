@@ -1,6 +1,6 @@
 # Spec 100 — Component Monitor Architecture
 
-**Status:** Draft
+**Status:** Implemented (v0.21.0 foundation), open for optimization refinements
 **Project:** AUDiotMonitor
 **Covers:** System boundary definition; manifest-driven software component monitoring;
 external project data integration via Prometheus; Docker image separation; CI build path
@@ -16,12 +16,12 @@ AUDiotMonitor has two distinct concerns that must not blur:
 | Concern | Owner | Extension point |
 | --- | --- | --- |
 | **Hardware metrics** | This repo | `vendor_exec` (scripts) or new Go adapters |
-| **Service data** | External project | Prometheus `/metrics` or `component_manifest` |
+| **Service data** | External project | Prometheus `/metrics` or `gateway_manifest` |
 
 ### 1.1 Hardware Extensions (`vendor_exec`)
 While core hardware adapters (e.g., `amdgpu`, `hwmon`) are built into the Go binary, users can extend hardware support without Go code using the `vendor_exec` adapter. This adapter executes external scripts (Python, Bash) from `/etc/hwexp/custom.d/` and parses their standard output as raw metrics.
 
-### 1.2 Software Extensions (`component_manifest`)
+### 1.2 Software Extensions (`gateway_manifest`)
 Software services that need to be correlated with hardware use the manifest-driven adapter. This allows mapping service-specific health and performance data into the `hw_device_*` standard with common labels.
 
 ---
@@ -55,7 +55,7 @@ hardware_correlation:
 ```
 
 ### 3.2 Hot Reloading
-The `component_manifest` adapter re-scans its manifest directories (`/etc/hwexp/components/`) on a regular cadence (default 15s, per spec-801 §2.2). This allows adding new monitored components to a live system without restarting the collector container.
+The `gateway_manifest` adapter re-scans its manifest directories (`/etc/hwexp/components/`) on a regular cadence (default 15s, per spec-801 §2.2). This allows adding new monitored components to a live system without restarting the collector container.
 
 ---
 
@@ -73,7 +73,7 @@ The `component_manifest` adapter re-scans its manifest directories (`/etc/hwexp/
 ### Stage 1: Foundation & Hardware Extension
 *   **Formalize `vendor_exec`**: Ensure the existing Go adapter for external scripts is robust and documented.
 *   **Initial `gateway_manifest`**: Implement the HTTP-based manifest adapter from spec-801.
-*   **Standard Mappings**: Add `^gateway_` rules to `mappings.yaml`.
+*   **Standard Mappings**: Add `^gateway_.*$` rules to `mappings.yaml`.
 
 ### Stage 2: Generalized Manifests & Hot Reload
 *   **Source Generalization**: Expand manifests to support `source_type: exec` and `source_type: file` in addition to `http`.
@@ -81,7 +81,7 @@ The `component_manifest` adapter re-scans its manifest directories (`/etc/hwexp/
 *   **Loader Logic**: Implement manifest merging (local overrides project).
 
 ### Stage 3: Hardware Correlation (The Join Layer)
-*   **Label Injection**: Update the engine to perform label-joins between `DiscoveredDevice` (hardware) and `component_manifest` metrics.
+*   **Label Injection**: Update the engine to perform label-joins between `DiscoveredDevice` (hardware) and `gateway_manifest` metrics.
 *   **Binding Contract**: Implement the `hardware_correlation` manifest fields.
 
 ### Stage 4: Ecosystem & Correlation Dashboards

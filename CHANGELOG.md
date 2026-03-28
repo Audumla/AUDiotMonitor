@@ -67,4 +67,8 @@
 - Fixed CI monitoring test working directory and docker cache auth failures.
 - Restricted automapper inference to expected raw-name families and stabilized temperature-metric checks in integration scripts.
 
+### Validated release workflow artifacts and deployed released hwexp build to remote host using compose. (Build / Packaging)
+- Created home-directory deployment helper doc, merged feature work to main, merged release PR, and verified release workflow produced hwexp-v0.21.0 and monitoring-v0.9.0 artifacts.
+- Deployed released image/config to 10.10.100.10 and verified gateway_manifest + linux_system runtime activation; identified packaging/runtime gaps (missing smartctl in container, unresolved template labels).
+
 ---

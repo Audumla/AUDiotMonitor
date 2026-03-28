@@ -91,6 +91,10 @@ This installs the collector under:
     hwexp/
       hwexp.yaml
       mappings.yaml
+      components/
+      local/
+        components/
+      custom.d/
     prometheus/
       prometheus.yml
       rules/
@@ -129,6 +133,10 @@ collector/
     hwexp/
       hwexp.yaml         # main config overrides
       mappings.yaml      # manual metric mapping rules
+      components/        # gateway_manifest component definitions
+      local/
+        components/      # host-local manifest overrides
+      custom.d/          # vendor_exec executable scripts
     prometheus/
       prometheus.yml     # scrape + rule_files config
       rules/
@@ -159,14 +167,16 @@ cd /opt/docker/services/monitoring
 ./manage-collector.sh restart-prometheus
 ```
 
-Example `hwexp.yaml` override to enable LLM monitoring:
+Example `hwexp.yaml` override to enable LLM monitoring via `gateway_manifest`:
 
 ```yaml
 adapters:
-  llamaswap:
+  gateway_manifest:
     enabled: true
-    settings:
-      endpoint: "http://localhost:50099"
+  linux_storage:
+    enabled: true
+  linux_system:
+    enabled: true
 ```
 
 ---
@@ -338,11 +348,11 @@ adapters:
 
 ### Custom scripts (`custom.d`)
 
-Place any executable script in a `custom.d/` directory and mount it:
+Place any executable script in `config/hwexp/custom.d/` (already mounted by compose):
 
 ```yaml
 volumes:
-  - ./custom.d:/etc/hwexp/custom.d:ro
+  - ./config/hwexp/custom.d:/etc/hwexp/custom.d:ro
 ```
 
 Scripts are executed every poll cycle. They must write a JSON array of `RawMeasurement` objects to stdout. Run with `--discover` to emit `DiscoveredDevice` objects instead.

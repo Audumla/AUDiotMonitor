@@ -68,7 +68,9 @@ A set of bash scripts provides a unified interface for stack operations:
 - `linux_hwmon`: Kernel hwmon subsystem.
 - `linux_gpu`: AMD (sysfs) and NVIDIA (nvidia-smi) telemetry.
 - `linux_static`: System inventory (DMI, /proc).
-- `gateway_manifest`: Manifest-driven software component monitoring with hardware correlation (spec-801, planned).
+- `gateway_manifest`: Manifest-driven software component monitoring with hardware correlation (spec-801).
+- `linux_storage`: Native storage telemetry using `smartctl --json` for disk health, wear, and power-on time.
+- `linux_system`: ACPI/system telemetry including thermal zones, CPU C-state residency, interrupts, and ECC counters.
 - `vendor_exec`: Custom external scripts/plugins.
 
 ---

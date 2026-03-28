@@ -89,4 +89,4 @@ The adapter MUST emit the following standard metrics for every component:
 | **Variable Resolver** | Implement `${VAR:-default}` expansion. |
 | **Discovery Engine** | Implement Tier 1/Tier 2 logic. |
 | **Correlation Layer** | Update `internal/engine` to handle label-joins. |
-| **Mapping Rules** | Add `^gateway_` catch-all to `mappings.yaml`. |
+| **Mapping Rules** | Add `^gateway_.*$` catch-all to `mappings.yaml` for passthrough families. |
