@@ -86,4 +86,9 @@
 - Added a session autouse fixture that skips integration tests when prerequisites are unavailable.
 - Kept full integration behavior unchanged when prerequisites exist.
 
+### Migrated VRAM dashboard and recording-rule queries from logical_name regex selectors to sensor labels. (Documentation Update, Test Update, Configuration Cleanup)
+- Updated dashboard PromQL across standard/mobile/wide/custom profiles to use sensor=usage and sensor=capacity selectors.
+- Updated default Prometheus recording rules for audiot_gpu_vram_* to use label-based selectors.
+- Validated new query path against live emitter and Grafana proxy on 2026-03-29 (hosts 10.10.100.10 and brutusview).
+
 ---

@@ -47,7 +47,7 @@
       "title": "${__series.name} VRAM",
       "gridPos": { "h": 6, "w": 3, "x": 0, "y": 5 },
       "targets": [{
-        "expr": "(sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100) * on(device_id) group_left(model) hw_device_info",
+        "expr": "(sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:03:00.0\", sensor=\"usage\"}) / sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:03:00.0\", sensor=\"capacity\"}) * 100) * on(device_id) group_left(model) hw_device_info",
         "legendFormat": "{{model}}"
       }],
       "options": {
@@ -115,7 +115,7 @@
       "title": "${__series.name} VRAM",
       "gridPos": { "h": 6, "w": 3, "x": 3, "y": 5 },
       "targets": [{
-        "expr": "(sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100) * on(device_id) group_left(model) hw_device_info",
+        "expr": "(sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:06:00.0\", sensor=\"usage\"}) / sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:06:00.0\", sensor=\"capacity\"}) * 100) * on(device_id) group_left(model) hw_device_info",
         "legendFormat": "{{model}}"
       }],
       "options": {
@@ -183,7 +183,7 @@
       "title": "${__series.name} VRAM",
       "gridPos": { "h": 6, "w": 3, "x": 6, "y": 5 },
       "targets": [{
-        "expr": "(sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100) * on(device_id) group_left(model) hw_device_info",
+        "expr": "(sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:7e:00.0\", sensor=\"usage\"}) / sum by(device_id) (hw_device_capacity_bytes{device_id=\"pci-0000:7e:00.0\", sensor=\"capacity\"}) * 100) * on(device_id) group_left(model) hw_device_info",
         "legendFormat": "{{model}}"
       }],
       "options": {
@@ -281,3 +281,6 @@
     }
   ]
 }
+
+
+

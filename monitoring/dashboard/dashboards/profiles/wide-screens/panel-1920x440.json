@@ -121,7 +121,7 @@
       "description": "Navi 31 — pci-0000:03:00.0",
       "gridPos": { "h": 9, "w": 3, "x": 9, "y": 0 },
       "targets": [{
-        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100",
+        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", sensor=\"usage\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:03:00.0\", sensor=\"capacity\"}) * 100",
         "legendFormat": "VRAM 1"
       }],
       "options": {
@@ -156,7 +156,7 @@
       "description": "Navi 31 — pci-0000:06:00.0",
       "gridPos": { "h": 9, "w": 3, "x": 12, "y": 0 },
       "targets": [{
-        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100",
+        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", sensor=\"usage\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:06:00.0\", sensor=\"capacity\"}) * 100",
         "legendFormat": "VRAM 2"
       }],
       "options": {
@@ -191,7 +191,7 @@
       "description": "Navi 21 — pci-0000:7e:00.0",
       "gridPos": { "h": 9, "w": 3, "x": 15, "y": 0 },
       "targets": [{
-        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_used_bytes\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", logical_name=~\".*_vram_capacity_bytes\"}) * 100",
+        "expr": "sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", sensor=\"usage\"}) / sum(hw_device_capacity_bytes{device_class=\"gpu\", component=\"memory\", device_id=\"pci-0000:7e:00.0\", sensor=\"capacity\"}) * 100",
         "legendFormat": "VRAM 3"
       }],
       "options": {
@@ -463,3 +463,6 @@
 
   ]
 }
+
+
+
