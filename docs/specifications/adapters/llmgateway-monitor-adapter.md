@@ -1,10 +1,10 @@
-# Spec 801 — LLM Gateway Manifest Adapter
+# LLM Gateway Manifest Adapter Spec
 
 **Status:** Finalized
 **Date:** 2026-03-26
 **Project:** AUDiotMonitor
 **Covers:** Manifest-driven hwexp adapter for monitoring AUDiaLLMGateway components; Two-tier discovery; Hardware correlation; Hot reloading.
-**Related:** [Spec 100](../foundation/spec-100-component-architecture.md), AUDiaLLMGateway [spec-701](../../../AUDia/AUDiaLLMGateway/specifications/components/dashboard/spec-701-gateway-dashboard.md)
+**Related:** [Spec 100](../foundation/component-architecture.md), AUDiaLLMGateway [spec-701](../../../AUDia/AUDiaLLMGateway/specifications/components/dashboard/spec-701-gateway-dashboard.md)
 
 ---
 
@@ -90,3 +90,7 @@ The adapter MUST emit the following standard metrics for every component:
 | **Discovery Engine** | Implement Tier 1/Tier 2 logic. |
 | **Correlation Layer** | Update `internal/engine` to handle label-joins. |
 | **Mapping Rules** | Add `^gateway_.*$` catch-all to `mappings.yaml` for passthrough families. |
+
+
+
+

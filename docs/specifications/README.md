@@ -5,13 +5,13 @@ This is the canonical specification set for AUDiotMonitor.
 ## Read Order (High Level to Implementation)
 
 1. [Foundation Overview](foundation/overview.md)
-2. [System Architecture (Spec 100)](foundation/spec-100-component-architecture.md)
+2. [System Architecture (Spec 100)](foundation/component-architecture.md)
 3. [Installation and Lifecycle](foundation/installation-spec.md)
-4. [Exporter Detailed Contract](exporter/detailed-specification.md)
+4. [Exporter Detailed Contract](exporter/detailed-spec.md)
 5. [Adapter-Specific Specs](adapters/README.md)
 6. [Dashboard Specs](dashboard/README.md)
-7. [Implementation Plan](exporter/implementation-plan-stages.md)
-8. [Flow Guide (Intent to Implementation)](flow-high-to-low.md)
+7. [Implementation Plan](exporter/implementation-plan.md)
+8. [Flow Guide (Intent to Implementation)](spec-flow-guide.md)
 
 ## Component-Focused Entry Points (For Agents)
 
@@ -32,4 +32,7 @@ This is the canonical specification set for AUDiotMonitor.
 
 ## Authoring Standard
 
-- [Spec Style Guide](DOC_STYLE.md)
+- [Spec Style Guide](spec-style-guide.md)
+
+
+

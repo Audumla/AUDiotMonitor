@@ -1,9 +1,9 @@
-# Spec 101 — Deep Hardware Telemetry
+# Deep Hardware Telemetry Spec
 
 **Status:** Draft
 **Project:** AUDiotMonitor
 **Covers:** Native adapters for S.M.A.R.T. storage data, generic CPU power states, and system-wide hardware pressure metrics.
-**Related:** [Spec 100](../foundation/spec-100-component-architecture.md)
+**Related:** [Spec 100](../foundation/component-architecture.md)
 
 ---
 
@@ -70,3 +70,7 @@ While `vendor_exec` remains for user customization, these "Deep" metrics must be
 The `internal/adapters` package will be expanded:
 *   `linux_storage`: Handles block/NVMe depth.
 *   `linux_system`: Handles generic ACPI, Thermal, and CPU states.
+
+
+
+

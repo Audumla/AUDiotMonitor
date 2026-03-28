@@ -4,8 +4,8 @@ Use this style for all new and updated specs.
 
 ## Title Format
 
-- Use: `# Spec <id> — <name>` for numbered specs.
-- Use: `# <Component> <Topic> Spec` for non-numbered component docs.
+- Use: `# <Component> <Topic> Spec`.
+- Do not include numeric IDs in filenames or titles unless a maintained ID registry exists.
 
 ## Required Front Matter Block
 
@@ -35,3 +35,6 @@ Use this style for all new and updated specs.
 - Keep sections component-scoped.
 - Avoid mixing dashboard and exporter implementation details in one file.
 - Link to component reading paths in `components/` when adding a new spec.
+
+
+

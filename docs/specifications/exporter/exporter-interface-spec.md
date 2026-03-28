@@ -64,3 +64,6 @@ A specialized adapter MUST support executing external binaries or scripts.
 ## 15.3 LLM Monitoring
 Built-in support for **Llamaswap** (or OpenAI-compatible APIs) is provided via a dedicated adapter.
 - It treats loaded models as virtual devices and tracks their status and performance.
+
+
+

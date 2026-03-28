@@ -76,3 +76,6 @@
 3. Extract mapper template expansion into reusable package + tests.
 4. Add adapter capability contract and readiness reporting.
 5. Refactor join engine into isolated module.
+
+
+

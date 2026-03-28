@@ -18,7 +18,7 @@ Custom hardware or software data can be ingested by placing executable scripts i
 
 ## 8.7 Implementation: Gateway Manifest Adapter
 
-LLM and software component monitoring is provided by the `gateway_manifest` adapter (spec-801).
+LLM and software component monitoring is provided by the `gateway_manifest` adapter (llmgateway-monitor-adapter).
 The adapter reads YAML manifests from `/etc/hwexp/components/` and polls configured endpoints.
 Local host overrides are loaded from `/etc/hwexp/local/components/`.
 See `monitoring/collector/config/hwexp/components/llamaswap.yaml.example` for a reference manifest.
@@ -61,3 +61,7 @@ Standard installation paths for Linux / Docker:
 | `/usr/bin/hwexp` | Exporter binary. |
 | `/opt/docker/collector/` | **Collector Layout**: Prometheus rules, hwexp config, and compose file. |
 | `/opt/docker/dashboard/` | **Dashboard Layout**: Grafana provisioning, profiles, and custom dashboards. |
+
+
+
+

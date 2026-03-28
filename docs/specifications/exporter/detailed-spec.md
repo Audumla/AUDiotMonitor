@@ -881,7 +881,7 @@ Known keys in v1:
 * `linux_gpu_vendor`
 * `linux_vendor_exec`: Supports `scripts_dir` (default: `/etc/hwexp/custom.d`)
 * `linux_node_bridge`
-* `gateway_manifest`: Manifest-driven component monitoring (see spec-801)
+* `gateway_manifest`: Manifest-driven component monitoring (see llmgateway-monitor-adapter)
 * `linux_storage`: Smart-backed storage telemetry (`smartctl --json`)
 * `linux_system`: ACPI/system telemetry (thermal zones, c-state, interrupts, ECC)
 * `windows_exporter_bridge`
@@ -1404,3 +1404,7 @@ This document, together with `Overview.md`, is intended to be sufficient to begi
 * schema generation work
 
 The next highest-value implementation artifact is the **JSON Schemas Pack**, since it converts these contracts into machine-validatable definitions and removes the remaining ambiguity from config and debug payloads.
+
+
+
+

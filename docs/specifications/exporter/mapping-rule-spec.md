@@ -673,3 +673,6 @@ Tests MUST cover:
 # 17. Immediate next document
 
 After this document, the next highest-value implementation document is the **Dashboard Data Contract Guide**, because it translates stable normalized metrics into predictable dashboard query and grouping patterns.
+
+
+

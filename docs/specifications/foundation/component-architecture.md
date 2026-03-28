@@ -1,11 +1,11 @@
-# Spec 100 — Component Monitor Architecture
+# Component Monitor Architecture Spec
 
 **Status:** Implemented (v0.21.0 foundation), open for optimization refinements
 **Project:** AUDiotMonitor
 **Covers:** System boundary definition; manifest-driven software component monitoring;
 external project data integration via Prometheus; Docker image separation; CI build path
 for optional runtime tools
-**Related:** [spec-801](../adapters/spec-801-llmgateway-monitor-adapter.md), [spec-101](../adapters/spec-101-deep-hardware-telemetry.md)
+**Related:** [llmgateway-monitor-adapter](../adapters/llmgateway-monitor-adapter.md), [deep-hardware-telemetry](../adapters/deep-hardware-telemetry.md)
 
 ---
 
@@ -55,7 +55,7 @@ hardware_correlation:
 ```
 
 ### 3.2 Hot Reloading
-The `gateway_manifest` adapter re-scans its manifest directories (`/etc/hwexp/components/`) on a regular cadence (default 15s, per spec-801 §2.2). This allows adding new monitored components to a live system without restarting the collector container.
+The `gateway_manifest` adapter re-scans its manifest directories (`/etc/hwexp/components/`) on a regular cadence (default 15s, per llmgateway-monitor-adapter §2.2). This allows adding new monitored components to a live system without restarting the collector container.
 
 ---
 
@@ -72,7 +72,7 @@ The `gateway_manifest` adapter re-scans its manifest directories (`/etc/hwexp/co
 
 ### Stage 1: Foundation & Hardware Extension
 *   **Formalize `vendor_exec`**: Ensure the existing Go adapter for external scripts is robust and documented.
-*   **Initial `gateway_manifest`**: Implement the HTTP-based manifest adapter from spec-801.
+*   **Initial `gateway_manifest`**: Implement the HTTP-based manifest adapter from llmgateway-monitor-adapter.
 *   **Standard Mappings**: Add `^gateway_.*$` rules to `mappings.yaml`.
 
 ### Stage 2: Generalized Manifests & Hot Reload
@@ -107,3 +107,8 @@ The `gateway_manifest` adapter re-scans its manifest directories (`/etc/hwexp/co
 | Backward compatible | Stage 1 implementation must not break existing config files |
 | No secrets in manifests | Tokens are referenced via environment variable names |
 | Idempotent bootstrap | Re-running DietPi setup does not break existing install |
+
+
+
+
+

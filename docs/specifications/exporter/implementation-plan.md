@@ -51,7 +51,7 @@ This document breaks down the implementation of Spec 100 and Spec 101 into actio
 ### 2.2 Hot Reloading
 
 - **Location**: `hwexp/internal/adapters/gateway_manifest/`
-- **Cadence**: 15 seconds (per spec-801 §2.2).
+- **Cadence**: 15 seconds (per llmgateway-monitor-adapter §2.2).
 - **Tasks**:
   - [ ] Implement a timer-based re-scan (15s) of the components directories inside the adapter's background loop.
   - [ ] On each re-scan, reload and re-merge manifests; atomically replace the active manifest list so in-flight polls are unaffected.
@@ -134,3 +134,7 @@ This document breaks down the implementation of Spec 100 and Spec 101 into actio
   - [ ] **Thermal Zones**: Read `/sys/class/thermal/thermal_zone*` for generic ACPI zones not covered by `linux_hwmon`.
   - [ ] **Interrupts**: Implement a delta-calculator for `/proc/interrupts` (`hw_device_system_interrupts_total`).
   - [ ] **EDAC**: Scan `/sys/devices/system/edac/mc/mc*/` for correctable/uncorrectable ECC memory error counts (`hw_device_memory_ecc_errors_total`).
+
+
+
+
