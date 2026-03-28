@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.9.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.8.0...monitoring-v0.9.0) (2026-03-28)
+
+
+### Features
+
+* **arch:** component manifest architecture, kiosk-tools image, llamaswap manifest ([246af88](https://github.com/Audumla/AUDiotMonitor/commit/246af88aac2e277e1c75f890b891616fbd50b7cd))
+* **dashboard:** bake wl-gammarelay into dashboard image, extract on install ([d307902](https://github.com/Audumla/AUDiotMonitor/commit/d307902eab4b9ac5c54ce91a73f75536431736fd))
+* **dashboard:** update triple-gpu-wide with dynamic pretty names ([0af7cab](https://github.com/Audumla/AUDiotMonitor/commit/0af7cabcdc19fb7f0c49cf1b07da1c383c9eb169))
+* **deploy:** make dashboard stack fully redeployable as a docker package ([de6c12d](https://github.com/Audumla/AUDiotMonitor/commit/de6c12d135c1b7105ea7832c646ea664381fc8a4))
+* **dietpi:** add combined docker-compose and prometheus config ([9682c0b](https://github.com/Audumla/AUDiotMonitor/commit/9682c0b0e8dbe9262736e8b134d3257e694d114d))
+* **dietpi:** add one-shot bootstrap installer ([d84aeef](https://github.com/Audumla/AUDiotMonitor/commit/d84aeef0d12415b81de869b39e77c4bce2f508f6))
+* **dietpi:** add X11/DietPi support to kiosk launcher ([71f92ff](https://github.com/Audumla/AUDiotMonitor/commit/71f92ffabd964212dfca68d778135c64d24d58f8))
+* **hwexp:** add manifest, storage, and system adapters with correlation ([1dd089a](https://github.com/Audumla/AUDiotMonitor/commit/1dd089a6f702181d0e8f380c6fc48f332085927a))
+* **kiosk-tools:** distribute wl-gammarelay as GitHub release artifacts ([d091c82](https://github.com/Audumla/AUDiotMonitor/commit/d091c823b22e0a29cbf8d57754870f6495b74c3d))
+* **kiosk:** add kiosk-switch.sh dashboard switcher ([79ed6fb](https://github.com/Audumla/AUDiotMonitor/commit/79ed6fbd1544ff4a1f15999ad134b2dd6cf25b1b))
+* **kiosk:** redesign triple-gpu-wide dashboard and fix kiosk display ([0f88d06](https://github.com/Audumla/AUDiotMonitor/commit/0f88d06da7c8c577253e62386882018ead8644c4))
+* **kiosk:** swayidle touch-wake, probe_dimmer with wl-gammarelay+ddcutil fallback ([c730e03](https://github.com/Audumla/AUDiotMonitor/commit/c730e0394315e7c3b69b168f7ea09cd819db4c32))
+* **kiosk:** use wl-gammarelay brightness=0 as display blanker ([542a240](https://github.com/Audumla/AUDiotMonitor/commit/542a2403c83e617eff5b4678cf3e1a96b9876e08))
+
+
+### Bug Fixes
+
+* **dietpi:** pull from Docker Hub instead of building locally ([d271217](https://github.com/Audumla/AUDiotMonitor/commit/d271217aa726fbdc1a1de2c6b35e3d59c8310c25))
+* **kiosk:** prevent scrollbar and force exact viewport fit at any resolution ([a8bf93c](https://github.com/Audumla/AUDiotMonitor/commit/a8bf93c99bcb494ca65ad189a9fde114d5509dd8))
+* **kiosk:** restore wlopm blanker and fix wake-watcher pkill pattern ([b9ecf72](https://github.com/Audumla/AUDiotMonitor/commit/b9ecf721be8424e14f07ba90c2101c63afac5cfa))
+* **kiosk:** target baron__bar to hide Grafana's custom scrollbar ([4695238](https://github.com/Audumla/AUDiotMonitor/commit/46952386637caf7b51d4e8c8df19ec3d7ed7e898))
+* **kiosk:** use ::-webkit-scrollbar to reliably hide scrollbar in Chromium ([9639db9](https://github.com/Audumla/AUDiotMonitor/commit/9639db96b15076ce1dfe31186d674eb5413a1758))
+* updated config and images ([96b9c88](https://github.com/Audumla/AUDiotMonitor/commit/96b9c88d71e25563d5544d34cd6721bcfad0f800))
+
 ## [0.8.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.7.3...monitoring-v0.8.0) (2026-03-21)
 
 
