@@ -143,20 +143,20 @@ func (s *Server) HandleDebugState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type DeviceView struct {
-		StableID          string                 `json:"stable_id"`
-		DisplayName       string                 `json:"display_name"`
-		DeviceClass       string                 `json:"device_class"`
-		DeviceSubclass    string                 `json:"device_subclass,omitempty"`
-		Vendor            string                 `json:"vendor,omitempty"`
-		Model             string                 `json:"model,omitempty"`
-		Driver            string                 `json:"driver,omitempty"`
-		Bus               string                 `json:"bus,omitempty"`
-		Location          string                 `json:"location,omitempty"`
-		Source            string                 `json:"source"`
-		Capabilities      []string               `json:"capabilities"`
-		RawIdentifiers    map[string]string      `json:"raw_identifiers,omitempty"`
-		AdapterMetadata   map[string]interface{} `json:"adapter_metadata,omitempty"`
-		Measurements      []MeasurementView      `json:"measurements"`
+		StableID        string                 `json:"stable_id"`
+		DisplayName     string                 `json:"display_name"`
+		DeviceClass     string                 `json:"device_class"`
+		DeviceSubclass  string                 `json:"device_subclass,omitempty"`
+		Vendor          string                 `json:"vendor,omitempty"`
+		Model           string                 `json:"model,omitempty"`
+		Driver          string                 `json:"driver,omitempty"`
+		Bus             string                 `json:"bus,omitempty"`
+		Location        string                 `json:"location,omitempty"`
+		Source          string                 `json:"source"`
+		Capabilities    []string               `json:"capabilities"`
+		RawIdentifiers  map[string]string      `json:"raw_identifiers,omitempty"`
+		AdapterMetadata map[string]interface{} `json:"adapter_metadata,omitempty"`
+		Measurements    []MeasurementView      `json:"measurements"`
 	}
 
 	views := make([]DeviceView, 0, len(devices))
@@ -254,11 +254,11 @@ func (s *Server) HandleDebugMappings(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-	
+
 	measurements := s.store.GetAllNormalized()
 	devices := s.store.GetDevices()
 	sm := s.engine.GetSelfMetrics()
-	
+
 	// Group by MetricFamily for OpenMetrics formatting
 	grouped := make(map[string][]string)
 	types := make(map[string]string)
@@ -290,7 +290,7 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	// Write output
 	fmt.Fprintf(w, "# HELP hwexp_up Exporter is running\n# TYPE hwexp_up gauge\nhwexp_up{host=%q} 1\n", s.cfg.Identity.Host)
-	
+
 	// Device Info Metrics
 	fmt.Fprintf(w, "# HELP hw_device_info Metadata about discovered hardware devices\n# TYPE hw_device_info gauge\n")
 	for _, dev := range devices {
@@ -302,7 +302,7 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 		lb.WriteString(fmt.Sprintf(`,vendor=%q`, dev.Vendor))
 		lb.WriteString(fmt.Sprintf(`,model=%q`, dev.Model))
 		lb.WriteString(fmt.Sprintf(`,driver=%q`, dev.Driver))
-		
+
 		// Add some metadata if available
 		if bios, ok := dev.AdapterMetadata["bios_version"].(string); ok {
 			lb.WriteString(fmt.Sprintf(`,bios_version=%q`, bios))
@@ -320,16 +320,26 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	// Self-metrics
 	fmt.Fprintf(w, "# HELP hwexp_adapter_refresh_duration_seconds Duration of the last adapter refresh\n# TYPE hwexp_adapter_refresh_duration_seconds gauge\nhwexp_adapter_refresh_duration_seconds{host=%q} %f\n", s.cfg.Identity.Host, sm.LastRefreshDuration.Seconds())
-	
+
 	valSuccess := 0.0
-	if sm.LastRefreshSuccess { valSuccess = 1.0 }
+	if sm.LastRefreshSuccess {
+		valSuccess = 1.0
+	}
 	fmt.Fprintf(w, "# HELP hwexp_adapter_refresh_success Whether the last adapter refresh was successful\n# TYPE hwexp_adapter_refresh_success gauge\nhwexp_adapter_refresh_success{host=%q} %f\n", s.cfg.Identity.Host, valSuccess)
-	
+
 	fmt.Fprintf(w, "# HELP hwexp_adapter_last_success_unixtime Last successful refresh timestamp\n# TYPE hwexp_adapter_last_success_unixtime gauge\nhwexp_adapter_last_success_unixtime{host=%q} %d\n", s.cfg.Identity.Host, sm.LastSuccessTime.Unix())
-	
+
 	fmt.Fprintf(w, "# HELP hwexp_discovered_devices Number of discovered devices\n# TYPE hwexp_discovered_devices gauge\nhwexp_discovered_devices{host=%q} %d\n", s.cfg.Identity.Host, sm.DiscoveredDevices)
-	
+
 	fmt.Fprintf(w, "# HELP hwexp_mapping_failures_total Total number of mapping failures\n# TYPE hwexp_mapping_failures_total counter\nhwexp_mapping_failures_total{host=%q} %d\n", s.cfg.Identity.Host, sm.MappingFailures)
+	fmt.Fprintf(w, "# HELP hwexp_capability_available Runtime dependency availability by dependency name\n# TYPE hwexp_capability_available gauge\n")
+	for dep, available := range s.store.GetCapabilities() {
+		v := 0.0
+		if available {
+			v = 1.0
+		}
+		fmt.Fprintf(w, "hwexp_capability_available{host=%q,dependency=%q} %f\n", s.cfg.Identity.Host, dep, v)
+	}
 
 	for family, lines := range grouped {
 		fmt.Fprintf(w, "# TYPE %s %s\n", family, types[family])
@@ -397,4 +407,3 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 }
-

@@ -94,6 +94,16 @@ def test_collector_health(collector_stack):
     assert res.status_code == 200
     assert res.json()["status"] == "ready"
 
+def test_prometheus_scrapes_hwexp_target(collector_stack):
+    # Ensure Prometheus is actively scraping hwexp; this catches exporter
+    # exposition issues that readyz alone does not detect.
+    res = requests.get("http://localhost:9090/api/v1/query?query=up{job=\"hwexp\"}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert len(data["data"]["result"]) == 1
+    assert float(data["data"]["result"][0]["value"][1]) == 1.0
+
 def test_grafana_health(dashboard_stack):
     res = requests.get("http://localhost:3000/api/health")
     assert res.status_code == 200

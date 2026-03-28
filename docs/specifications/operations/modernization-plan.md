@@ -13,7 +13,7 @@
 ## 1. Goals
 
 1. Improve reliability (prevent scrape/config regressions).
-2. Make schema evolution safe (with compatibility windows).
+2. Make schema evolution safe with direct cutover discipline.
 3. Make collectors more modular and extensible.
 4. Ensure dashboards migrate in lockstep with metric changes.
 5. Keep deployments artifact-only and reproducible.
@@ -61,13 +61,13 @@ Out of scope:
   - `hw_*` (canonical)
   - `audiot_*` (derived/recording)
 - Add schema migration matrix template:
-  - `old metric/query` -> `new metric/query` -> `compatibility rule` -> `removal target`
-- Add versioning/deprecation policy:
-  - minimum one minor release compatibility window
+  - `old metric/query` -> `new metric/query` -> `affected dashboards` -> `cutover release`
+- Add direct-cutover policy:
+  - schema and dashboard updates ship in the same release
 
 ### Acceptance Criteria
 - Every schema change PR includes migration matrix entries.
-- Compatibility recording rules are present for any renamed metric/label.
+- No migration entry may rely on compatibility aliases.
 
 ---
 
@@ -81,9 +81,9 @@ Out of scope:
   - critical system overview panels
 
 ### Acceptance Criteria
-- No dashboard ships with deprecated-only queries.
+- No dashboard ships with pre-cutover queries after release.
 - Golden checks pass in CI for critical dashboards.
-- Compatibility rules are removed only after dashboard cutover verification.
+- Cutover release gates on dashboard verification.
 
 ---
 
@@ -168,7 +168,7 @@ Out of scope:
 ## 6. Risks and Mitigations
 
 - Risk: dashboard breakage during schema migration.
-  - Mitigation: compatibility rules + golden checks + staged cutover.
+  - Mitigation: migration matrix + golden checks + same-release cutover.
 - Risk: collector complexity increases too quickly.
   - Mitigation: ship job model and capability contract before process isolation.
 - Risk: hidden runtime dependencies.

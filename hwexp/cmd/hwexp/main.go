@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -20,6 +21,7 @@ import (
 	"hwexp/internal/adapters/linux_system"
 	"hwexp/internal/adapters/mock"
 	"hwexp/internal/adapters/vendor_exec"
+	"hwexp/internal/capabilities"
 	"hwexp/internal/config"
 	"hwexp/internal/engine"
 	"hwexp/internal/httpapi"
@@ -36,8 +38,8 @@ const bannerInner = 56
 // column and the value truncated (with "…") or padded to fill the remaining space
 // exactly — guaranteeing every line is the same total width.
 func bannerRow(label, value string) string {
-	const labelW = 11 // width of the label column (e.g. "Host       ")
-	const sepW = 2    // ": "
+	const labelW = 11                 // width of the label column (e.g. "Host       ")
+	const sepW = 2                    // ": "
 	const prefixW = 2 + labelW + sepW // "  " + label + ": "
 	valueW := bannerInner - prefixW
 	if len(value) > valueW {
@@ -238,6 +240,7 @@ func main() {
 
 	// 6. Initialize State Store
 	stateStore := store.NewStateStore()
+	stateStore.SetCapabilities(checkAdapterRequirements(adapters, l))
 
 	// 7. Initialize Mapping Engine
 	mapperEngine, err := mapper.NewEngine(rules)
@@ -296,4 +299,35 @@ func main() {
 	if err := server.Start(ctx); err != nil {
 		l.Fatal("startup", "Server failed", "HTTP_INTERNAL_ERROR", map[string]interface{}{"error": err.Error()})
 	}
+}
+
+func checkAdapterRequirements(adapters []engine.Adapter, l *logger.Logger) map[string]bool {
+	status := map[string]bool{}
+	for _, a := range adapters {
+		provider, ok := a.(capabilities.Provider)
+		if !ok {
+			continue
+		}
+		for _, req := range provider.Requirements() {
+			status[req.Name] = false
+			if _, err := exec.LookPath(req.Name); err == nil {
+				status[req.Name] = true
+				continue
+			}
+			levelEvent := "capability_missing"
+			message := "Adapter runtime dependency missing"
+			details := map[string]interface{}{
+				"dependency":  req.Name,
+				"description": req.Description,
+				"optional":    req.Optional,
+			}
+			// Missing optional dependencies are informational; required are warnings.
+			if req.Optional {
+				l.Info(levelEvent, message, details)
+			} else {
+				l.Info(levelEvent, message, details)
+			}
+		}
+	}
+	return status
 }

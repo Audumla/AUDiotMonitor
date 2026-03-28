@@ -14,6 +14,7 @@ type StateStore struct {
 	measurements map[string]model.NormalizedMeasurement
 	raw          map[string]model.RawMeasurement
 	decisions    []model.MappingDecision
+	capabilities map[string]bool
 }
 
 func NewStateStore() *StateStore {
@@ -23,6 +24,7 @@ func NewStateStore() *StateStore {
 		measurements: make(map[string]model.NormalizedMeasurement),
 		raw:          make(map[string]model.RawMeasurement),
 		decisions:    make([]model.MappingDecision, 0),
+		capabilities: make(map[string]bool),
 	}
 }
 
@@ -52,7 +54,7 @@ func (s *StateStore) IsReady() bool {
 func (s *StateStore) GetAllNormalized() []model.NormalizedMeasurement {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	res := make([]model.NormalizedMeasurement, 0, len(s.measurements))
 	for _, m := range s.measurements {
 		res = append(res, m)
@@ -86,4 +88,23 @@ func (s *StateStore) GetDecisions() []model.MappingDecision {
 	res := make([]model.MappingDecision, len(s.decisions))
 	copy(res, s.decisions)
 	return res
+}
+
+func (s *StateStore) SetCapabilities(status map[string]bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.capabilities = make(map[string]bool, len(status))
+	for k, v := range status {
+		s.capabilities[k] = v
+	}
+}
+
+func (s *StateStore) GetCapabilities() map[string]bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make(map[string]bool, len(s.capabilities))
+	for k, v := range s.capabilities {
+		out[k] = v
+	}
+	return out
 }

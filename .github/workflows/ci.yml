@@ -16,12 +16,45 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  preflight:
+    name: Preflight Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: hwexp/go.sum
+
+      - name: Install preflight dependencies
+        run: python -m pip install --quiet pyyaml
+
+      - name: Run preflight
+        run: python scripts/preflight.py
+
   build-and-test:
     name: Build & Test (Go)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate mapping contracts
+        run: |
+          python -m pip install --quiet pyyaml
+          python .github/scripts/validate_mappings.py \
+            hwexp/configs/mappings.yaml \
+            monitoring/collector/config/hwexp/mappings.yaml
+          python .github/scripts/validate_query_migration_matrix.py \
+            monitoring/dashboard/migrations/query-migration-matrix.yaml
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -58,9 +91,15 @@ jobs:
           context: ./hwexp
           platforms: linux/amd64
           push: false
+          load: true
           tags: audumla/audiot-hwexp:ci-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Runtime smoke checks
+        run: |
+          docker run --rm --entrypoint sh audumla/audiot-hwexp:ci-check -lc 'which smartctl'
+          docker run --rm --entrypoint sh audumla/audiot-hwexp:ci-check -lc '/usr/bin/hwexp --help >/dev/null'
 
   integration-test:
     name: Integration Tests
