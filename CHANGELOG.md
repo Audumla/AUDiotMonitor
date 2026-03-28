@@ -71,4 +71,9 @@
 - Created home-directory deployment helper doc, merged feature work to main, merged release PR, and verified release workflow produced hwexp-v0.21.0 and monitoring-v0.9.0 artifacts.
 - Deployed released image/config to 10.10.100.10 and verified gateway_manifest + linux_system runtime activation; identified packaging/runtime gaps (missing smartctl in container, unresolved template labels).
 
+### Extracted correlation join logic and capability checks into dedicated modules with tests. (Code Refactoring, Test Update)
+- Moved Stage 3 correlation enrichment into internal/engine/join and wired engine to use it.
+- Moved startup capability requirement checks into internal/capabilities/checker with injectable lookup and logger.
+- Added unit tests for join enrichment/indexing and capability requirement evaluation.
+
 ---

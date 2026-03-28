@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -240,7 +239,13 @@ func main() {
 
 	// 6. Initialize State Store
 	stateStore := store.NewStateStore()
-	stateStore.SetCapabilities(checkAdapterRequirements(adapters, l))
+	capabilityProviders := make([]capabilities.Provider, 0, len(adapters))
+	for _, a := range adapters {
+		if provider, ok := a.(capabilities.Provider); ok {
+			capabilityProviders = append(capabilityProviders, provider)
+		}
+	}
+	stateStore.SetCapabilities(capabilities.CheckRequirements(capabilityProviders, nil, l))
 
 	// 7. Initialize Mapping Engine
 	mapperEngine, err := mapper.NewEngine(rules)
@@ -299,35 +304,4 @@ func main() {
 	if err := server.Start(ctx); err != nil {
 		l.Fatal("startup", "Server failed", "HTTP_INTERNAL_ERROR", map[string]interface{}{"error": err.Error()})
 	}
-}
-
-func checkAdapterRequirements(adapters []engine.Adapter, l *logger.Logger) map[string]bool {
-	status := map[string]bool{}
-	for _, a := range adapters {
-		provider, ok := a.(capabilities.Provider)
-		if !ok {
-			continue
-		}
-		for _, req := range provider.Requirements() {
-			status[req.Name] = false
-			if _, err := exec.LookPath(req.Name); err == nil {
-				status[req.Name] = true
-				continue
-			}
-			levelEvent := "capability_missing"
-			message := "Adapter runtime dependency missing"
-			details := map[string]interface{}{
-				"dependency":  req.Name,
-				"description": req.Description,
-				"optional":    req.Optional,
-			}
-			// Missing optional dependencies are informational; required are warnings.
-			if req.Optional {
-				l.Info(levelEvent, message, details)
-			} else {
-				l.Info(levelEvent, message, details)
-			}
-		}
-	}
-	return status
 }

@@ -9,6 +9,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 	"hwexp/internal/automapper"
+	"hwexp/internal/engine/join"
 	"hwexp/internal/mapper"
 	"hwexp/internal/model"
 	"hwexp/internal/store"
@@ -115,10 +116,7 @@ func (e *Engine) executeCycle(ctx context.Context) {
 		}
 		for _, d := range devices {
 			newDevices[d.StableID] = d
-			// Index by PCI slot if available
-			if slot, ok := d.RawIdentifiers["pci_slot"]; ok && slot != "" {
-				deviceIndex[slot] = d
-			}
+			join.IndexDeviceByPCISlot(deviceIndex, d)
 		}
 
 		// 2. Poll
@@ -146,30 +144,8 @@ func (e *Engine) executeCycle(ctx context.Context) {
 				}
 			}
 
-			// Stage 3: Hardware Correlation (Join Layer)
-			if norm != nil && r.Metadata != nil {
-				if slot, ok := r.Metadata["correlation_pci_slot"]; ok && slot != "" {
-					if targetDev, found := deviceIndex[slot]; found {
-						// Inject hardware labels
-						if norm.Labels == nil {
-							norm.Labels = make(map[string]string)
-						}
-						norm.Labels["device_id"] = targetDev.StableID
-						norm.Labels["vendor"] = targetDev.Vendor
-						norm.Labels["model"] = targetDev.Model
-						if targetDev.DisplayName != "" {
-							norm.Labels["display_name"] = targetDev.DisplayName
-						}
-					}
-				}
-				// Also handle model_name from two-tier discovery
-				if modelName, ok := r.Metadata["model_name"]; ok {
-					if norm.Labels == nil {
-						norm.Labels = make(map[string]string)
-					}
-					norm.Labels["model_name"] = modelName
-				}
-			}
+			// Stage 3: Hardware/Software correlation join.
+			join.EnrichNormalizedMeasurement(norm, r, deviceIndex)
 
 			// Auto-map: infer a rule for any measurement that has no manual mapping.
 			if autoMapEnabled && decision != nil && decision.Decision == "ignored" {
@@ -239,7 +215,7 @@ func (e *Engine) persistGeneratedRules() {
 	e.mu.Unlock()
 
 	wrapper := struct {
-		SchemaVersion string             `yaml:"schema_version"`
+		SchemaVersion string              `yaml:"schema_version"`
 		Rules         []model.MappingRule `yaml:"rules"`
 	}{
 		SchemaVersion: "1.0.0",
