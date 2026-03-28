@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.21.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.20.0...hwexp-v0.21.0) (2026-03-28)
+
+
+### Features
+
+* **hwexp:** add manifest, storage, and system adapters with correlation ([1dd089a](https://github.com/Audumla/AUDiotMonitor/commit/1dd089a6f702181d0e8f380c6fc48f332085927a))
+
+
+### Bug Fixes
+
+* minor updates ([e3e3098](https://github.com/Audumla/AUDiotMonitor/commit/e3e3098dcccf3b4c0a8ce4ca8aabdfa4dd8ca40d))
+
 ## [0.20.0](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.19.2...hwexp-v0.20.0) (2026-03-19)
 
 
