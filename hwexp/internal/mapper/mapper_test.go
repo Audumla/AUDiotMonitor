@@ -136,3 +136,60 @@ func TestEngine_Map_TemplateExpansionMetadataAndRegex(t *testing.T) {
 		t.Fatalf("expected label copy_raw=%q, got %q", want, got)
 	}
 }
+
+func TestEngine_Map_RawNameExactMatch(t *testing.T) {
+	rules := []model.MappingRule{
+		{
+			ID:       "exact_only",
+			Priority: 100,
+			Match: model.MatchCriteria{
+				Source:  "linux_storage",
+				RawName: "disk_health_status",
+			},
+			Normalize: model.NormalizeConfig{
+				MetricFamily:        "hw_device_disk_health_status",
+				MetricType:          "gauge",
+				LogicalNameTemplate: "${logical_device_name}_health",
+			},
+		},
+	}
+
+	engine, err := NewEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
+
+	device := model.DiscoveredDevice{
+		StableID:          "disk0",
+		Source:            "linux_storage",
+		LogicalDeviceName: "disk0",
+	}
+
+	// Exact match should map.
+	rawMatch := model.RawMeasurement{
+		MeasurementID: "m1",
+		RawName:       "disk_health_status",
+		RawValue:      1,
+		RawUnit:       "count",
+		Quality:       "good",
+		Timestamp:     time.Now(),
+	}
+	norm, decision := engine.Map(device, rawMatch)
+	if decision.Decision != "mapped" || norm == nil {
+		t.Fatalf("expected exact raw_name to map, got decision=%q", decision.Decision)
+	}
+
+	// Different raw name must not map.
+	rawOther := model.RawMeasurement{
+		MeasurementID: "m2",
+		RawName:       "disk_temperature",
+		RawValue:      40,
+		RawUnit:       "celsius",
+		Quality:       "good",
+		Timestamp:     time.Now(),
+	}
+	norm, decision = engine.Map(device, rawOther)
+	if decision.Decision != "ignored" || norm != nil {
+		t.Fatalf("expected non-matching raw_name to be ignored, got decision=%q", decision.Decision)
+	}
+}

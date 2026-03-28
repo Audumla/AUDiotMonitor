@@ -2,7 +2,7 @@
 
 ## Detailed Contracts, Configuration, Errors, and Security Specification
 
-**Document purpose**: This document is the implementation-level companion to `Overview.md` and `installation_spec.md`. It removes remaining ambiguity by defining:
+**Document purpose**: This document is the implementation-level companion to `foundation/overview.md` and `foundation/installation-spec.md`. It removes remaining ambiguity by defining:
 
 * Formal data contracts for internal and external APIs
 * Canonical JSON payload schemas for debug endpoints
@@ -23,7 +23,7 @@
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as requirements.
 
-Where this document conflicts with `Overview.md` or `installation_spec.md`, this document takes precedence for low-level implementation details.
+Where this document conflicts with `foundation/overview.md` or `foundation/installation-spec.md`, this document takes precedence for low-level implementation details.
 
 ---
 
@@ -1384,7 +1384,7 @@ After this document, the next required documents are:
 3.  **Mapping Rules Reference**
     *   exhaustive rule syntax and examples
 
-4.  **installation_spec.md**
+4.  **foundation/installation-spec.md**
     *   Covers deployment, operations, packaging, and portability details.
 
 5.  **Dashboard Data Contract Guide**

@@ -3,7 +3,7 @@
 **Status:** Draft
 **Project:** AUDiotMonitor
 **Covers:** Native adapters for S.M.A.R.T. storage data, generic CPU power states, and system-wide hardware pressure metrics.
-**Related:** [Spec 100](spec-100-component-architecture.md)
+**Related:** [Spec 100](../foundation/spec-100-component-architecture.md)
 
 ---
 

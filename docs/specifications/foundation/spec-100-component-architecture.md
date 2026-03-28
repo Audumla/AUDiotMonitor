@@ -5,7 +5,7 @@
 **Covers:** System boundary definition; manifest-driven software component monitoring;
 external project data integration via Prometheus; Docker image separation; CI build path
 for optional runtime tools
-**Related:** [spec-801](spec-801-llmgateway-monitor-adapter.md), [spec-101](spec-101-deep-hardware-telemetry.md)
+**Related:** [spec-801](../adapters/spec-801-llmgateway-monitor-adapter.md), [spec-101](../adapters/spec-101-deep-hardware-telemetry.md)
 
 ---
 

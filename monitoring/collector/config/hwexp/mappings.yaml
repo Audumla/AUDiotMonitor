@@ -45,6 +45,36 @@ rules:
       component: "memory"
       sensor: "usage"
 
+  - id: "gpu_vram_used_bytes"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^vram_used_bytes$"
+    normalize:
+      metric_family: "hw_device_capacity_bytes"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_vram_used_bytes"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "memory"
+      sensor: "usage"
+
+  - id: "gpu_vram_capacity_bytes"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^vram_(total|capacity)_bytes$"
+    normalize:
+      metric_family: "hw_device_capacity_bytes"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_vram_capacity_bytes"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "memory"
+      sensor: "capacity"
+
   - id: "mock_gpu_temp"
     priority: 100
     match:
@@ -64,7 +94,7 @@ rules:
     priority: 100
     match:
       source: "gateway_manifest"
-      raw_name: "component_up"
+      raw_name_regex: "^component_up$"
     normalize:
       metric_family: "gateway_component_up"
       metric_type: "gauge"
@@ -76,7 +106,7 @@ rules:
     priority: 100
     match:
       source: "gateway_manifest"
-      raw_name: "component_info"
+      raw_name_regex: "^component_info$"
     normalize:
       metric_family: "gateway_component_info"
       metric_type: "info"
@@ -98,7 +128,7 @@ rules:
     priority: 100
     match:
       source: "linux_storage"
-      raw_name: "disk_health_status"
+      raw_name_regex: "^disk_health_status$"
     normalize:
       metric_family: "hw_device_disk_health_status"
       metric_type: "gauge"
@@ -108,7 +138,7 @@ rules:
     priority: 100
     match:
       source: "linux_storage"
-      raw_name: "disk_temperature"
+      raw_name_regex: "^disk_temperature$"
     normalize:
       metric_family: "hw_device_temperature_celsius"
       metric_type: "gauge"
@@ -119,7 +149,7 @@ rules:
     priority: 100
     match:
       source: "linux_storage"
-      raw_name: "disk_life_remaining_percent"
+      raw_name_regex: "^disk_life_remaining_percent$"
     normalize:
       metric_family: "hw_device_disk_life_remaining_percent"
       metric_type: "gauge"
@@ -129,7 +159,7 @@ rules:
     priority: 100
     match:
       source: "linux_storage"
-      raw_name: "disk_power_on_hours"
+      raw_name_regex: "^disk_power_on_hours$"
     normalize:
       metric_family: "hw_device_disk_power_on_hours_total"
       metric_type: "counter"
@@ -139,7 +169,7 @@ rules:
     priority: 100
     match:
       source: "linux_system"
-      raw_name: "thermal_zone_temp"
+      raw_name_regex: "^thermal_zone_temp$"
     normalize:
       metric_family: "hw_device_temperature_celsius"
       metric_type: "gauge"
@@ -152,7 +182,7 @@ rules:
     priority: 100
     match:
       source: "linux_system"
-      raw_name: "cpu_cstate_residency"
+      raw_name_regex: "^cpu_cstate_residency$"
     normalize:
       metric_family: "hw_device_utilization_percent"
       metric_type: "gauge"
@@ -165,7 +195,7 @@ rules:
     priority: 100
     match:
       source: "linux_system"
-      raw_name: "system_interrupts_rate"
+      raw_name_regex: "^system_interrupts_rate$"
     normalize:
       metric_family: "hw_device_sensor_count"
       metric_type: "gauge"
@@ -178,7 +208,7 @@ rules:
     priority: 100
     match:
       source: "linux_system"
-      raw_name: "memory_ecc_ce_count"
+      raw_name_regex: "^memory_ecc_ce_count$"
     normalize:
       metric_family: "hw_device_memory_ecc_errors_total"
       metric_type: "counter"

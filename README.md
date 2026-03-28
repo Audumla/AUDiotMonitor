@@ -27,6 +27,7 @@ Hardware, OS, and AI telemetry stack for Linux machines. Collects sensor data, s
 ## Quick install
 
 Full instructions: [`monitoring/INSTALL.md`](monitoring/INSTALL.md)
+Documentation and specs: [`docs/README.md`](docs/README.md)
 
 ### 1. Remote Deployment (Recommended)
 

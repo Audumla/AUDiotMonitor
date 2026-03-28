@@ -14,6 +14,7 @@ type MatchCriteria struct {
 	DeviceClass    string `json:"device_class,omitempty" yaml:"device_class,omitempty"`
 	DeviceSubclass string `json:"device_subclass,omitempty" yaml:"device_subclass,omitempty"`
 	Vendor         string `json:"vendor,omitempty" yaml:"vendor,omitempty"`
+	RawName        string `json:"raw_name,omitempty" yaml:"raw_name,omitempty"`
 	ModelRegex     string `json:"model_regex,omitempty" yaml:"model_regex,omitempty"`
 	StableIDRegex  string `json:"stable_id_regex,omitempty" yaml:"stable_id_regex,omitempty"`
 	RawNameRegex   string `json:"raw_name_regex,omitempty" yaml:"raw_name_regex,omitempty"`

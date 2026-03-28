@@ -4,7 +4,7 @@
 **Date:** 2026-03-26
 **Project:** AUDiotMonitor
 **Covers:** Manifest-driven hwexp adapter for monitoring AUDiaLLMGateway components; Two-tier discovery; Hardware correlation; Hot reloading.
-**Related:** [Spec 100](spec-100-component-architecture.md), AUDiaLLMGateway [spec-701](../../AUDia/AUDiaLLMGateway/specifications/components/dashboard/spec-701-gateway-dashboard.md)
+**Related:** [Spec 100](../foundation/spec-100-component-architecture.md), AUDiaLLMGateway [spec-701](../../../AUDia/AUDiaLLMGateway/specifications/components/dashboard/spec-701-gateway-dashboard.md)
 
 ---
 

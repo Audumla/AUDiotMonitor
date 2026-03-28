@@ -162,10 +162,19 @@ func (e *Engine) evaluateMatch(cr *compiledRule, device model.DiscoveredDevice, 
 	if m.DeviceClass != "" && m.DeviceClass != device.DeviceClass {
 		return false, nil
 	}
+	if m.DeviceSubclass != "" && m.DeviceSubclass != device.DeviceSubclass {
+		return false, nil
+	}
 	if m.Vendor != "" && m.Vendor != device.Vendor {
 		return false, nil
 	}
+	if m.RawName != "" && m.RawName != raw.RawName {
+		return false, nil
+	}
 	if m.ComponentHint != "" && m.ComponentHint != raw.ComponentHint {
+		return false, nil
+	}
+	if m.SensorHint != "" && m.SensorHint != raw.SensorHint {
 		return false, nil
 	}
 

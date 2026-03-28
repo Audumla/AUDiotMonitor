@@ -44,3 +44,33 @@ rules:
       device_class: "gpu"
       component: "memory"
       sensor: "usage"
+
+  - id: "gpu_vram_used_bytes"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^vram_used_bytes$"
+    normalize:
+      metric_family: "hw_device_capacity_bytes"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_vram_used_bytes"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "memory"
+      sensor: "usage"
+
+  - id: "gpu_vram_capacity_bytes"
+    priority: 100
+    match:
+      platform: "linux"
+      device_class: "gpu"
+      raw_name_regex: "^vram_(total|capacity)_bytes$"
+    normalize:
+      metric_family: "hw_device_capacity_bytes"
+      metric_type: "gauge"
+      logical_name_template: "${logical_device_name}_vram_capacity_bytes"
+      unit_scale: 1.0
+      device_class: "gpu"
+      component: "memory"
+      sensor: "capacity"
