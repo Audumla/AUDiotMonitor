@@ -59,7 +59,17 @@ echo "$VERSION" | grep -q '"exporter_version"'          && pass "/version return
 
 METRICS=$(curl -sf "http://localhost:$PORT/metrics")
 echo "$METRICS" | grep -qE 'hwexp_up(\{[^}]*\})? 1'    && pass "/metrics contains hwexp_up 1"  || fail "/metrics bad response"
-echo "$METRICS" | grep -q 'hw_device_temperature'       && pass "/metrics contains mapped temp"  || fail "/metrics missing temperature metric"
+
+TEMP_READY=0
+for i in $(seq 1 10); do
+  METRICS=$(curl -sf "http://localhost:$PORT/metrics")
+  if echo "$METRICS" | grep -q 'hw_device_temperature'; then
+    TEMP_READY=1
+    break
+  fi
+  sleep 1
+done
+[ "$TEMP_READY" -eq 1 ] && pass "/metrics contains mapped temp" || fail "/metrics missing temperature metric"
 
 # --- 4. Uninstall and verify cleanup ---
 kill "$HWEXP_PID" 2>/dev/null || true

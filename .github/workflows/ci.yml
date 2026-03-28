@@ -59,8 +59,8 @@ jobs:
           platforms: linux/amd64
           push: false
           tags: audumla/audiot-hwexp:ci-check
-          cache-from: type=registry,ref=audumla/audiot-hwexp:buildcache
-          cache-to: type=registry,ref=audumla/audiot-hwexp:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   integration-test:
     name: Integration Tests
@@ -162,9 +162,6 @@ jobs:
     name: Monitoring Integration Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: ./AUDiotMonitor
     steps:
       - name: Checkout
         uses: actions/checkout@v4

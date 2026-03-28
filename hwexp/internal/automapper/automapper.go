@@ -112,6 +112,10 @@ func InferRule(device model.DiscoveredDevice, raw model.RawMeasurement) *model.M
 		prefix = m[1]
 	} else if strings.HasSuffix(raw.RawName, "_percent") {
 		prefix = strings.TrimSuffix(raw.RawName, "_percent")
+	} else {
+		// Avoid auto-mapping threshold/status-style metrics like temp1_max.
+		// We only infer for *_input and *_percent naming families.
+		return nil
 	}
 
 	// Rule ID is deterministic: same (vendor, class, prefix) → same rule ID,
