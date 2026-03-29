@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.10.0...monitoring-v0.10.1) (2026-03-29)
+
+
+### Bug Fixes
+
+* **monitoring:** harden compose startup and publish kiosk image artifacts ([#56](https://github.com/Audumla/AUDiotMonitor/issues/56)) ([4bccdb4](https://github.com/Audumla/AUDiotMonitor/commit/4bccdb4657594a3e2e582ddbc07a291e7520b3f0))
+
 ## [0.10.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.3...monitoring-v0.10.0) (2026-03-29)
 
 
