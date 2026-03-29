@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.3](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.21.2...hwexp-v0.21.3) (2026-03-29)
+
+
+### Bug Fixes
+
+* **ci:** stabilize monitoring integration and packaging smoke tests ([8620374](https://github.com/Audumla/AUDiotMonitor/commit/8620374c1b701ba77df721c28aa49f1ecf98a132))
+* **ci:** unblock monitoring and package integration flakiness ([1e10fd4](https://github.com/Audumla/AUDiotMonitor/commit/1e10fd418e3f081232817a4127b26e678b12a4fe))
+
 ## [0.21.2](https://github.com/Audumla/AUDiotMonitor/compare/hwexp-v0.21.1...hwexp-v0.21.2) (2026-03-28)
 
 

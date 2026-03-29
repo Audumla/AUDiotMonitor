@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.3...monitoring-v0.10.0) (2026-03-29)
+
+
+### Features
+
+* **dashboard:** manage kiosk browser via docker compose ([4822039](https://github.com/Audumla/AUDiotMonitor/commit/4822039b75e46f807e86ba32f31e197fa1d8edd2))
+* **dashboard:** migrate VRAM panels to sensor-based metrics ([85ab275](https://github.com/Audumla/AUDiotMonitor/commit/85ab275906b77ae87dde91a7fa6b5f466c3200d3))
+
+
+### Bug Fixes
+
+* **ci:** stabilize monitoring integration and packaging smoke tests ([8620374](https://github.com/Audumla/AUDiotMonitor/commit/8620374c1b701ba77df721c28aa49f1ecf98a132))
+* **ci:** unblock monitoring and package integration flakiness ([1e10fd4](https://github.com/Audumla/AUDiotMonitor/commit/1e10fd418e3f081232817a4127b26e678b12a4fe))
+
 ## [0.9.3](https://github.com/Audumla/AUDiotMonitor/compare/monitoring-v0.9.2...monitoring-v0.9.3) (2026-03-28)
 
 
