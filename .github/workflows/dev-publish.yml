@@ -67,3 +67,27 @@ jobs:
           tags: audumla/audiot-dashboard:dev
           cache-from: type=registry,ref=audumla/audiot-dashboard:buildcache
           cache-to: type=registry,ref=audumla/audiot-dashboard:buildcache,mode=max
+
+  kiosk-dev-publish:
+    name: Build & Push audiot-kiosk:dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker setup
+        uses: ./.github/actions/docker-setup
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push :dev (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/dashboard
+          file: ./monitoring/dashboard/Dockerfile.kiosk
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: audumla/audiot-kiosk:dev
+          cache-from: type=registry,ref=audumla/audiot-kiosk:buildcache
+          cache-to: type=registry,ref=audumla/audiot-kiosk:buildcache,mode=max

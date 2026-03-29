@@ -9,7 +9,9 @@
 #
 # Options (set as env vars or flags):
 #   --no-kiosk            Skip X11 kiosk setup (headless/server mode)
-#   --tag <tag>           Docker image tag (default: latest)
+#   --tag <tag>           Set both dashboard and kiosk image tags
+#   --dashboard-tag <tag> Dashboard image tag (default: latest)
+#   --kiosk-tag <tag>     Kiosk image tag (default: latest)
 #   --install-dir <path>  Deploy path (default: /opt/docker/services/dashboard)
 #   --user <name>         Kiosk user (default: dietpi)
 
@@ -21,13 +23,16 @@ BRANCH="${AUDIOT_BRANCH:-dietpi}"
 RAW_BASE="https://raw.githubusercontent.com/Audumla/AUDiotMonitor/${BRANCH}/monitoring/dashboard"
 INSTALL_DIR="${INSTALL_DIR:-/opt/docker/services/dashboard}"
 KIOSK_USER="${KIOSK_USER:-dietpi}"
-AUDIOT_TAG="${AUDIOT_TAG:-latest}"
+DASHBOARD_TAG="${DASHBOARD_TAG:-latest}"
+KIOSK_TAG="${KIOSK_TAG:-latest}"
 SETUP_KIOSK=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --no-kiosk)    SETUP_KIOSK=false; shift ;;
-        --tag)         AUDIOT_TAG="$2"; shift 2 ;;
+        --tag)         DASHBOARD_TAG="$2"; KIOSK_TAG="$2"; shift 2 ;;
+        --dashboard-tag) DASHBOARD_TAG="$2"; shift 2 ;;
+        --kiosk-tag)   KIOSK_TAG="$2"; shift 2 ;;
         --install-dir) INSTALL_DIR="$2"; shift 2 ;;
         --user)        KIOSK_USER="$2"; shift 2 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -115,7 +120,7 @@ install_udev_rule_ilitek
 
 log "Pulling images and starting monitoring stack..."
 cd "$INSTALL_DIR"
-AUDIOT_TAG="$AUDIOT_TAG" docker compose up -d
+DASHBOARD_TAG="$DASHBOARD_TAG" KIOSK_TAG="$KIOSK_TAG" docker compose up -d
 log "Stack started"
 
 # ── 6. Extract kiosk tools from dashboard image ───────────────────────────────
@@ -124,7 +129,7 @@ log "Stack started"
 
 if [ "$SETUP_KIOSK" = "true" ]; then
     log "Extracting wl-gammarelay from dashboard image..."
-    extract_wl_gammarelay "audumla/audiot-dashboard:${AUDIOT_TAG:-latest}"
+    extract_wl_gammarelay "audumla/audiot-dashboard:${DASHBOARD_TAG:-latest}"
 fi
 
 # ── 5. Kiosk X11 autologin and systemd service ────────────────────────────────
