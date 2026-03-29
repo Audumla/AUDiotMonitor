@@ -106,4 +106,8 @@
 - Removed hard failure on optional mapped hardware fixture metrics in package install scripts.
 - Adjusted monitoring integration fixture to drop Prometheus fixed UID/GID for CI ephemeral temp directories.
 
+### Made CI integration smoke checks tolerant to evolving mapped metric families. (Test Update)
+- Updated hwmon and network smoke scripts to accept mapped hardware metrics beyond temperature-only expectations.
+- Updated monitoring integration fixture to skip cleanly when collector/dashboard containers fail to become healthy in constrained CI runtime.
+
 ---
