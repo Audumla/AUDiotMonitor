@@ -48,9 +48,10 @@ export XDG_RUNTIME_DIR
 [ -n "${XAUTHORITY:-}" ] && export XAUTHORITY
 [ -n "${DISPLAY:-}" ] && export DISPLAY
 
-# Select backend: "wayland" if wlopm is available and WAYLAND_DISPLAY is set;
-# otherwise "x11" (requires xset).
-if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlopm &>/dev/null; then
+# Select backend: prefer Wayland whenever WAYLAND_DISPLAY is available.
+# wlopm is optional and only required for DPMS power controls, not for
+# Chromium rendering.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
     _BACKEND="wayland"
 else
     _BACKEND="x11"

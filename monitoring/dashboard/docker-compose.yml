@@ -47,5 +47,43 @@ services:
           memory: 128m
     restart: unless-stopped
 
+  kiosk:
+    build:
+      context: .
+      dockerfile: Dockerfile.kiosk
+    image: audumla/audiot-kiosk:${AUDIOT_TAG:-latest}
+    container_name: audiot-kiosk
+    depends_on:
+      - grafana
+    user: "${KIOSK_UID:-1000}:${KIOSK_GID:-1000}"
+    environment:
+      - USER=${KIOSK_USER:-audumla}
+      - HOME=/tmp
+      - XDG_CONFIG_HOME=/tmp/.config
+      - KIOSK_CONFIG_FILE=/dev/null
+      - XAUTHORITY=/tmp/.Xauthority
+      - DISPLAY=${KIOSK_DISPLAY:-:0}
+      - WAYLAND_DISPLAY=${KIOSK_WAYLAND_DISPLAY:-wayland-0}
+      - XDG_RUNTIME_DIR=/run/user/${KIOSK_UID:-1000}
+      - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${KIOSK_UID:-1000}/bus
+      - KIOSK_DASHBOARD=${KIOSK_DASHBOARD:-audiot-triple-gpu-wide}
+      - KIOSK_REFRESH=${KIOSK_REFRESH:-5s}
+    volumes:
+      - /run/user/${KIOSK_UID:-1000}:/run/user/${KIOSK_UID:-1000}
+      - /home/${KIOSK_USER:-audumla}/.Xauthority:/tmp/.Xauthority:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/dri:/dev/dri
+      - /dev/input:/dev/input
+    group_add:
+      - "${KIOSK_VIDEO_GID:-44}"
+      - "${KIOSK_INPUT_GID:-104}"
+    devices:
+      - /dev/dri:/dev/dri
+      - /dev/input:/dev/input
+    security_opt:
+      - seccomp=unconfined
+    shm_size: "256m"
+    restart: unless-stopped
+
 volumes:
   grafana-data:

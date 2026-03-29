@@ -91,4 +91,9 @@
 - Updated default Prometheus recording rules for audiot_gpu_vram_* to use label-based selectors.
 - Validated new query path against live emitter and Grafana proxy on 2026-03-29 (hosts 10.10.100.10 and brutusview).
 
+### Added compose-managed kiosk browser service so dashboard browser lifecycle follows docker compose up/down. (Build / Packaging, Configuration Cleanup, New Feature)
+- Introduced monitoring/dashboard/Dockerfile.kiosk to run kiosk.sh + Chromium in a dedicated container.
+- Extended monitoring/dashboard/docker-compose.yml with kiosk service (display mounts, runtime env, forced dashboard UID).
+- Updated kiosk backend selection and tested on brutusview: compose up launches browser; compose down stops browser and Grafana together.
+
 ---

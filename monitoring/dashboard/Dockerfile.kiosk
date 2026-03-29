@@ -1,0 +1,22 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    chromium \
+    curl \
+    dbus-user-session \
+    procps \
+    swayidle \
+    wlr-randr \
+    x11-xserver-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --chmod=0755 kiosk.sh /opt/audiot-dashboard/kiosk.sh
+COPY config/kiosk.env.example /opt/audiot-dashboard/config/kiosk.env
+
+RUN sed -i 's/\r$//' /opt/audiot-dashboard/kiosk.sh /opt/audiot-dashboard/config/kiosk.env
+
+ENV HOME=/tmp \
+    KIOSK_CONFIG_FILE=/opt/audiot-dashboard/config/kiosk.env
+
+ENTRYPOINT ["/bin/bash", "-lc", "/opt/audiot-dashboard/kiosk.sh http://grafana:3000"]
