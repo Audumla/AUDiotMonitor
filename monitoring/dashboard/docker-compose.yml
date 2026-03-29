@@ -23,6 +23,8 @@ services:
     image: audumla/audiot-dashboard:${AUDIOT_TAG:-latest}
     container_name: audiot-grafana
     entrypoint: /run.sh   # use Grafana's native entrypoint; provisioning is baked into the image
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "3000:3000"
     volumes:

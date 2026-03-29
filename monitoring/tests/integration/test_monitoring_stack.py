@@ -82,11 +82,24 @@ def collector_stack(temp_run_dir):
         yaml.safe_dump(cfg, f)
     
     # Start the stack
-    subprocess.run(["docker", "compose", "up", "-d"], 
+    subprocess.run(["docker", "compose", "up", "-d"],
                    cwd=install_dir, check=True, capture_output=True)
-    
-    # Wait for Prometheus
-    time.sleep(10)
+
+    # Wait for Prometheus and hwexp to be ready
+    prom_ready = False
+    hwexp_ready = False
+    for _ in range(30):
+        try:
+            prom_ready = requests.get("http://localhost:9090/-/healthy", timeout=3).status_code == 200
+            hwexp_resp = requests.get("http://localhost:9200/readyz", timeout=3)
+            hwexp_ready = hwexp_resp.status_code == 200 and hwexp_resp.json().get("status") == "ready"
+            if prom_ready and hwexp_ready:
+                break
+        except requests.RequestException:
+            pass
+        time.sleep(2)
+    assert prom_ready, "Prometheus did not become healthy in time"
+    assert hwexp_ready, "hwexp did not become ready in time"
     
     yield install_dir
     
@@ -105,13 +118,37 @@ def dashboard_stack(temp_run_dir, collector_stack):
     subprocess.run(["bash", str(DASHBOARD_ROOT / "install-layout.sh")], 
                    env=env, check=True, capture_output=True)
     
+    # Disable kiosk in CI tests and pin datasource endpoints to collector stack.
+    compose_path = install_dir / "docker-compose.yml"
+    with open(compose_path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    if "kiosk" in cfg.get("services", {}):
+        del cfg["services"]["kiosk"]
+    grafana = cfg["services"]["grafana"]
+    env = grafana.get("environment", [])
+    env = [entry for entry in env if not str(entry).startswith("PROMETHEUS_URL=") and not str(entry).startswith("HWEXP_URL=")]
+    env.append("PROMETHEUS_URL=http://host.docker.internal:9090")
+    env.append("HWEXP_URL=http://host.docker.internal:9200")
+    grafana["environment"] = env
+    with open(compose_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(cfg, f)
+
     # Start the stack
-    # Dashboard uses host.docker.internal:9090 by default in docker-compose.yml
-    subprocess.run(["docker", "compose", "up", "-d"], 
+    subprocess.run(["docker", "compose", "up", "-d"],
                    cwd=install_dir, check=True, capture_output=True)
-    
-    # Wait for Grafana
-    time.sleep(15)
+
+    # Wait for Grafana health
+    healthy = False
+    for _ in range(30):
+        try:
+            res = requests.get("http://localhost:3000/api/health", timeout=3)
+            healthy = res.status_code == 200 and res.json().get("database") == "ok"
+            if healthy:
+                break
+        except requests.RequestException:
+            pass
+        time.sleep(2)
+    assert healthy, "Grafana did not become healthy in time"
     
     yield install_dir
     
@@ -121,18 +158,18 @@ def dashboard_stack(temp_run_dir, collector_stack):
 
 def test_collector_health(collector_stack):
     # Check Prometheus
-    res = requests.get("http://localhost:9090/-/healthy")
+    res = requests.get("http://localhost:9090/-/healthy", timeout=10)
     assert res.status_code == 200
     
     # Check hwexp
-    res = requests.get("http://localhost:9200/readyz")
+    res = requests.get("http://localhost:9200/readyz", timeout=10)
     assert res.status_code == 200
     assert res.json()["status"] == "ready"
 
 def test_prometheus_scrapes_hwexp_target(collector_stack):
     # Ensure Prometheus is actively scraping hwexp; this catches exporter
     # exposition issues that readyz alone does not detect.
-    res = requests.get("http://localhost:9090/api/v1/query?query=up{job=\"hwexp\"}")
+    res = requests.get("http://localhost:9090/api/v1/query?query=up{job=\"hwexp\"}", timeout=10)
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "success"
@@ -140,7 +177,7 @@ def test_prometheus_scrapes_hwexp_target(collector_stack):
     assert float(data["data"]["result"][0]["value"][1]) == 1.0
 
 def test_grafana_health(dashboard_stack):
-    res = requests.get("http://localhost:3000/api/health")
+    res = requests.get("http://localhost:3000/api/health", timeout=10)
     assert res.status_code == 200
     assert res.json()["database"] == "ok"
 
@@ -150,7 +187,7 @@ def test_metrics_present_in_prometheus(collector_stack):
     
     # Query for a raw metric from the fixture
     query = 'hw_device_temperature_celsius'
-    res = requests.get(f"http://localhost:9090/api/v1/query?query={query}")
+    res = requests.get(f"http://localhost:9090/api/v1/query?query={query}", timeout=10)
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "success"
@@ -160,7 +197,7 @@ def test_recording_rules_working(collector_stack):
     # Query for a derived metric defined in recording rules
     # We use a simple one that doesn't depend on capacity for this basic check
     query = 'audiot_gpu_compute_utilization_percent'
-    res = requests.get(f"http://localhost:9090/api/v1/query?query={query}")
+    res = requests.get(f"http://localhost:9090/api/v1/query?query={query}", timeout=10)
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "success"
@@ -170,7 +207,7 @@ def test_recording_rules_working(collector_stack):
 def test_grafana_prometheus_connection_e2e(dashboard_stack):
     # This is the most important end-to-end test:
     # 1. Get Prometheus datasource ID
-    res = requests.get("http://localhost:3000/api/datasources", auth=("admin", "admin"))
+    res = requests.get("http://localhost:3000/api/datasources", auth=("admin", "admin"), timeout=10)
     assert res.status_code == 200
     ds_list = res.json()
     prom_ds = next(d for d in ds_list if d["type"] == "prometheus")
@@ -182,7 +219,7 @@ def test_grafana_prometheus_connection_e2e(dashboard_stack):
     
     # Retry a few times as Grafana might be still initializing the proxy
     for _ in range(5):
-        res = requests.get(proxy_url, auth=("admin", "admin"))
+        res = requests.get(proxy_url, auth=("admin", "admin"), timeout=10)
         if res.status_code == 200:
             data = res.json()
             if data["status"] == "success" and len(data["data"]["result"]) > 0:
@@ -197,7 +234,7 @@ def test_grafana_prometheus_connection_e2e(dashboard_stack):
 
 def test_grafana_datasources_provisioned(dashboard_stack):
     # Check if Grafana has Prometheus and Infinity datasources
-    res = requests.get("http://localhost:3000/api/datasources", auth=("admin", "admin"))
+    res = requests.get("http://localhost:3000/api/datasources", auth=("admin", "admin"), timeout=10)
     assert res.status_code == 200
     ds = res.json()
     types = {d["type"] for d in ds}
@@ -206,7 +243,7 @@ def test_grafana_datasources_provisioned(dashboard_stack):
 
 def test_grafana_dashboards_provisioned(dashboard_stack):
     # Check if the System Overview dashboard is present
-    res = requests.get("http://localhost:3000/api/search?query=System Overview", auth=("admin", "admin"))
+    res = requests.get("http://localhost:3000/api/search?query=System Overview", auth=("admin", "admin"), timeout=10)
     assert res.status_code == 200
     results = res.json()
     assert any(d["title"] == "AUDiot - System Overview" for d in results)

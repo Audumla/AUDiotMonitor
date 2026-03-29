@@ -14,6 +14,9 @@ info() { echo "[collector-layout] $*"; }
 
 mkdir -p \
     "$INSTALL_DIR/config/hwexp" \
+    "$INSTALL_DIR/config/hwexp/components" \
+    "$INSTALL_DIR/config/hwexp/local/components" \
+    "$INSTALL_DIR/config/hwexp/custom.d" \
     "$INSTALL_DIR/config/prometheus/rules/defaults" \
     "$INSTALL_DIR/config/prometheus/rules/custom" \
     "$INSTALL_DIR/hwexp" \

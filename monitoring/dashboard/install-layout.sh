@@ -29,15 +29,25 @@ copy_if_missing() {
     fi
 }
 
+copy_if_exists() {
+    local src="$1"
+    local dst="$2"
+    if [ -e "$src" ]; then
+        cp "$src" "$dst"
+    fi
+}
+
 cp "$SCRIPT_DIR/docker-compose.yml" "$INSTALL_DIR/docker-compose.yml"
 cp "$SCRIPT_DIR/kiosk.sh" "$INSTALL_DIR/kiosk.sh"
+copy_if_exists "$SCRIPT_DIR/Dockerfile.kiosk" "$INSTALL_DIR/Dockerfile.kiosk"
+copy_if_exists "$SCRIPT_DIR/.env.example" "$INSTALL_DIR/.env.example"
 cp "$SCRIPT_DIR/install-layout.sh" "$INSTALL_DIR/install-layout.sh"
-cp "$SCRIPT_DIR/manage-dashboard.sh" "$INSTALL_DIR/manage-dashboard.sh"
-cp "$SCRIPT_DIR/set-dashboard.sh" "$INSTALL_DIR/set-dashboard.sh"
+copy_if_exists "$SCRIPT_DIR/manage-dashboard.sh" "$INSTALL_DIR/manage-dashboard.sh"
+copy_if_exists "$SCRIPT_DIR/set-dashboard.sh" "$INSTALL_DIR/set-dashboard.sh"
 chmod +x "$INSTALL_DIR/kiosk.sh"
 chmod +x "$INSTALL_DIR/install-layout.sh"
-chmod +x "$INSTALL_DIR/manage-dashboard.sh"
-chmod +x "$INSTALL_DIR/set-dashboard.sh"
+if [ -e "$INSTALL_DIR/manage-dashboard.sh" ]; then chmod +x "$INSTALL_DIR/manage-dashboard.sh"; fi
+if [ -e "$INSTALL_DIR/set-dashboard.sh" ]; then chmod +x "$INSTALL_DIR/set-dashboard.sh"; fi
 
 copy_if_missing "$SCRIPT_DIR/kiosk-install.sh" "$INSTALL_DIR/kiosk-install.sh"
 chmod +x "$INSTALL_DIR/kiosk-install.sh"
