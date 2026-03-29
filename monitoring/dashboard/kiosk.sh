@@ -63,6 +63,19 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [kiosk] $*"
 }
 
+wait_for_grafana() {
+    log "Waiting for Grafana to be ready..."
+    for i in $(seq 1 120); do
+        if curl -sf "$GRAFANA_URL/api/health" | grep -q '"database": "ok"' 2>/dev/null; then
+            log "Grafana ready after ${i}s"
+            return 0
+        fi
+        sleep 1
+    done
+    log "WARNING: Grafana health endpoint not ready after 120s; continuing"
+    return 1
+}
+
 log "Display backend: $_BACKEND (DISPLAY=${DISPLAY:-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-})"
 
 # ── Resolution Detection ──────────────────────────────────────────────────────
@@ -135,9 +148,16 @@ resolve_dashboard_uid() {
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+wait_for_grafana || true
+
 if [ -n "${KIOSK_DASHBOARD:-}" ]; then
-    DASHBOARD_UID="$KIOSK_DASHBOARD"
-    log "Using forced dashboard: $DASHBOARD_UID"
+    REQUESTED_UID="$KIOSK_DASHBOARD"
+    DASHBOARD_UID=$(resolve_dashboard_uid "$REQUESTED_UID")
+    if [ "$DASHBOARD_UID" != "$REQUESTED_UID" ]; then
+        log "Requested dashboard '$REQUESTED_UID' is unavailable; using '$DASHBOARD_UID' instead"
+    else
+        log "Using forced dashboard: $DASHBOARD_UID"
+    fi
 else
     RES=$(detect_resolution)
     DASHBOARD_UID=$(select_dashboard "$RES")
@@ -443,16 +463,6 @@ KIOSK_PROFILE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/chromium-kiosk"
 mkdir -p "$KIOSK_PROFILE_DIR"
 rm -f "$KIOSK_PROFILE_DIR/SingletonLock" 2>/dev/null || true
 rm -f "$KIOSK_PROFILE_DIR/Default/Preferences" 2>/dev/null || true
-
-# Wait for Grafana to be ready before launching browser (avoids blank/error page on cold start)
-log "Waiting for Grafana to be ready..."
-for i in $(seq 1 60); do
-    if curl -sf "$GRAFANA_URL/api/health" | grep -q '"database": "ok"' 2>/dev/null; then
-        log "Grafana ready after ${i}s"
-        break
-    fi
-    sleep 1
-done
 
 # Select Chromium ozone platform flag based on backend
 if [ "$_BACKEND" = "wayland" ]; then

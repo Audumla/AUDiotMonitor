@@ -182,6 +182,40 @@ jobs:
             type=registry,ref=audumla/audiot-dashboard:buildcache
           cache-to: type=registry,ref=audumla/audiot-dashboard:buildcache,mode=max
 
+  monitoring-kiosk-publish:
+    name: Publish Kiosk Image
+    needs: [release]
+    if: ${{ always() && needs.release.result != 'failure' && needs.release.outputs.monitoring_release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve monitoring version
+        id: meta
+        run: |
+          TAG="${{ needs.release.outputs.monitoring_tag_name }}"
+          echo "version=${TAG#monitoring-v}" >> $GITHUB_OUTPUT
+
+      - name: Docker setup
+        uses: ./.github/actions/docker-setup
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push kiosk image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/dashboard
+          file: ./monitoring/dashboard/Dockerfile.kiosk
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            audumla/audiot-kiosk:${{ steps.meta.outputs.version }}
+            audumla/audiot-kiosk:latest
+          cache-from: type=registry,ref=audumla/audiot-kiosk:buildcache
+          cache-to: type=registry,ref=audumla/audiot-kiosk:buildcache,mode=max
+
   kiosk-tools-publish:
     name: Build & Upload wl-gammarelay Binaries
     needs: [release]

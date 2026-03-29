@@ -20,8 +20,9 @@
 services:
 
   grafana:
-    image: audumla/audiot-dashboard:${AUDIOT_TAG:-latest}
+    image: audumla/audiot-dashboard:${DASHBOARD_TAG:-latest}
     container_name: audiot-grafana
+    init: true
     entrypoint: /run.sh   # use Grafana's native entrypoint; provisioning is baked into the image
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -47,16 +48,22 @@ services:
           memory: 512m
         reservations:
           memory: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "(wget -q -O- http://localhost:3000/api/health 2>/dev/null || curl -sf http://localhost:3000/api/health 2>/dev/null) | grep -q 'database'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    stop_grace_period: 30s
     restart: unless-stopped
 
   kiosk:
-    build:
-      context: .
-      dockerfile: Dockerfile.kiosk
-    image: audumla/audiot-kiosk:${AUDIOT_TAG:-latest}
+    image: audumla/audiot-kiosk:${KIOSK_TAG:-latest}
     container_name: audiot-kiosk
+    init: true
     depends_on:
-      - grafana
+      grafana:
+        condition: service_healthy
     user: "${KIOSK_UID:-1000}:${KIOSK_GID:-1000}"
     environment:
       - USER=${KIOSK_USER:-audumla}
@@ -68,7 +75,7 @@ services:
       - WAYLAND_DISPLAY=${KIOSK_WAYLAND_DISPLAY:-wayland-0}
       - XDG_RUNTIME_DIR=/run/user/${KIOSK_UID:-1000}
       - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${KIOSK_UID:-1000}/bus
-      - KIOSK_DASHBOARD=${KIOSK_DASHBOARD:-audiot-triple-gpu-wide}
+      - KIOSK_DASHBOARD=${KIOSK_DASHBOARD:-}
       - KIOSK_REFRESH=${KIOSK_REFRESH:-5s}
     volumes:
       - /run/user/${KIOSK_UID:-1000}:/run/user/${KIOSK_UID:-1000}
@@ -85,6 +92,13 @@ services:
     security_opt:
       - seccomp=unconfined
     shm_size: "256m"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -fa 'chromium|google-chrome' > /dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    stop_grace_period: 20s
     restart: unless-stopped
 
 volumes:

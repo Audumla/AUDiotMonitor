@@ -304,9 +304,13 @@ The `audiot-dashboard` installer and kiosk launcher automatically handle the dif
 The kiosk launcher detects the connected screen resolution and picks a dashboard using `config/kiosk.env`, then restarts Chromium if it exits.
 
 Edit `/opt/docker/services/dashboard/config/kiosk.env` to control:
-* `KIOSK_DASHBOARD=` (Force one UID for all screens)
+* `KIOSK_DASHBOARD=` (Optional force UID. If invalid, kiosk auto-falls back to a known dashboard)
 * `KIOSK_IDLE_TIMEOUT=` (Idle timeout in seconds before screen blanks. Useful for touchscreens. Default: always on)
 * `KIOSK_DPMS_STANDBY=`, `KIOSK_DPMS_SUSPEND=`, `KIOSK_DPMS_OFF=` (Advanced staggered dimming/sleep states)
+
+For robust production pinning in `/opt/docker/services/dashboard/.env`:
+* `DASHBOARD_TAG=` (Grafana/dashboard image tag)
+* `KIOSK_TAG=` (kiosk/browser image tag)
 
 To add your own dashboards, drop JSON files into `/opt/docker/services/dashboard/dashboards/custom/` and set the desired UID in `/opt/docker/services/dashboard/config/kiosk.env` using `audiot-dashboard set <uid>`.
 
