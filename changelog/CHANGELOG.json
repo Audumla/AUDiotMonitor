@@ -308,5 +308,24 @@
       "Extended monitoring/dashboard/docker-compose.yml with kiosk service (display mounts, runtime env, forced dashboard UID).",
       "Updated kiosk backend selection and tested on brutusview: compose up launches browser; compose down stops browser and Grafana together."
     ]
+  },
+  {
+    "id": "CHG-8620374c",
+    "agent": "codex",
+    "change_group": "ci-stability-20260329",
+    "plugin_version": "unreleased",
+    "date": "2026-03-29",
+    "recorded_at": "2026-03-29T04:47:49.256044Z",
+    "summary_tags": [
+      "Bug Fix",
+      "Test Update"
+    ],
+    "summary": "Stabilized monitoring integration and packaging smoke tests for CI merge gating.",
+    "details": [
+      "Fixed dashboard install-layout.sh to handle optional scripts and copy kiosk build assets.",
+      "Pre-created collector hwexp bind-mount subdirectories to prevent root-owned temp path cleanup failures.",
+      "Updated monitoring integration test fixture flow to disable kiosk, wait for service readiness, and add request timeouts.",
+      "Relaxed package install smoke metric check to validate mapped hardware metrics across schema evolution."
+    ]
   }
 ]

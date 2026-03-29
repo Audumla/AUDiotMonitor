@@ -96,4 +96,10 @@
 - Extended monitoring/dashboard/docker-compose.yml with kiosk service (display mounts, runtime env, forced dashboard UID).
 - Updated kiosk backend selection and tested on brutusview: compose up launches browser; compose down stops browser and Grafana together.
 
+### Stabilized monitoring integration and packaging smoke tests for CI merge gating. (Bug Fix, Test Update)
+- Fixed dashboard install-layout.sh to handle optional scripts and copy kiosk build assets.
+- Pre-created collector hwexp bind-mount subdirectories to prevent root-owned temp path cleanup failures.
+- Updated monitoring integration test fixture flow to disable kiosk, wait for service readiness, and add request timeouts.
+- Relaxed package install smoke metric check to validate mapped hardware metrics across schema evolution.
+
 ---
