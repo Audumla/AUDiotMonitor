@@ -102,4 +102,8 @@
 - Updated monitoring integration test fixture flow to disable kiosk, wait for service readiness, and add request timeouts.
 - Relaxed package install smoke metric check to validate mapped hardware metrics across schema evolution.
 
+### Resolved remaining CI flakes in monitoring and package integration jobs. (Bug Fix, Test Update)
+- Removed hard failure on optional mapped hardware fixture metrics in package install scripts.
+- Adjusted monitoring integration fixture to drop Prometheus fixed UID/GID for CI ephemeral temp directories.
+
 ---
