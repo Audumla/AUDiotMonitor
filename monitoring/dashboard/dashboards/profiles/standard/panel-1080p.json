@@ -42,7 +42,7 @@
     },
     { "id": 5, "type": "stat", "title": "VRAM Load",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-      "targets": [{ "expr": "max(sum by (device_id) (hw_device_capacity_bytes{host=~\"$host\", device_class=\"gpu\", component=\"memory\", logical_name=~\".*_vram_used_bytes\"}) / sum by (device_id) (hw_device_capacity_bytes{host=~\"$host\", device_class=\"gpu\", component=\"memory\", logical_name=~\".*_vram_capacity_bytes\"}) * 100)", "legendFormat": "" }],
+      "targets": [{ "expr": "max(sum by (device_id) (hw_device_capacity_bytes{host=~\"$host\", device_class=\"gpu\", component=\"memory\", sensor=\"usage\"}) / sum by (device_id) (hw_device_capacity_bytes{host=~\"$host\", device_class=\"gpu\", component=\"memory\", sensor=\"capacity\"}) * 100)", "legendFormat": "" }],
       "options": { "colorMode": "background", "graphMode": "area" },
       "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 90 }]}}}
     },
@@ -86,3 +86,6 @@
     }
   ]
 }
+
+
+

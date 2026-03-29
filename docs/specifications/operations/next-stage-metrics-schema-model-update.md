@@ -3,7 +3,7 @@
 **Status:** Proposed (Deferred; not part of current baseline)  
 **Date:** 2026-03-28  
 **Project:** AUDiotMonitor  
-**Covers:** Extensible telemetry schema model for raw, canonical, and derived metrics; label contracts; compatibility strategy  
+**Covers:** Extensible telemetry schema model for raw, canonical, and derived metrics; label contracts; direct-cutover migration strategy  
 **Related:** [detailed-spec.md](../exporter/detailed-spec.md), [mapping-rule-spec.md](../exporter/mapping-rule-spec.md), [json-schema-spec.md](../exporter/json-schema-spec.md), [dashboard-data-spec.md](../dashboard/dashboard-data-spec.md)
 
 > This document is a next-stage planning artifact only. It does not modify current production schema contracts unless explicitly promoted in a future stage.
@@ -27,7 +27,7 @@ This spec defines:
 - canonical metric layer names and labels
 - normalization expectations from raw adapters
 - derived metric conventions for dashboard use
-- compatibility/versioning rules
+- migration/versioning rules
 
 This spec does not define:
 - full dashboard JSON implementation
@@ -167,20 +167,19 @@ They SHOULD NOT use adapter raw names directly.
 ### 7.1 Versioning
 
 - `metric_schema_version` MUST increment on breaking label/family changes.
-- Additive labels/families are minor-compatible.
+- Additive labels/families are preferred; renames require same-release cutover.
 
 ### 7.2 Compatibility Strategy
 
-- Introduce compatibility recording rules when renaming labels or families.
-- Keep old derived names for at least one minor release cycle.
+- Apply same-release cutover for schema and dashboard changes.
+- Remove old query paths in the same release once validation passes.
 - Add migration notes in changelog and dashboard spec.
 
 ### 7.3 Recommended Migration Sequence
 
 1. Define canonical family/label target in mapping rules.
-2. Add compatibility recording rules.
-3. Update dashboards to canonical/derived queries.
-4. Remove compatibility rules after deprecation window.
+2. Update dashboards to canonical/derived queries.
+3. Validate cutover queries in CI and remove legacy query paths.
 
 ### 7.4 Dashboard Migration Requirements (Mandatory)
 
@@ -189,14 +188,13 @@ Schema migration is incomplete until dashboards are migrated.
 Required dashboard work:
 1. Build a query migration matrix (`old query` -> `new query` -> `dashboard file`).
 2. Update dashboards in `monitoring/dashboard/dashboards/` to canonical/derived model.
-3. Keep compatibility recording rules active during the migration window.
-4. Add dashboard golden checks for critical panels (especially multi-GPU VRAM panels).
-5. Remove deprecated query paths only after dashboard verification passes in CI.
+3. Add dashboard golden checks for critical panels (especially multi-GPU VRAM panels).
+4. Remove old query paths only after dashboard verification passes in CI.
 
 Minimum migration matrix entries:
 - VRAM used: legacy `logical_name=~".*_vram_used_bytes"` -> canonical `sensor="used",memory_kind="vram"`
 - VRAM capacity: legacy `logical_name=~".*_vram_capacity_bytes"` -> canonical `sensor="capacity",memory_kind="vram"`
-- VRAM percent: legacy ratio query -> `audiot_gpu_vram_usage_percent` recording rule
+- VRAM percent: legacy ratio query -> canonical `sensor="usage",memory_kind="vram"` or project recording rule
 
 
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hwexp/internal/capabilities"
 	"log"
 	"os"
 	"os/exec"
@@ -21,6 +22,16 @@ type Adapter struct {
 func NewAdapter() *Adapter {
 	path, _ := exec.LookPath("smartctl")
 	return &Adapter{smartctlPath: path}
+}
+
+func (a *Adapter) Requirements() []capabilities.Requirement {
+	return []capabilities.Requirement{
+		{
+			Name:        "smartctl",
+			Description: "Collect SMART/NVMe health data",
+			Optional:    false,
+		},
+	}
 }
 
 func (a *Adapter) Discover(ctx context.Context) ([]model.DiscoveredDevice, error) {
@@ -67,11 +78,11 @@ func (a *Adapter) Poll(ctx context.Context) ([]model.RawMeasurement, error) {
 	for _, d := range devices {
 		name := strings.TrimPrefix(d.StableID, "disk-")
 		devPath := "/dev/" + name
-		
+
 		cmd := exec.CommandContext(ctx, a.smartctlPath, "--json", "--all", devPath)
 		out, err := cmd.Output()
 		if err != nil {
-			// smartctl returns non-zero exit codes for various warnings, 
+			// smartctl returns non-zero exit codes for various warnings,
 			// so we only error if out is empty.
 			if len(out) == 0 {
 				continue

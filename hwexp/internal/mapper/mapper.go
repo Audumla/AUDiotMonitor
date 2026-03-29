@@ -3,6 +3,7 @@ package mapper
 import (
 	"fmt"
 	"hwexp/internal/model"
+	"hwexp/internal/templatex"
 	"os"
 	"regexp"
 	"sort"
@@ -253,42 +254,30 @@ func (e *Engine) applyNormalization(cr *compiledRule, device model.DiscoveredDev
 	return norm, decision
 }
 
-var templateTokenRE = regexp.MustCompile(`\$\{([^}]+)\}`)
-
 func expandTemplate(t string, device model.DiscoveredDevice, raw model.RawMeasurement, regexMatches []string) string {
-	if t == "" {
-		return t
-	}
-
-	return templateTokenRE.ReplaceAllStringFunc(t, func(token string) string {
-		m := templateTokenRE.FindStringSubmatch(token)
-		if len(m) != 2 {
-			return token
-		}
-		key := m[1]
-
+	return templatex.Expand(t, func(key string) (string, bool) {
 		if key == "logical_device_name" {
-			return device.LogicalDeviceName
+			return device.LogicalDeviceName, true
 		}
 		if key == "stable_device_id" {
-			return device.StableID
+			return device.StableID, true
 		}
 
 		// Regex capture placeholders: ${0}, ${1}, ...
 		if idx, err := strconv.Atoi(key); err == nil {
 			if idx >= 0 && idx < len(regexMatches) {
-				return regexMatches[idx]
+				return regexMatches[idx], true
 			}
-			return ""
+			return "", true
 		}
 
 		// Metadata placeholders: ${zone}, ${state}, ${mc}, ...
 		if raw.Metadata != nil {
 			if v, ok := raw.Metadata[key]; ok {
-				return v
+				return v, true
 			}
 		}
 
-		return ""
+		return "", false
 	})
 }

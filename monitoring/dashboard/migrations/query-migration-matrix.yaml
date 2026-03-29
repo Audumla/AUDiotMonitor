@@ -1,0 +1,15 @@
+schema_version: "1.0.0"
+migrations:
+  - id: gpu_vram_used_query
+    old_query: 'hw_device_capacity_bytes{device_class="gpu", component="memory", logical_name=~".*_vram_used_bytes"}'
+    new_query: 'hw_device_capacity_bytes{device_class="gpu", component="memory", sensor="usage"}'
+    dashboards:
+      - "monitoring/dashboard/dashboards/profiles/standard/system-overview.json"
+      - "monitoring/dashboard/dashboards/custom/triple-gpu-wide.json"
+  - id: gpu_vram_capacity_query
+    old_query: 'hw_device_capacity_bytes{device_class="gpu", component="memory", logical_name=~".*_vram_capacity_bytes"}'
+    new_query: 'hw_device_capacity_bytes{device_class="gpu", component="memory", sensor="capacity"}'
+    dashboards:
+      - "monitoring/dashboard/dashboards/profiles/standard/system-overview.json"
+      - "monitoring/dashboard/dashboards/custom/triple-gpu-wide.json"
+
