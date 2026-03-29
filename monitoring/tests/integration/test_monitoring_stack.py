@@ -77,6 +77,9 @@ def collector_stack(temp_run_dir):
     # 2. Disable node-exporter (not cross-platform friendly in CI/Windows)
     if 'node-exporter' in cfg['services']:
         del cfg['services']['node-exporter']
+    # 3. Allow Prometheus to write TSDB on ephemeral CI temp dirs regardless of host UID/GID.
+    if "prometheus" in cfg["services"]:
+        cfg["services"]["prometheus"].pop("user", None)
     
     with open(compose_path, 'w') as f:
         yaml.safe_dump(cfg, f)
