@@ -12,7 +12,7 @@
         "name": "host",
         "label": "Host",
         "type": "query",
-        "query": "label_values(hwexp_up, host)",
+        "query": "label_values(hw_host_uptime_seconds, host)",
         "refresh": 2,
         "multi": false,
         "includeAll": false,

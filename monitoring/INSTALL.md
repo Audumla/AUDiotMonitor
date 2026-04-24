@@ -26,7 +26,7 @@ Typical example:
 ```bash
 cd monitoring
 ./deploy-remote.sh buri collector
-./deploy-remote.sh brutusview dashboard
+./deploy-remote.sh <dashboard-host> dashboard
 ```
 
 | Stack | Purpose | Deploy on |

@@ -9,8 +9,8 @@
 #   kiosk-switch.sh audiot-triple-gpu-wide
 #   kiosk-switch.sh audiot-panel-1080p
 #
-# Run on the kiosk machine (brutusview) directly or via SSH:
-#   ssh audumla@brutusview /opt/docker/services/dashboard/kiosk-switch.sh audiot-system-overview
+# Run on the kiosk machine directly or via SSH:
+#   ssh <user>@<dashboard-host> /opt/docker/services/dashboard/kiosk-switch.sh audiot-system-overview
 
 set -euo pipefail
 

@@ -258,10 +258,10 @@ The Pi node MUST be able to connect to one or more remote exporter/backend endpo
 
 Examples:
 
-* source-host exporter at `http://10.10.100.10:9200/metrics`
-* node_exporter at `http://10.10.100.10:9100/metrics`
-* custom ingest exporter at `http://10.10.100.10:9300/metrics`
-* LLM observer exporter at `http://10.10.100.10:9400/metrics`
+* source-host exporter at `http://<collector-host>:9200/metrics`
+* node_exporter at `http://<collector-host>:9100/metrics`
+* custom ingest exporter at `http://<collector-host>:9300/metrics`
+* LLM observer exporter at `http://<collector-host>:9400/metrics`
 
 ## 8.3 Prometheus scrape model
 
@@ -343,11 +343,11 @@ Example logical file:
 remote_targets:
   - job_name: hwexp_exporters
     targets:
-      - http://10.10.100.10:9200/metrics
+      - http://<collector-host>:9200/metrics
       - http://10.10.100.11:9200/metrics
   - job_name: node_exporters
     targets:
-      - http://10.10.100.10:9100/metrics
+      - http://<collector-host>:9100/metrics
 ```
 
 A config-generation step MUST transform this into valid Prometheus scrape config.

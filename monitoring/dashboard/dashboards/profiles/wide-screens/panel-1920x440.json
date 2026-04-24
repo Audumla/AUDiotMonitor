@@ -445,19 +445,33 @@
 
     {
       "id": 16,
-      "type": "stat",
-      "title": "PSU Power",
+      "type": "timeseries",
+      "title": "PSU Voltages",
+      "description": "Stacked PSU voltage rails, shown as solid filled bars.",
       "gridPos": { "h": 4, "w": 3, "x": 21, "y": 9 },
       "targets": [{
-        "expr": "sum(hw_device_power_watts{device_class=\"psu\"})",
-        "legendFormat": ""
+        "expr": "hw_device_voltage_volts{device_class=\"psu\"}",
+        "legendFormat": "{{logical_name}}"
       }],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
       "fieldConfig": {
         "defaults": {
-          "unit": "watt",
-          "color": { "mode": "fixed", "fixedColor": "red" }
+          "unit": "volt",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 100,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
         }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
       }
     }
 

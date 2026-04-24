@@ -69,7 +69,7 @@
 
 ### Validated release workflow artifacts and deployed released hwexp build to remote host using compose. (Build / Packaging)
 - Created home-directory deployment helper doc, merged feature work to main, merged release PR, and verified release workflow produced hwexp-v0.21.0 and monitoring-v0.9.0 artifacts.
-- Deployed released image/config to 10.10.100.10 and verified gateway_manifest + linux_system runtime activation; identified packaging/runtime gaps (missing smartctl in container, unresolved template labels).
+- Deployed released image/config to the collector host and verified gateway_manifest + linux_system runtime activation; identified packaging/runtime gaps (missing smartctl in container, unresolved template labels).
 
 ### Extracted correlation join logic and capability checks into dedicated modules with tests. (Code Refactoring, Test Update)
 - Moved Stage 3 correlation enrichment into internal/engine/join and wired engine to use it.
@@ -89,12 +89,12 @@
 ### Migrated VRAM dashboard and recording-rule queries from logical_name regex selectors to sensor labels. (Documentation Update, Test Update, Configuration Cleanup)
 - Updated dashboard PromQL across standard/mobile/wide/custom profiles to use sensor=usage and sensor=capacity selectors.
 - Updated default Prometheus recording rules for audiot_gpu_vram_* to use label-based selectors.
-- Validated new query path against live emitter and Grafana proxy on 2026-03-29 (hosts 10.10.100.10 and brutusview).
+- Validated new query path against the live emitter and Grafana proxy on 2026-03-29.
 
 ### Added compose-managed kiosk browser service so dashboard browser lifecycle follows docker compose up/down. (Build / Packaging, Configuration Cleanup, New Feature)
 - Introduced monitoring/dashboard/Dockerfile.kiosk to run kiosk.sh + Chromium in a dedicated container.
 - Extended monitoring/dashboard/docker-compose.yml with kiosk service (display mounts, runtime env, forced dashboard UID).
-- Updated kiosk backend selection and tested on brutusview: compose up launches browser; compose down stops browser and Grafana together.
+- Updated kiosk backend selection and tested on the dashboard host: compose up launches browser; compose down stops browser and Grafana together.
 
 ### Stabilized monitoring integration and packaging smoke tests for CI merge gating. (Bug Fix, Test Update)
 - Fixed dashboard install-layout.sh to handle optional scripts and copy kiosk build assets.
@@ -109,5 +109,13 @@
 ### Made CI integration smoke checks tolerant to evolving mapped metric families. (Test Update)
 - Updated hwmon and network smoke scripts to accept mapped hardware metrics beyond temperature-only expectations.
 - Updated monitoring integration fixture to skip cleanly when collector/dashboard containers fail to become healthy in constrained CI runtime.
+
+### Removed deployment-specific hostnames and credentials from tracked repo files. (Configuration Cleanup)
+- Replaced personal host/IP examples with generic placeholders in docs and changelog records.
+- Verified the dashboard compose file still renders successfully with docker compose config.
+
+### Converted the wide dashboard PSU panel to a stacked voltage bar chart. (UI Improvement)
+- Replaced the single PSU stat with a solid stacked timeseries bar visualization.
+- Kept the total readable while exposing each voltage rail as its own stacked segment.
 
 ---

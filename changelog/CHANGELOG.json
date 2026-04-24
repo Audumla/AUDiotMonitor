@@ -215,7 +215,7 @@
     "summary": "Validated release workflow artifacts and deployed released hwexp build to remote host using compose.",
     "details": [
       "Created home-directory deployment helper doc, merged feature work to main, merged release PR, and verified release workflow produced hwexp-v0.21.0 and monitoring-v0.9.0 artifacts.",
-      "Deployed released image/config to 10.10.100.10 and verified gateway_manifest + linux_system runtime activation; identified packaging/runtime gaps (missing smartctl in container, unresolved template labels)."
+      "Deployed released image/config to the collector host and verified gateway_manifest + linux_system runtime activation; identified packaging/runtime gaps (missing smartctl in container, unresolved template labels)."
     ]
   },
   {
@@ -287,7 +287,7 @@
     "details": [
       "Updated dashboard PromQL across standard/mobile/wide/custom profiles to use sensor=usage and sensor=capacity selectors.",
       "Updated default Prometheus recording rules for audiot_gpu_vram_* to use label-based selectors.",
-      "Validated new query path against live emitter and Grafana proxy on 2026-03-29 (hosts 10.10.100.10 and brutusview)."
+      "Validated new query path against the live emitter and Grafana proxy on 2026-03-29."
     ]
   },
   {
@@ -306,7 +306,7 @@
     "details": [
       "Introduced monitoring/dashboard/Dockerfile.kiosk to run kiosk.sh + Chromium in a dedicated container.",
       "Extended monitoring/dashboard/docker-compose.yml with kiosk service (display mounts, runtime env, forced dashboard UID).",
-      "Updated kiosk backend selection and tested on brutusview: compose up launches browser; compose down stops browser and Grafana together."
+      "Updated kiosk backend selection and tested on the dashboard host: compose up launches browser; compose down stops browser and Grafana together."
     ]
   },
   {
@@ -359,6 +359,38 @@
     "details": [
       "Updated hwmon and network smoke scripts to accept mapped hardware metrics beyond temperature-only expectations.",
       "Updated monitoring integration fixture to skip cleanly when collector/dashboard containers fail to become healthy in constrained CI runtime."
+    ]
+  },
+  {
+    "id": "CHG-4bccdb46",
+    "agent": "codex",
+    "change_group": "repo-secret-sanitization",
+    "plugin_version": "unreleased",
+    "date": "2026-04-05",
+    "recorded_at": "2026-04-05T13:21:41.910570Z",
+    "summary_tags": [
+      "Configuration Cleanup"
+    ],
+    "summary": "Removed deployment-specific hostnames and credentials from tracked repo files.",
+    "details": [
+      "Replaced personal host/IP examples with generic placeholders in docs and changelog records.",
+      "Verified the dashboard compose file still renders successfully with docker compose config."
+    ]
+  },
+  {
+    "id": "CHG-4bccdb46-1",
+    "agent": "codex",
+    "change_group": "wide-dashboard-psu-stack",
+    "plugin_version": "unreleased",
+    "date": "2026-04-08",
+    "recorded_at": "2026-04-08T05:10:09.560542Z",
+    "summary_tags": [
+      "UI Improvement"
+    ],
+    "summary": "Converted the wide dashboard PSU panel to a stacked voltage bar chart.",
+    "details": [
+      "Replaced the single PSU stat with a solid stacked timeseries bar visualization.",
+      "Kept the total readable while exposing each voltage rail as its own stacked segment."
     ]
   }
 ]
