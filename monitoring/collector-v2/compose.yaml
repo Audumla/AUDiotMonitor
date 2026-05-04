@@ -1,0 +1,80 @@
+services:
+  netdata:
+    container_name: netdata
+    image: netdata/netdata:latest
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    privileged: true
+    cap_add:
+      - SYS_PTRACE
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - ./config/netdata/config:/etc/netdata
+      - ./config/netdata/data:/var/lib/netdata
+      - netdata-cache:/var/cache/netdata
+
+  llamaswap-exporter:
+    container_name: llamaswap-exporter
+    build:
+      context: ./llamaswap-exporter
+    restart: unless-stopped
+    networks:
+      - llamaswap-net
+      - monitor_network
+    volumes:
+      - /sys:/host/sys:ro
+    environment:
+      - LLAMASWAP_URL=http://llama-swap:8080
+      - LLAMASWAP_POLL_INTERVAL=${LLAMASWAP_POLL_INTERVAL:-15}
+      - EXPORTER_PORT=9300
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9091}:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitor_network
+    volumes:
+      - ./config/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus/data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitor_network
+    volumes:
+      - ./config/grafana/config/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS:-true}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GRAFANA_ANON_ROLE:-Viewer}
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+
+networks:
+  monitor_network:
+    driver: bridge
+  llamaswap-net:
+    external: true
+
+volumes:
+  netdata-cache:

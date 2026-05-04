@@ -1,0 +1,1190 @@
+{
+    "id": null,
+    "uid": "audiot-monitor-001",
+    "title": "AUDiot Monitor - GPU/CPU/Memory/Llama",
+    "tags": [
+        "netdata",
+        "llamaswap",
+        "monitoring"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 2,
+    "refresh": "10s",
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "panels": [
+        {
+            "id": 1,
+            "type": "row",
+            "title": "GPU - 3x AMD Radeon RX 7900 XTX",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "collapsed": false
+        },
+        {
+            "id": 2,
+            "type": "timeseries",
+            "title": "GPU Utilization (%)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "label_replace(netdata_amdgpu_gpu_utilization_percentage_average{dimension=\"utilization\", chart=~\".*card1.*\"}, \"gpu_label\", \"R9700\", \"chart\", \".*\")\n  or\nlabel_replace(netdata_amdgpu_gpu_utilization_percentage_average{dimension=\"utilization\", chart=~\".*card0.*\"}, \"gpu_label\", \"7900-XTX 1\", \"chart\", \".*\")\n  or\nlabel_replace(netdata_amdgpu_gpu_utilization_percentage_average{dimension=\"utilization\", chart=~\".*card2.*\"}, \"gpu_label\", \"7900-XTX 2\", \"chart\", \".*\")",
+                    "legendFormat": "{{gpu_label}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 70
+                            },
+                            {
+                                "color": "red",
+                                "value": 90
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 3,
+            "type": "timeseries",
+            "title": "VRAM Usage (%)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "label_replace(netdata_amdgpu_gpu_mem_vram_usage_perc_percentage_average{chart=~\".*card1.*\"}, \"gpu_label\", \"R9700\", \"chart\", \".*\")\n  or\nlabel_replace(netdata_amdgpu_gpu_mem_vram_usage_perc_percentage_average{chart=~\".*card0.*\"}, \"gpu_label\", \"7900-XTX 1\", \"chart\", \".*\")\n  or\nlabel_replace(netdata_amdgpu_gpu_mem_vram_usage_perc_percentage_average{chart=~\".*card2.*\"}, \"gpu_label\", \"7900-XTX 2\", \"chart\", \".*\")",
+                    "legendFormat": "{{gpu_label}} VRAM%"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 70
+                            },
+                            {
+                                "color": "red",
+                                "value": 90
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 4,
+            "type": "timeseries",
+            "title": "VRAM Usage (MiB)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 9
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "label_replace(netdata_amdgpu_gpu_mem_vram_usage_bytes_average{dimension=~\"used|free\", chart=~\".*card1.*\"} / 1024 / 1024, \"gpu_label\", \"R9700\", \"chart\", \".*\")\n  or\nlabel_replace(netdata_amdgpu_gpu_mem_vram_usage_bytes_average{dimension=~\"used|free\", chart=~\".*card0.*\"} / 1024 / 1024, \"gpu_label\", \"7900-XTX 1\", \"chart\", \".*\")\n  or\nlabel_replace(netdata_amdgpu_gpu_mem_vram_usage_bytes_average{dimension=~\"used|free\", chart=~\".*card2.*\"} / 1024 / 1024, \"gpu_label\", \"7900-XTX 2\", \"chart\", \".*\")",
+                    "legendFormat": "{{gpu_label}} {{dimension}}",
+                    "unit": "decmbytes"
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "type": "gauge",
+            "title": "GPU 0 Utilization",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 12,
+                "y": 9
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_amdgpu_gpu_utilization_percentage_average{chart=~\".*card1\",dimension=\"utilization\"}",
+                    "legendFormat": "GPU 0"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 6,
+            "type": "gauge",
+            "title": "GPU 1 Utilization",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 9
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_amdgpu_gpu_utilization_percentage_average{chart=~\".*card0\",dimension=\"utilization\"}",
+                    "legendFormat": "GPU 1"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 7,
+            "type": "gauge",
+            "title": "GPU 2 Utilization",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 17
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_amdgpu_gpu_utilization_percentage_average{chart=~\".*card2\",dimension=\"utilization\"}",
+                    "legendFormat": "GPU 2"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 8,
+            "type": "row",
+            "title": "CPU",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 25
+            },
+            "collapsed": false
+        },
+        {
+            "id": 9,
+            "type": "timeseries",
+            "title": "CPU Utilization (%)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 26
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_cpu_percentage_average{dimension=~\"user|system|iowait|idle|nice\"}",
+                    "legendFormat": "{{dimension}}",
+                    "stack": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 70
+                            },
+                            {
+                                "color": "red",
+                                "value": 90
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 10,
+            "type": "timeseries",
+            "title": "Load Average",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 26
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_load_load_average",
+                    "legendFormat": "{{dimension}}"
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "type": "timeseries",
+            "title": "Context Switches / sec",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 34
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_ctxt_context_switches_persec_average",
+                    "legendFormat": "context switches"
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "type": "timeseries",
+            "title": "Interrupts / sec",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 34
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_interrupts_interrupts_persec_average",
+                    "legendFormat": "interrupts"
+                }
+            ]
+        },
+        {
+            "id": 13,
+            "type": "row",
+            "title": "Memory",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 42
+            },
+            "collapsed": false
+        },
+        {
+            "id": 14,
+            "type": "timeseries",
+            "title": "RAM Usage (MiB)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 43
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_ram_MiB_average{dimension=~\"used|free|cached|buffers\"}",
+                    "legendFormat": "{{dimension}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "decmbytes"
+                }
+            }
+        },
+        {
+            "id": 15,
+            "type": "gauge",
+            "title": "RAM Usage %",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 12,
+                "y": 43
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_ram_MiB_average{dimension=\"used\"} / (netdata_system_ram_MiB_average{dimension=\"used\"} + netdata_system_ram_MiB_average{dimension=\"free\"}) * 100",
+                    "legendFormat": "used %"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 70
+                            },
+                            {
+                                "color": "red",
+                                "value": 90
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 16,
+            "type": "gauge",
+            "title": "Available Memory (MiB)",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 43
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_mem_available_MiB_average",
+                    "legendFormat": "available"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "decmbytes"
+                }
+            }
+        },
+        {
+            "id": 17,
+            "type": "row",
+            "title": "Disk & Storage",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 51
+            },
+            "collapsed": false
+        },
+        {
+            "id": 18,
+            "type": "timeseries",
+            "title": "Disk IO (KiB/s)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 52
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_disk_io_KiB_persec_average{device=\"nvme0n1\"}",
+                    "legendFormat": "{{dimension}}"
+                }
+            ]
+        },
+        {
+            "id": 19,
+            "type": "timeseries",
+            "title": "NVMe Temperature (\u00c2\u00b0C)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 52
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_nvme_device_composite_temperature_celsius_average",
+                    "legendFormat": "{{device}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "celsius",
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 60
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 20,
+            "type": "gauge",
+            "title": "Disk Space Used (GiB)",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 60
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_disk_space_GiB_average{mount_point=\"/\", dimension=\"used\"}",
+                    "legendFormat": "used"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "gibibytes"
+                }
+            }
+        },
+        {
+            "id": 21,
+            "type": "gauge",
+            "title": "Disk Space Available (GiB)",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 60
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_disk_space_GiB_average{mount_point=\"/\", dimension=\"avail\"}",
+                    "legendFormat": "available"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "gibibytes"
+                }
+            }
+        },
+        {
+            "id": 22,
+            "type": "gauge",
+            "title": "Disk Space Total (GiB)",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 60
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "sum(netdata_disk_space_GiB_average{mount_point=\"/\", dimension=~\"used|avail\"})",
+                    "legendFormat": "total"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "gibibytes"
+                }
+            }
+        },
+        {
+            "id": 23,
+            "type": "row",
+            "title": "Network",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 68
+            },
+            "collapsed": false
+        },
+        {
+            "id": 24,
+            "type": "timeseries",
+            "title": "Network Bandwidth (kbps)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 69
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "netdata_system_net_kilobits_persec_average",
+                    "legendFormat": "{{dimension}}"
+                }
+            ]
+        },
+        {
+            "id": 25,
+            "type": "row",
+            "title": "Llama-Swap",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 77
+            },
+            "collapsed": false
+        },
+        {
+            "id": 26,
+            "type": "stat",
+            "title": "Llama-Swap Health",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 78
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_health",
+                    "legendFormat": "health"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": 0
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "color": {
+                        "mode": "thresholds"
+                    }
+                }
+            }
+        },
+        {
+            "id": 27,
+            "type": "stat",
+            "title": "Models Registered",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 78
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_models_total",
+                    "legendFormat": "models"
+                }
+            ]
+        },
+        {
+            "id": 28,
+            "type": "table",
+            "title": "Currently Loaded Models",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 82
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_running_total{value=\"1\"}",
+                    "format": "table",
+                    "instant": true
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "labelsToRows",
+                    "options": {}
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "Value": true,
+                            "__name__": true,
+                            "instance": true,
+                            "job": true
+                        },
+                        "indexByName": {},
+                        "renameByName": {
+                            "model_id": "Model"
+                        }
+                    }
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+            }
+        },
+        {
+            "id": 29,
+            "type": "gauge",
+            "title": "Models Loaded (%)",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 12,
+                "y": 82
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_running_total / llamaswap_models_total * 100",
+                    "legendFormat": "loaded %"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 30
+                            },
+                            {
+                                "color": "green",
+                                "value": 70
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 30,
+            "type": "stat",
+            "title": "Scrape Errors",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 12,
+                "y": 78
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_scrape_errors_total",
+                    "legendFormat": "errors"
+                }
+            ]
+        },
+        {
+            "id": 31,
+            "type": "stat",
+            "title": "Last Scrape Duration (s)",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 78
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_last_scrape_duration_seconds",
+                    "legendFormat": "duration"
+                }
+            ]
+        },
+        {
+            "id": 32,
+            "type": "stat",
+            "title": "Prometheus Targets UP",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 78
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "count(up == 1)",
+                    "legendFormat": "up"
+                }
+            ]
+        },
+        {
+            "id": 33,
+            "type": "timeseries",
+            "title": "Llama-Swap Models & Running",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 82
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_models_total",
+                    "legendFormat": "models total"
+                },
+                {
+                    "expr": "llamaswap_running_total",
+                    "legendFormat": "running"
+                }
+            ]
+        },
+        {
+            "id": 34,
+            "type": "timeseries",
+            "title": "Llama-Swap Scrape Errors & Duration",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 82
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_scrape_errors_total",
+                    "legendFormat": "errors"
+                },
+                {
+                    "expr": "llamaswap_last_scrape_duration_seconds",
+                    "legendFormat": "duration (s)"
+                }
+            ]
+        },
+        {
+            "id": 35,
+            "type": "row",
+            "title": "Llama-Swap Backend Metrics (Per Model)",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 90
+            },
+            "collapsed": false
+        },
+        {
+            "id": 36,
+            "type": "timeseries",
+            "title": "Requests Processing",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 91
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_requests_processing",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 37,
+            "type": "timeseries",
+            "title": "Max Tokens Observed",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 91
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_max_tokens_observed",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 38,
+            "type": "timeseries",
+            "title": "Prompt Tokens/sec",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 99
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_prompt_per_second",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 39,
+            "type": "timeseries",
+            "title": "Decode Tokens/sec (Throughput)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 99
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_decode_per_second",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 40,
+            "type": "timeseries",
+            "title": "Busy Slots per Decode",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 107
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_busy_slots_per_decode",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 41,
+            "type": "timeseries",
+            "title": "Requests Deferred",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 107
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_requests_deferred",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 42,
+            "type": "timeseries",
+            "title": "Total Prompt Duration (s)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 115
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_prompt_duration_total_seconds",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 43,
+            "type": "timeseries",
+            "title": "Total Decode Duration (s)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 115
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "llamaswap_decode_duration_total_seconds",
+                    "legendFormat": "{{model_id}}"
+                }
+            ]
+        },
+        {
+            "id": 44,
+            "type": "timeseries",
+            "title": "Tokens/sec & Prompt Tokens/sec",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 123
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "rate(llamaswap_tokens_eval_total[30s])",
+                    "legendFormat": "{{model_id}} t/s"
+                },
+                {
+                    "expr": "rate(llamaswap_tokens_prompt_total[30s])",
+                    "legendFormat": "{{model_id}} p/s"
+                }
+            ]
+        }
+    ],
+    "templating": {
+        "list": []
+    },
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
+    }
+}
